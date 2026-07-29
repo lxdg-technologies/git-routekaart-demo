@@ -50,6 +50,7 @@ assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
 assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
 assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld (test == live)");
 assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld (geen merge op main)");
+assert(byIdMap["map-scroll"].innerHTML.includes("🧪🚀"), "kaart toont gecombineerde vlag bij de start (test == live)");
 
 byIdMap["btn-issue"].onclick();                       // missie 1
 findBtn("Maak branch").onclick();                     // missie 2
@@ -62,10 +63,12 @@ assert(byIdMap["env-test"].textContent === "v0.1.1", "na merge staat test op v0.
 assert(byIdMap["env-live"].textContent === "v0.1.0", "live blijft op v0.1.0 na merge");
 assert(byIdMap["btn-promote"].disabled === false, "promote is nu beschikbaar");
 assert(byIdMap["btn-revert"].disabled === false, "revert is nu beschikbaar");
+assert(!byIdMap["map-scroll"].innerHTML.includes("🧪🚀") && byIdMap["map-scroll"].innerHTML.includes("🧪") && byIdMap["map-scroll"].innerHTML.includes("🚀"), "kaart toont losse test- en live-vlag na merge (nog niet gepromoveerd)");
 
 byIdMap["btn-promote"].onclick();                     // missie 9
 assert(byIdMap["env-live"].textContent === "v0.1.1", "na promotie staat live op v0.1.1");
 assert(byIdMap["btn-promote"].disabled === true, "promote weer uitgeschakeld na promotie");
+assert(byIdMap["map-scroll"].innerHTML.includes("🧪🚀"), "kaart toont gecombineerde vlag op dezelfde commit na promotie");
 
 // tweede ronde: squash + revert
 byIdMap["btn-issue"].onclick();

@@ -292,7 +292,7 @@
       active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
       missions: [false, false, false, false, false, false, false, false, false, false],
       mergeKinds: new Set(),
-      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0" },
+      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
     };
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
@@ -308,7 +308,9 @@
     S = freshState();
     S.branches.main = { name: "main", lane: 0, color: getComputedStyle(document.documentElement).getPropertyValue("--main-line").trim() || "#1e5aa8", head: null, merged: false };
     addCommit("main", "initiële versie", [], "normal");
-    addCommit("main", "release v0.1.0", [S.branches.main.head], "normal");
+    const rel0 = addCommit("main", "release v0.1.0", [S.branches.main.head], "normal");
+    S.env.testCommit = rel0.id;
+    S.env.liveCommit = rel0.id;
     S.active = "main";
     render();
   }
@@ -363,7 +365,8 @@
   function release() {
     const v = "v0.1." + (++S.relNum);
     S.env.test = v;
-    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Elke wijziging op <code>main</code> triggert de CI: die bouwt automatisch een nieuwe versie en rolt hem uit naar de <b>test</b>-omgeving. <b>Live</b> draait nog gewoon ${S.env.live} — gebruikers merken hier niets van, totdat jij bewust promoveert.`);
+    S.env.testCommit = S.branches.main.head;
+    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Elke wijziging op <code>main</code> triggert de CI: die bouwt automatisch een nieuwe versie en rolt hem uit naar de <b>test</b>-omgeving. <b>Live</b> draait nog gewoon ${S.env.live} — gebruikers merken hier niets van, totdat jij bewust promoveert. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
   }
   function doMerge(pr, squash) {
@@ -400,7 +403,8 @@
   function promote() {
     if (S.env.test === S.env.live) return;
     S.env.live = S.env.test;
-    log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt.");
+    S.env.liveCommit = S.env.testCommit;
+    log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
     tick(8); render();
   }
   function revertLast() {
@@ -530,13 +534,13 @@
   }
 
   function renderMap() {
-    const SP = 78, X0 = 60, Y0 = 44, LH = 60, R = 9;
+    const SP = 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
     const lanes = Math.max(2, ...Object.values(S.branches).filter(b => !b.deleted || S.commits.some(c => c.branch === b.name)).map(b => b.lane + 1));
     const W = X0 + S.commits.length * SP + 60, H = Y0 + lanes * LH;
     const laneY = l => Y0 + l * LH - LH / 2 + 10;
     const cx = c => X0 + c.x * SP;
     const branchOf = c => S.branches[c.branch];
-    let edges = "", stations = "", labels = "";
+    let edges = "", stations = "", labels = "", flags = "";
 
     S.commits.forEach(c => {
       const b = branchOf(c), y = laneY(b.lane), x = cx(c);
@@ -571,14 +575,23 @@
       const x = head ? cx(head) : X0;
       labels += `<text x="${x + 18}" y="${y - 14}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)">${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}</text>`;
     });
-    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${edges}${stations}${labels}</svg>`;
+    // vlaggetjes: waar staat test, waar staat live (altijd op main)
+    const flagY = laneY(0) - R - 14;
+    const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
+    if (testC && liveC && testC.id === liveC.id) {
+      flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>test én live staan hier</title>🧪🚀</text>`;
+    } else {
+      if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>huidige test-versie</title>🧪</text>`;
+      if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>huidige live-versie</title>🚀</text>`;
+    }
+    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${edges}${stations}${labels}${flags}</svg>`;
     el("map-scroll").scrollLeft = 1e6;
 
     const lg = el("legend");
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
