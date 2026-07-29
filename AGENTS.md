@@ -10,14 +10,15 @@ Een **interactieve git-simulatie als metrokaart**: issue → branch → PR → m
 
 ⚠️ **Pages deployt automatisch vanaf `main`.** Elke merge naar `main` staat binnen ±1 minuut live op die URL. Dit is bewust — het is zelf een demonstratie van "merge = automatische deploy". Maar besef het vóór je merget.
 
-## Twee varianten — verwar ze niet
+## Werkwijze: deze repo is de hoofdlijn — niet continu synchroniseren
 
-| repo | zichtbaarheid | doel |
-|---|---|---|
-| `lxdg-technologies/git-routekaart-demo` (deze) | **publiek**, MIT | generiek leermiddel, deelbaar met derden |
-| `lxdg-technologies/git-routekaart` | privé | LXDG-specifieke inhoud; later koppeling met de echte robotproject-workflow |
+**Deze publieke repo is waar actief aan doorgebouwd wordt.** Geen doorlopende synchronisatie met een artifact of de privérepo meer — dat kostte eerder onnodig veel moeite (3 kopieën bijwerken voor één wijziging).
 
-**Regel voor deze publieke repo: geen organisatie-specifieke inhoud.** Geen interne projectnamen, machines, personen of URL's. Bij het overnemen van verbeteringen uit de privérepo: eerst genericeren (daar staat bv. "de robot" waar hier "het echte systeem" staat).
+- De **Claude-artifact is gearchiveerd** (29-07-2026) en wordt niet meer bijgewerkt. Als je een link naar een `claude.ai/code/artifact/...`-URL tegenkomt: negeer 'm, deze repo is de bron van waarheid.
+- De **privérepo** (`lxdg-technologies/git-routekaart`, LXDG-specifieke inhoud) neemt op een bewust gekozen moment de geschiedenis van deze repo over via `git merge --allow-unrelated-histories` — geen doorlopende sync, één keer, met behoud van volledige commit-historie. Tot dat moment hoeft niemand hier iets voor de privérepo te doen.
+- **Regel voor déze repo: geen organisatie-specifieke inhoud.** Geen interne projectnamen, machines, personen of URL's — dat komt pas na de overname in de privérepo.
+
+**Nieuwe features: bij voorkeur via Hermes/Luna, niet via interactieve Claude-chat.** Dit is generiek, laag-risico webwerk — prima geschikt om te delegeren i.p.v. duur, interactief te laten bouwen. Geef Hermes een scherp afgebakende opdracht (dit bestand + de gewenste wijziging), laat hem een PR openen, Rob merget.
 
 ## Bestandsstructuur
 
@@ -65,4 +66,4 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 
 ## Herkomst
 
-Gestart als Claude-artifact voor het LXDG-robotproject (juli 2026); de drie-omgevingen-uitbreiding (ontwikkel/test/live) kwam voort uit extern advies om dev-, test- en productieomgevingen te scheiden. Deze publieke variant is de generieke afsplitsing daarvan.
+Gestart als Claude-artifact voor het LXDG-robotproject (juli 2026); de drie-omgevingen-uitbreiding (ontwikkel/test/live) kwam voort uit extern advies om dev-, test- en productieomgevingen te scheiden. Deze publieke variant is de generieke afsplitsing daarvan. Sinds 29-07-2026 is dit de enige actief onderhouden kopie (zie "Werkwijze" hierboven).
