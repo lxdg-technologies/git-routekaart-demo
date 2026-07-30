@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Routekaart — issues, branches & merges</title>
+<style>
+  :root {
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --ink: #1b2733;
+    --ink-soft: #5a6a7a;
+    --line: #d5dce3;
+    --main-line: #1e5aa8;
+    --accent: #1e5aa8;
+    --ok: #2e8b57;
+    --warn: #c47f17;
+    --danger: #c43b3b;
+    --station: #ffffff;
+    --chip-bg: #e7ecf1;
+    --radius: 10px;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10161d; --panel: #18212b; --ink: #e8edf2; --ink-soft: #93a3b3;
+      --line: #2a3641; --station: #10161d; --chip-bg: #22303c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10161d; --panel: #18212b; --ink: #e8edf2; --ink-soft: #93a3b3;
+    --line: #2a3641; --station: #10161d; --chip-bg: #22303c;
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f4; --panel: #ffffff; --ink: #1b2733; --ink-soft: #5a6a7a;
+    --line: #d5dce3; --station: #ffffff; --chip-bg: #e7ecf1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 1.25rem; line-height: 1.5;
+  }
+  header.top { max-width: 1200px; margin: 0 auto 1rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1rem; }
+  header.top h1 { font-size: 1.45rem; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  header.top h1 .metro { color: var(--main-line); }
+  header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+  .wrap { max-width: 1520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr) 300px 300px; gap: 1rem; align-items: start; }
+  @media (max-width: 1150px) { .wrap { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
+  .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 .6rem; font-weight: 600; }
+
+  /* ── kaart ── */
+  #map-card { padding: .6rem .6rem .2rem; }
+  #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
+  #map-scroll svg { display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: .35rem; }
+  .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
+
+  /* ── omgevingen ── */
+  .envs { display: flex; align-items: stretch; gap: .3rem; }
+  .env { flex: 1 1 0; border: 1.5px solid var(--line); border-radius: 8px; padding: .45rem .4rem; text-align: center; min-width: 0; }
+  .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
+  .env-val { font-family: var(--mono); font-weight: 700; font-size: .92rem; margin: .15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .env-sub { font-size: .67rem; color: var(--ink-soft); line-height: 1.25; }
+  .env.dev { border-color: var(--warn); }
+  .env.test { border-color: var(--accent); }
+  .env.live { border-color: var(--ok); }
+  .env.live.behind .env-val { color: var(--warn); }
+  .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
+
+  /* ── chips / knoppen ── */
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .chip {
+    border: 1.5px solid var(--line); background: var(--chip-bg); color: var(--ink);
+    border-radius: 999px; padding: .18rem .7rem; font-size: .82rem; font-family: var(--mono);
+    cursor: pointer;
+  }
+  .chip.active { border-color: currentColor; font-weight: 600; }
+  button.act {
+    display: block; width: 100%; text-align: left;
+    background: var(--panel); color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: 8px;
+    padding: .5rem .7rem; font-size: .9rem; font-family: inherit; cursor: pointer;
+    margin-top: .45rem;
+  }
+  button.act:hover:not(:disabled) { border-color: var(--accent); }
+  button.act:disabled { opacity: .45; cursor: not-allowed; }
+  button.act small { display: block; color: var(--ink-soft); font-size: .78rem; }
+  button.act.primary { border-color: var(--accent); }
+  button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .mini-btns { display: flex; gap: .4rem; margin-top: .45rem; flex-wrap: wrap; }
+  .mini-btns button {
+    flex: 1 1 auto; background: var(--chip-bg); color: var(--ink); border: 1.5px solid var(--line);
+    border-radius: 7px; padding: .32rem .55rem; font-size: .8rem; font-family: inherit; cursor: pointer;
+  }
+  .mini-btns button:hover:not(:disabled) { border-color: var(--accent); }
+  .mini-btns button:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── issue / PR kaartjes ── */
+  .ticket { border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 7px; padding: .5rem .65rem; margin-top: .5rem; font-size: .85rem; }
+  .ticket.pr { border-left-color: var(--accent); }
+  .ticket.done { border-left-color: var(--ok); opacity: .75; }
+  .ticket .t-head { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
+  .ticket .num { font-family: var(--mono); color: var(--ink-soft); font-size: .78rem; }
+  .badge { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; padding: .05rem .45rem; border-radius: 999px; background: var(--chip-bg); color: var(--ink-soft); white-space: nowrap; }
+  .badge.open { color: var(--ok); }
+  .badge.merged { color: #8250df; }
+
+  /* ── missies ── */
+  #missies ol { list-style: none; margin: 0; padding: 0; }
+  #missies li { display: flex; gap: .55rem; padding: .32rem 0; font-size: .87rem; color: var(--ink-soft); align-items: baseline; }
+  #missies li.done { color: var(--ink); }
+  #missies li.done .box { background: var(--ok); border-color: var(--ok); color: #fff; }
+  #missies li.next { color: var(--ink); font-weight: 600; }
+  #missies .box {
+    flex: 0 0 auto; width: 1.05rem; height: 1.05rem; border: 1.5px solid var(--line); border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; transform: translateY(.15rem);
+  }
+  #progress { height: 6px; background: var(--chip-bg); border-radius: 3px; margin: .5rem 0 .2rem; overflow: hidden; }
+  #progress > div { height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+  #trophy { display: none; margin-top: .5rem; padding: .5rem .7rem; border-radius: 8px; background: var(--chip-bg); font-size: .88rem; }
+  #trophy.show { display: block; }
+
+  /* ── logboek ── */
+  #log { max-height: 300px; overflow-y: auto; }
+  .log-entry { border-top: 1px solid var(--line); padding: .5rem .1rem; font-size: .84rem; }
+  .log-entry:first-child { border-top: 0; }
+  .log-entry b { font-weight: 600; }
+  .log-entry .why { color: var(--ink-soft); display: block; margin-top: .1rem; }
+  code { font-family: var(--mono); font-size: .85em; background: var(--chip-bg); padding: .05em .35em; border-radius: 4px; }
+
+  /* ── uitleg merge vs squash / omgevingen ── */
+  #vgl, #omg-uitleg { margin-top: 1rem; }
+  .vgl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+  .omg-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .8rem; }
+  @media (max-width: 700px) { .vgl-grid, .omg-grid { grid-template-columns: 1fr; } }
+  .vgl-grid h3, .omg-grid h3 { font-size: .92rem; margin: 0 0 .2rem; }
+  .vgl-grid p, .omg-grid p { font-size: .84rem; color: var(--ink-soft); margin: .25rem 0 0; }
+  .vgl-grid svg { width: 100%; height: auto; }
+  .omg-grid .omg-col { border: 1.5px solid var(--line); border-radius: 8px; padding: .6rem .7rem; }
+  .omg-grid .omg-col.c-dev { border-color: var(--warn); }
+  .omg-grid .omg-col.c-test { border-color: var(--accent); }
+  .omg-grid .omg-col.c-live { border-color: var(--ok); }
+  .col-note { font-size: .8rem; color: var(--ink-soft); margin-top: .6rem; }
+
+  .side-a, .side-b { display: flex; flex-direction: column; gap: 1rem; }
+  #reset { background: none; border: none; color: var(--ink-soft); font-size: .78rem; cursor: pointer; text-decoration: underline; padding: 0; font-family: inherit; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1><span class="metro">◉</span> Git Routekaart</h1>
+  <p>Speel een moderne git-werkstroom na: issue → branch → PR → merge → test → live. Elke lijn is een branch, elk station een commit.</p>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="card" id="map-card">
+      <div id="map-scroll"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="card" id="omg-uitleg">
+      <h2>Waarom drie omgevingen?</h2>
+      <div class="omg-grid">
+        <div class="omg-col c-dev">
+          <h3>1 · Ontwikkel</h3>
+          <p>Jouw branch, jouw machine. Hier bouw je, breek je en probeer je — <b>fouten kosten hier niemand iets</b>, want niemand anders draait deze code.</p>
+        </div>
+        <div class="omg-col c-test">
+          <h3>2 · Test</h3>
+          <p>Een kopie van de echte omgeving. Elke merge naar <code>main</code> komt hier <b>automatisch</b> terecht. Fouten worden hier zichtbaar zonder dat gebruikers er last van hebben.</p>
+        </div>
+        <div class="omg-col c-live">
+          <h3>3 · Live</h3>
+          <p>Het echte systeem, met echte gebruikers. Hier komt <b>alleen</b> een versie die op test al bewezen heeft te werken — en alléén via een bewuste, handmatige promotie. Nooit automatisch.</p>
+        </div>
+      </div>
+      <p class="col-note">De kernregel: <b>een merge mag nooit rechtstreeks live gaan.</b> Probeer het rechts: merge een PR en kijk welke omgeving verandert.</p>
+    </div>
+
+    <div class="card" id="vgl">
+      <h2>Spiekbrief — wat doet elke merge-knop?</h2>
+      <div class="vgl-grid">
+        <div>
+          <h3>Merge commit</h3>
+          <svg viewBox="0 0 260 70" aria-label="merge commit diagram">
+            <path d="M10 50 H250" stroke="var(--main-line)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="M55 50 C75 50 75 20 95 20 H150 C185 20 185 50 205 50" stroke="var(--warn)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <g fill="var(--station)" stroke-width="2.5">
+              <circle cx="30" cy="50" r="6" stroke="var(--main-line)"/>
+              <circle cx="110" cy="20" r="6" stroke="var(--warn)"/>
+              <circle cx="150" cy="20" r="6" stroke="var(--warn)"/>
+              <circle cx="205" cy="50" r="8" stroke="var(--main-line)"/>
+              <circle cx="205" cy="50" r="3.5" fill="var(--main-line)" stroke="none"/>
+            </g>
+          </svg>
+          <p>Alle commits van de branch blijven zichtbaar in de historie van <code>main</code>, plus één extra "overstapstation": de merge-commit met twee ouders. Volledige detailhistorie, maar de kaart wordt drukker.</p>
+        </div>
+        <div>
+          <h3>Squash &amp; merge</h3>
+          <svg viewBox="0 0 260 70" aria-label="squash merge diagram">
+            <path d="M10 50 H250" stroke="var(--main-line)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="M55 50 C75 50 75 20 95 20 H165" stroke="var(--warn)" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="3 6" opacity=".55"/>
+            <g fill="var(--station)" stroke-width="2.5">
+              <circle cx="30" cy="50" r="6" stroke="var(--main-line)"/>
+              <circle cx="110" cy="20" r="6" stroke="var(--warn)" opacity=".45"/>
+              <circle cx="150" cy="20" r="6" stroke="var(--warn)" opacity=".45"/>
+              <circle cx="205" cy="50" r="6" stroke="var(--main-line)"/>
+            </g>
+          </svg>
+          <p>Alle branch-commits worden samengeperst tot <em>één</em> nieuwe commit op <code>main</code>. De losse tussenstops verdwijnen uit de main-historie: overzichtelijke rechte lijn, maar minder detail. De PR bewaart het detail wél.</p>
+        </div>
+      </div>
+      <p class="col-note">Vuistregel die veel teams hanteren: <b>squash &amp; merge</b> voor feature-branches met veel "wip"-commits, zodat <code>main</code> één commit per PR krijgt en de CI daar één versietag aan kan hangen.</p>
+    </div>
+  </div>
+
+  <div class="side-a">
+    <div class="card" id="omgevingen">
+      <h2>Omgevingen</h2>
+      <div class="envs">
+        <div class="env dev">
+          <div class="env-name">Ontwikkel</div>
+          <div class="env-val" id="env-dev">—</div>
+          <div class="env-sub">jouw branch</div>
+        </div>
+        <div class="env-arrow">→</div>
+        <div class="env test">
+          <div class="env-name">Test</div>
+          <div class="env-val" id="env-test">v0.1.0</div>
+          <div class="env-sub">elke merge, automatisch</div>
+        </div>
+        <div class="env-arrow">→</div>
+        <div class="env live" id="env-live-box">
+          <div class="env-name">Live</div>
+          <div class="env-val" id="env-live">v0.1.0</div>
+          <div class="env-sub">alleen na jouw akkoord</div>
+        </div>
+      </div>
+      <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
+      <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
+    </div>
+
+    <div class="card" id="missies">
+      <h2>Missies</h2>
+      <div id="progress"><div></div></div>
+      <ol id="missie-list"></ol>
+      <div id="trophy">🏆 <b>Alle missies voltooid!</b> Je kent nu de hele route: van issue tot live, mét de nooduitgang (revert). Vergelijk op de kaart waar de stations van elke PR liggen.</div>
+    </div>
+  </div>
+
+  <div class="side-b">
+    <div class="card">
+      <h2>Acties</h2>
+      <div style="font-size:.8rem;color:var(--ink-soft);margin-bottom:.3rem;">Actieve branch (klik om te wisselen):</div>
+      <div class="chips" id="branch-chips"></div>
+      <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
+      <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
+      <div id="tickets"></div>
+      <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Logboek — wat gebeurde er net?</h2>
+      <div id="log"><div class="log-entry"><b>Welkom!</b><span class="why">De blauwe lijn is <code>main</code>: de enige branch waar versies uit gebouwd worden. Hierboven zie je de drie omgevingen. Begin met missie 1.</span></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const LANE_COLORS = ["#e07a1f", "#7a3fa0", "#0e8a83", "#c43b3b"];
+  const ISSUE_POOL = [
+    ["Versienummer in dashboard klopt niet", "fix/versienummer"],
+    ["Gripper sluit te traag bij appel-pick", "fix/gripper-snelheid"],
+    ["Camera-status ontbreekt op statuspagina", "feat/camera-status"],
+    ["Kalibratieknop geeft geen feedback", "feat/kalibratie-feedback"],
+    ["Log-bestanden groeien onbeperkt", "fix/log-rotatie"],
+  ];
+  const COMMIT_MSGS = ["eerste opzet", "fix review-opmerking", "test toegevoegd", "typo", "wip", "randgeval afgevangen"];
+
+  let S;
+  function freshState() {
+    return {
+      commits: [], branches: {}, issues: [], prs: [],
+      active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
+      missions: [false, false, false, false, false, false, false, false, false, false],
+      mergeKinds: new Set(),
+      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
+    };
+  }
+  const hash = () => Math.random().toString(16).slice(2, 8);
+  const el = id => document.getElementById(id);
+
+  function addCommit(branch, msg, parents, kind) {
+    const c = { id: hash(), branch, msg, parents, kind: kind || "normal", x: S.seq++ };
+    S.commits.push(c);
+    S.branches[branch].head = c.id;
+    return c;
+  }
+  function init() {
+    S = freshState();
+    S.branches.main = { name: "main", lane: 0, color: getComputedStyle(document.documentElement).getPropertyValue("--main-line").trim() || "#1e5aa8", head: null, merged: false };
+    addCommit("main", "initiële versie", [], "normal");
+    const rel0 = addCommit("main", "release v0.1.0", [S.branches.main.head], "normal");
+    S.env.testCommit = rel0.id;
+    S.env.liveCommit = rel0.id;
+    S.active = "main";
+    render();
+  }
+
+  const byId = id => S.commits.find(c => c.id === id);
+  function ancestry(headId) {
+    const seen = new Set(), stack = [headId];
+    while (stack.length) {
+      const id = stack.pop();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const c = byId(id);
+      if (c) stack.push(...c.parents);
+    }
+    return seen;
+  }
+  function aheadOfMain(branch) {
+    const mainSet = ancestry(S.branches.main.head);
+    return [...ancestry(S.branches[branch].head)].filter(id => !mainSet.has(id)).map(byId);
+  }
+
+  /* ── acties ── */
+  function newIssue() {
+    const [title, slug] = ISSUE_POOL[S.issues.length % ISSUE_POOL.length];
+    S.issues.push({ num: ++S.issueNo, title, slug, branch: null, closed: false });
+    log(`Issue #${S.issueNo} aangemaakt`, "Een issue beschrijft <i>wat</i> er moet gebeuren en waarom — nog geen code. Maak er nu een branch bij.");
+    tick(0); render();
+  }
+  function newBranch(issue) {
+    const name = `${issue.slug}-${issue.num}`;
+    const lane = S.laneFree.length ? S.laneFree.shift() : 1;
+    S.branches[name] = { name, lane, color: LANE_COLORS[(lane - 1) % LANE_COLORS.length], head: S.branches.main.head, merged: false, issue: issue.num };
+    issue.branch = name;
+    S.active = name;
+    log(`Branch <code>${name}</code> gemaakt vanaf main`, "Een branch is een eigen zijspoor: je vertrekt vanaf het laatste station van main en kunt vrij experimenteren zonder dat main (en dus de live-omgeving) er iets van merkt. Dit is je <b>ontwikkelomgeving</b>.");
+    tick(1); render();
+  }
+  function commit() {
+    const b = S.branches[S.active];
+    const msg = COMMIT_MSGS[Math.floor(Math.random() * COMMIT_MSGS.length)];
+    addCommit(b.name, msg, [b.head]);
+    log(`Commit <code>${S.commits[S.commits.length - 1].id}</code> op <code>${b.name}</code>`, "Een commit is een station: een vastgelegd tussenpunt waar je altijd naar terug kunt.");
+    if (aheadOfMain(b.name).length >= 2) tick(2);
+    render();
+  }
+  function openPR(branch) {
+    const b = S.branches[branch];
+    S.prs.push({ num: ++S.prNo, branch, state: "open", issue: b.issue });
+    log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt.");
+    tick(3); render();
+  }
+  function release() {
+    const v = "v0.1." + (++S.relNum);
+    S.env.test = v;
+    S.env.testCommit = S.branches.main.head;
+    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Elke wijziging op <code>main</code> triggert de CI: die bouwt automatisch een nieuwe versie en rolt hem uit naar de <b>test</b>-omgeving. <b>Live</b> draait nog gewoon ${S.env.live} — gebruikers merken hier niets van, totdat jij bewust promoveert. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
+    tick(7);
+  }
+  function doMerge(pr, squash) {
+    const b = S.branches[pr.branch];
+    const ahead = aheadOfMain(pr.branch);
+    if (squash) {
+      addCommit("main", `${pr.branch} (squash van ${ahead.length} commits, PR #${pr.num})`, [S.branches.main.head], "squash");
+      ahead.forEach(c => c.squashed = true);
+      log(`PR #${pr.num} — squash &amp; merge`, `De ${ahead.length} commits van <code>${pr.branch}</code> zijn samengeperst tot één nieuwe commit op main. Kijk op de kaart: het zijspoor is vervaagd — die stations zitten <b>niet</b> in de historie van main. Main blijft een rechte, leesbare lijn.`);
+      S.mergeKinds.add("squash");
+    } else {
+      const mainHead = S.branches.main.head;
+      addCommit("main", `merge PR #${pr.num} (${pr.branch})`, [mainHead, b.head], "merge");
+      log(`PR #${pr.num} — merge commit`, `Main heeft nu een overstapstation met twee ouders: de oude main én de kop van <code>${pr.branch}</code>. Alle ${ahead.length} commits van het zijspoor horen nu óók bij de historie van main.`);
+      S.mergeKinds.add("merge");
+    }
+    pr.state = "merged"; b.merged = true;
+    const issue = S.issues.find(i => i.num === pr.issue);
+    if (issue) issue.closed = true;
+    if (S.active === b.name) S.active = "main";
+    if (S.mergeKinds.has("merge")) tick(4);
+    if (S.mergeKinds.has("merge") && S.mergeKinds.has("squash")) tick(5);
+    release();
+    render();
+  }
+  function deleteBranch(name) {
+    const b = S.branches[name];
+    S.laneFree.unshift(b.lane); S.laneFree.sort();
+    b.deleted = true;
+    if (S.active === name) S.active = "main";
+    log(`Branch <code>${name}</code> opgeruimd`, "Na de merge heeft het zijspoor geen functie meer. De commits blijven bestaan (via de merge of de PR), alleen het naambordje is weg. Opruimen houdt de kaart leesbaar.");
+    tick(6); render();
+  }
+  function promote() {
+    if (S.env.test === S.env.live) return;
+    S.env.live = S.env.test;
+    S.env.liveCommit = S.env.testCommit;
+    log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
+    tick(8); render();
+  }
+  function revertLast() {
+    const head = byId(S.branches.main.head);
+    if (!head || (head.kind !== "merge" && head.kind !== "squash")) return;
+    addCommit("main", `revert: ${head.msg}`, [S.branches.main.head], "revert");
+    log("Revert-commit op <code>main</code>", "Terugdraaien is in git <i>vooruit</i> werken: je gooit geen historie weg, maar zet er een nieuwe commit bovenop die de wijziging exact omkeert. De CI bouwt daarna gewoon weer een nieuwe versie — eerst naar test, en pas na jouw promotie naar live. Zo is óók elke terugdraai-actie traceerbaar en omkeerbaar.");
+    tick(9);
+    release();
+    render();
+  }
+
+  /* ── missies ── */
+  const MISSIONS = [
+    "Maak een issue aan",
+    "Maak een branch voor het issue",
+    "Zet minstens 2 commits op de branch",
+    "Open een pull request",
+    "Merge de PR met een <b>merge commit</b>",
+    "Herhaal missie 1–4 en kies nu <b>squash &amp; merge</b> — vergelijk de kaart",
+    "Ruim een gemergde branch op",
+    "Merge een PR en zie: de nieuwe versie komt alléén op <b>test</b>",
+    "Promoveer de geteste versie naar <b>live</b>",
+    "Draai een merge terug met een <b>revert</b> — ook dát is gewoon een nieuwe versie",
+  ];
+  function tick(i) { S.missions[i] = true; }
+
+  function log(title, why) {
+    const d = document.createElement("div");
+    d.className = "log-entry";
+    d.innerHTML = `<b>${title}</b><span class="why">${why}</span>`;
+    el("log").prepend(d);
+  }
+
+  /* ── render ── */
+  function render() {
+    renderMap(); renderChips(); renderTickets(); renderMissions(); renderEnv();
+    const b = S.branches[S.active];
+    const commitBtn = el("btn-commit");
+    commitBtn.disabled = S.active === "main" || b.merged;
+    el("commit-sub").textContent = S.active === "main"
+      ? "Op main committen we nooit direct — maak eerst een branch"
+      : `voegt een station toe aan ${S.active}`;
+  }
+
+  function renderEnv() {
+    el("env-dev").textContent = S.active === "main" ? "—" : S.active;
+    el("env-test").textContent = S.env.test;
+    el("env-live").textContent = S.env.live;
+    const behind = S.env.test !== S.env.live;
+    el("env-live-box").classList.toggle("behind", behind);
+    el("btn-promote").disabled = !behind;
+    const head = byId(S.branches.main.head);
+    el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
+  }
+
+  function renderChips() {
+    const box = el("branch-chips"); box.innerHTML = "";
+    Object.values(S.branches).filter(b => !b.deleted).forEach(b => {
+      const c = document.createElement("button");
+      c.className = "chip" + (S.active === b.name ? " active" : "");
+      c.style.color = b.color;
+      c.textContent = b.name + (b.merged ? " ✓" : "");
+      c.onclick = () => { S.active = b.name; render(); };
+      box.appendChild(c);
+    });
+  }
+
+  function renderTickets() {
+    const box = el("tickets"); box.innerHTML = "";
+    S.issues.forEach(i => {
+      const t = document.createElement("div");
+      t.className = "ticket" + (i.closed ? " done" : "");
+      t.innerHTML = `<div class="t-head"><span><span class="num">#${i.num}</span> ${i.title}</span><span class="badge ${i.closed ? "" : "open"}">${i.closed ? "gesloten" : "open"}</span></div>`;
+      if (!i.branch && !i.closed) {
+        const m = document.createElement("div"); m.className = "mini-btns";
+        const btn = document.createElement("button");
+        btn.textContent = "🌿 Maak branch";
+        btn.onclick = () => newBranch(i);
+        m.appendChild(btn); t.appendChild(m);
+      }
+      box.appendChild(t);
+    });
+    S.prs.forEach(pr => {
+      const ahead = aheadOfMain(pr.branch).length;
+      const t = document.createElement("div");
+      t.className = "ticket pr" + (pr.state === "merged" ? " done" : "");
+      t.innerHTML = `<div class="t-head"><span><span class="num">PR #${pr.num}</span> <code>${pr.branch}</code> → <code>main</code></span><span class="badge ${pr.state === "merged" ? "merged" : "open"}">${pr.state === "merged" ? "merged" : ahead + " commit" + (ahead === 1 ? "" : "s")}</span></div>`;
+      if (pr.state === "open") {
+        const m = document.createElement("div"); m.className = "mini-btns";
+        const b1 = document.createElement("button"); b1.textContent = "Merge commit"; b1.onclick = () => doMerge(pr, false);
+        const b2 = document.createElement("button"); b2.textContent = "Squash & merge"; b2.onclick = () => doMerge(pr, true);
+        b1.disabled = b2.disabled = ahead === 0;
+        m.append(b1, b2); t.appendChild(m);
+      } else if (!S.branches[pr.branch].deleted) {
+        const m = document.createElement("div"); m.className = "mini-btns";
+        const b3 = document.createElement("button"); b3.textContent = "🗑️ Verwijder branch"; b3.onclick = () => deleteBranch(pr.branch);
+        m.appendChild(b3); t.appendChild(m);
+      }
+      box.appendChild(t);
+    });
+    // PR openen knop per branch met commits ahead en zonder open PR
+    Object.values(S.branches).forEach(b => {
+      if (b.name === "main" || b.merged || b.deleted) return;
+      if (S.prs.some(p => p.branch === b.name && p.state === "open")) return;
+      if (aheadOfMain(b.name).length === 0) return;
+      const m = document.createElement("div"); m.className = "mini-btns";
+      const btn = document.createElement("button");
+      btn.textContent = `⇪ Open PR voor ${b.name}`;
+      btn.onclick = () => openPR(b.name);
+      m.appendChild(btn); box.appendChild(m);
+    });
+  }
+
+  function renderMissions() {
+    const list = el("missie-list"); list.innerHTML = "";
+    let firstOpen = S.missions.findIndex(m => !m);
+    MISSIONS.forEach((m, i) => {
+      const li = document.createElement("li");
+      li.className = (S.missions[i] ? "done" : "") + (i === firstOpen ? " next" : "");
+      li.innerHTML = `<span class="box">${S.missions[i] ? "✓" : ""}</span><span>${m}</span>`;
+      list.appendChild(li);
+    });
+    const done = S.missions.filter(Boolean).length;
+    el("progress").firstElementChild.style.width = (done / MISSIONS.length * 100) + "%";
+    el("trophy").className = done === MISSIONS.length ? "show" : "";
+  }
+
+  function renderMap() {
+    const SP = 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
+    const lanes = Math.max(2, ...Object.values(S.branches).filter(b => !b.deleted || S.commits.some(c => c.branch === b.name)).map(b => b.lane + 1));
+    const W = X0 + S.commits.length * SP + 60, H = Y0 + lanes * LH;
+    const laneY = l => Y0 + l * LH - LH / 2 + 10;
+    const cx = c => X0 + c.x * SP;
+    const branchOf = c => S.branches[c.branch];
+    let edges = "", stations = "", labels = "", flags = "";
+
+    S.commits.forEach(c => {
+      const b = branchOf(c), y = laneY(b.lane), x = cx(c);
+      c.parents.forEach((pid, pi) => {
+        const p = byId(pid); if (!p) return;
+        const pb = branchOf(p), px = cx(p), py = laneY(pb.lane);
+        const color = pi === 1 ? branchOf(p).color : (pb.lane === b.lane ? b.color : b.color);
+        const faded = c.squashed || p.squashed;
+        const dash = faded ? 'stroke-dasharray="3 6" opacity=".45"' : "";
+        if (py === y) edges += `<path d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}/>`;
+        else {
+          const mid = px + Math.min(40, (x - px) / 2);
+          edges += `<path d="M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}/>`;
+        }
+      });
+    });
+    S.commits.forEach(c => {
+      const b = branchOf(c), y = laneY(b.lane), x = cx(c);
+      const fade = c.squashed ? 'opacity=".4"' : "";
+      const isHub = c.kind === "merge";
+      stations += `<g ${fade}><circle cx="${x}" cy="${y}" r="${isHub ? R + 3 : R}" fill="var(--station)" stroke="${b.color}" stroke-width="3"><title>${c.id} — ${c.msg}</title></circle>`;
+      if (isHub) stations += `<circle cx="${x}" cy="${y}" r="3.5" fill="${b.color}"/>`;
+      if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
+      if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
+      stations += `</g>`;
+      labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade}>${c.id.slice(0, 5)}</text>`;
+    });
+    // branch-naambordjes + HEAD
+    Object.values(S.branches).forEach(b => {
+      if (b.deleted) return;
+      const head = byId(b.head), y = laneY(b.lane);
+      const x = head ? cx(head) : X0;
+      labels += `<text x="${x + 18}" y="${y - 14}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)">${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}</text>`;
+    });
+    // vlaggetjes: waar staat test, waar staat live (altijd op main)
+    const flagY = laneY(0) - R - 14;
+    const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
+    if (testC && liveC && testC.id === liveC.id) {
+      flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>test én live staan hier</title>🧪🚀</text>`;
+    } else {
+      if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>huidige test-versie</title>🧪</text>`;
+      if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>huidige live-versie</title>🚀</text>`;
+    }
+    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${edges}${stations}${labels}${flags}</svg>`;
+    el("map-scroll").scrollLeft = 1e6;
+
+    const lg = el("legend");
+    lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
+      Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
+        `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
+      `<span>◎ = merge-commit (2 ouders)</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+    }
+
+  el("btn-issue").onclick = newIssue;
+  el("btn-commit").onclick = commit;
+  el("btn-promote").onclick = promote;
+  el("btn-revert").onclick = revertLast;
+  el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
+  init();
+})();
+</script>
+</body>
+</html>
