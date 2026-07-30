@@ -26,7 +26,8 @@ function makeEl(tag) {
 const byIdMap = {};
 const ids = ["map-scroll", "legend", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert",
-  "env-dev", "env-test", "env-live", "env-live-box"];
+  "env-dev", "env-test", "env-live", "env-live-box",
+  "start-label", "start-hint", "btn-clear-start"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 
 global.document = {
@@ -35,6 +36,7 @@ global.document = {
   documentElement: {},
 };
 global.getComputedStyle = () => ({ getPropertyValue: () => "#1e5aa8" });
+global.window = global; // zodat "window.selectStart = ..." in de app-code werkt
 
 eval(js);
 
@@ -88,7 +90,32 @@ assert(byIdMap["env-live"].textContent === "v0.1.3", "fix gepromoveerd naar live
 
 findBtn("Verwijder branch").onclick();                // missie 7
 
-assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 10 missies voltooid → 100%");
+// startpunt-picker: begint op main, wissen doet niets als er niets gekozen is
+assert(byIdMap["start-label"].textContent === "main (huidige kop)", "startpunt staat standaard op main");
+assert(byIdMap["btn-clear-start"].style.display === "none", "wis-knop verborgen als er geen startpunt gekozen is");
+
+// tijdreis: branch vanaf een oudere commit op main (niet de huidige kop)
+const initCommitId = byIdMap["map-scroll"].innerHTML.match(/<title>([0-9a-f]+) — initiële versie<\/title>/)[1];
+selectStart(initCommitId);
+assert(byIdMap["start-label"].textContent.includes(initCommitId.slice(0, 5)), "gekozen startpunt verschijnt in het paneel");
+assert(byIdMap["btn-clear-start"].style.display === "inline", "wis-knop zichtbaar zodra een startpunt gekozen is");
+byIdMap["btn-issue"].onclick();
+findBtn("Maak branch").onclick();                     // missie 11 (tijdreis)
+assert(__state().branches[__state().active].head === initCommitId, "nieuwe branch vertrekt echt vanaf de gekozen oudere commit, niet vanaf main-kop");
+assert(byIdMap["start-label"].textContent === "main (huidige kop)", "startpunt-keuze is verbruikt en terug naar main na het maken van de branch");
+
+// branch-van-branch: eerst een gewone branch met een eigen commit, dan daarvandaan vertakken
+byIdMap["btn-issue"].onclick();
+findBtn("Maak branch").onclick();
+byIdMap["btn-commit"].onclick();
+const branchXName = __state().active;
+const branchXHead = __state().branches[branchXName].head;
+selectStart(branchXHead);
+byIdMap["btn-issue"].onclick();
+findBtn("Maak branch").onclick();                     // missie 12 (branch-van-branch)
+assert(__state().branches[__state().active].head === branchXHead, "nieuwe branch vertrekt vanaf de commit op de andere (niet-main) branch");
+
+assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 12 missies voltooid → 100%");
 
 if (failed) { console.error("\n" + failed + " CHECK(S) GEFAALD"); process.exit(1); }
 console.log("\nALLE CHECKS GESLAAGD");
