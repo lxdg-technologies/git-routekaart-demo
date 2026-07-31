@@ -48,6 +48,8 @@ const assert = (cond, msg) => {
 // helper: vind de laatst gemaakte dynamische knop met deze tekst
 const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.includes(txt)).pop();
 
+assert(html.includes('class="release-badge">release: v1.1.0<'), "kaart toont de echte release-badge v1.1.0");
+
 assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
 assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
 assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld (test == live)");
