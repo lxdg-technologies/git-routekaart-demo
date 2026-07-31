@@ -24,8 +24,11 @@ Een **interactieve git-simulatie als metrokaart**: issue → branch → PR → m
 
 - `index.html` — de complete simulatie: CSS, HTML en JavaScript in één bestand
 - `test/smoketest.js` — headless rooktest (Node, geen dependencies): `node test/smoketest.js`
+- `sveltekit/` — de nieuwe uitbreidbare SvelteKit-app met Bun, Tailwind CSS 4, daisyUI 5 en TypeScript
 - `README.md` — gebruikersuitleg
 - `AGENTS.md` — dit bestand
+
+De nul-dependency `index.html` blijft de downloadbare referentiedemo. Nieuwe productfunctionaliteit hoort in `sveltekit/`, zodat daar later server-side GitHub Actions-integratie aan toegevoegd kan worden zonder de standalone demo te doorbreken.
 
 ## Hoe de simulatie werkt (architectuur)
 
