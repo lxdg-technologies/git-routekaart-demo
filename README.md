@@ -17,6 +17,18 @@ Interactieve simulatie van een moderne git-werkstroom: **issue → branch → PR
 
 Download of clone deze repo en open `index.html` in een browser. Eén bestand, geen build, geen server.
 
+## SvelteKit-app
+
+De nieuwe uitbreidbare versie staat in [`sveltekit/`](sveltekit/). Deze gebruikt SvelteKit, Bun, Tailwind CSS 4 en daisyUI 5:
+
+```sh
+cd sveltekit
+bun install
+bun run dev
+```
+
+Zie [`sveltekit/README.md`](sveltekit/README.md) voor de huidige scope en verificatiecommando's. De bestaande `index.html` blijft beschikbaar als downloadbare nul-dependency demo.
+
 ## Licentie
 
 [MIT](LICENSE) — vrij te gebruiken, delen en aanpassen.
