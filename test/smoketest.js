@@ -16,6 +16,7 @@ function makeEl(tag) {
     get innerHTML() { return this._html; },
     set textContent(v) { this._text = v; }, get textContent() { return this._text; },
     appendChild(c) { this.children.push(c); }, append(...c) { this.children.push(...c); },
+    addEventListener(name, handler) { this[`on${name}`] = handler; },
     prepend(c) { this.children.unshift(c); },
     firstElementChild: null,
   };
@@ -24,7 +25,7 @@ function makeEl(tag) {
   return el;
 }
 const byIdMap = {};
-const ids = ["map-scroll", "legend", "begrippen-lijst", "release-badge", "release-badge-label", "branch-chips", "tickets", "missie-list", "progress", "trophy",
+const ids = ["map-scroll", "legend", "begrippen-lijst", "release-history", "release-badge-label", "release-current-link", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert",
   "env-dev", "env-test", "env-live", "env-live-box",
   "start-label", "start-hint", "btn-clear-start"];
@@ -52,8 +53,12 @@ assert(byIdMap["begrippen-lijst"].innerHTML.includes("CI monitoring unavailable"
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
 
 assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"), "badge haalt releases live op via GitHub API");
+assert(html.includes("RELEASE_HISTORY_API_URL") && html.includes("fetch(RELEASE_HISTORY_API_URL"), "badge heeft een releasegeschiedenis-API");
+assert(html.includes("release-history") && html.includes("release-history-list"), "badge heeft een compact uitklappaneel");
+assert(html.includes("release-current-link") && html.includes("target=\"_blank\""), "huidige release heeft een directe GitHub-link");
+assert(html.includes("published_at") && html.includes("release.html_url"), "geschiedenis toont datum en release-noteslink");
 assert(html.includes("RELEASE_FALLBACK") && html.includes("catch (error)"), "badge heeft een netwerkfallback");
-assert(html.includes('id="release-badge-label">release: onbekend</span>'), "badge heeft veilige beginwaarde vóór de API-response");
+assert(html.includes('id="release-badge-label">release: onbekend</summary>'), "badge heeft veilige beginwaarde vóór de API-response");
 assert(html.includes("release-badge.dev") && html.includes("release-badge.test") && html.includes("release-badge.live"), "badge heeft ontwikkel-, test- en livekleur");
 
 assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
