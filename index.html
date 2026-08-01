@@ -59,6 +59,12 @@
   .legend span { display: inline-flex; align-items: center; gap: .35rem; }
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
   .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; padding: .35rem .65rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
+  #begrippen-lijst { display: grid; gap: .45rem; }
+  .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); }
+  .term-item summary { cursor: pointer; font-weight: 650; color: var(--ink); }
+  .term-item summary::marker { color: var(--accent); }
+  .term-explanation { margin: .4rem 0 0; color: var(--ink-soft); font-size: .86rem; }
+  .term-example { margin: .35rem 0 0; padding: .35rem .5rem; border-left: 3px solid var(--accent); color: var(--ink); font-size: .82rem; }
 
   /* ── omgevingen ── */
   .envs { display: flex; align-items: stretch; gap: .3rem; }
@@ -184,6 +190,12 @@
       <p class="col-note">De kernregel: <b>een merge mag nooit rechtstreeks live gaan.</b> Probeer het rechts: merge een PR en kijk welke omgeving verandert.</p>
     </div>
 
+    <div class="card" id="begrippen">
+      <h2>Vaktermen</h2>
+      <p class="col-note">Klik een term open voor een korte uitleg en een voorbeeld uit de workflow.</p>
+      <div id="begrippen-lijst"></div>
+    </div>
+
     <div class="card" id="vgl">
       <h2>Spiekbrief — wat doet elke merge-knop?</h2>
       <div class="vgl-grid">
@@ -292,6 +304,21 @@
     ["Log-bestanden groeien onbeperkt", "fix/log-rotatie"],
   ];
   const COMMIT_MSGS = ["eerste opzet", "fix review-opmerking", "test toegevoegd", "typo", "wip", "randgeval afgevangen"];
+  const TERMS = [
+    { term: "Repository (repo)", explanation: "De gezamenlijke opslagplaats van de code, geschiedenis en werkinstructies.", example: "git-routekaart-demo is de repository voor deze simulatie." },
+    { term: "Commit", explanation: "Een vastgelegde wijziging met een korte beschrijving, zodat je later kunt zien wat er veranderde.", example: "Een commit kan de release-badge of een nieuwe uitleg toevoegen." },
+    { term: "Branch", explanation: "Een tijdelijk zijspoor waarop je veilig aan een wijziging werkt zonder main direct te veranderen.", example: "feat/dcs-152-vaktermen is een branch voor deze woordenlijst." },
+    { term: "Merge", explanation: "Het samenvoegen van een goedgekeurde branch met main.", example: "Na de merge komt de wijziging op main en kan GitHub Pages deployen." },
+    { term: "Pull Request (PR)", explanation: "Een voorstel om een branch te mergen, zodat anderen de wijziging en checks kunnen beoordelen.", example: "PR #6 stelde de release-badge voor en wachtte op menselijke beoordeling." },
+    { term: "Tag", explanation: "Een vast label op één specifieke commit, vaak gebruikt voor een versie.", example: "Tag v1.1.0 markeert de release van de branch-van-commit-feature." },
+    { term: "Release", explanation: "Een uitgebrachte versie met een herkenbare tag en vaak release-notes.", example: "GitHub Release v1.1.0 hoort bij tag v1.1.0." },
+    { term: "Issue", explanation: "Een werkitem met een doel, context en acceptatiepunten.", example: "DCS-152 beschrijft de klikbare woordenlijst met uitleg en voorbeelden." },
+    { term: "Workflow", explanation: "De afgesproken route van werk: issue, branch, commit, PR, checks, review, merge en deploy.", example: "Deze demo maakt die workflow zichtbaar als een metrokaart." },
+    { term: "Deploy / Deployment", explanation: "Het beschikbaar maken van een versie in een omgeving.", example: "Een merge naar main start automatisch de GitHub Pages-deployment." },
+    { term: "CI (Continuous Integration)", explanation: "Automatische controle die wijzigingen bouwt en test zodra ze worden gepusht.", example: "De preview-workflow draait bij een nieuwe PR-commit." },
+    { term: "CI checks", explanation: "De afzonderlijke controles binnen CI, zoals tests, linting of een preview-build.", example: "Een groene preview-check betekent dat de preview-workflow geslaagd is." },
+    { term: "CI monitoring unavailable", explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
+  ];
 
   let S;
   function freshState() {
@@ -313,6 +340,14 @@
     S.branches[branch].head = c.id;
     return c;
   }
+  function renderGlossary() {
+    el("begrippen-lijst").innerHTML = TERMS.map(({ term, explanation, example }) => `
+      <details class="term-item">
+        <summary>${term}</summary>
+        <p class="term-explanation">${explanation}</p>
+        <p class="term-example"><b>Voorbeeld:</b> ${example}</p>
+      </details>`).join("");
+  }
   function init() {
     S = freshState();
     S.branches.main = { name: "main", lane: 0, color: getComputedStyle(document.documentElement).getPropertyValue("--main-line").trim() || "#1e5aa8", head: null, merged: false };
@@ -321,6 +356,7 @@
     S.env.testCommit = rel0.id;
     S.env.liveCommit = rel0.id;
     S.active = "main";
+    renderGlossary();
     render();
   }
 
