@@ -9,7 +9,7 @@ const js = html.substring(html.indexOf("<script>") + 8, html.lastIndexOf("</scri
 const created = []; // alle dynamisch gemaakte elementen
 function makeEl(tag) {
   const el = {
-    tag, style: {}, children: [], _text: "", _html: "",
+    tag, style: {}, dataset: {}, children: [], _text: "", _html: "",
     classList: { toggle() {}, add() {}, remove() {} },
     set className(v) { this._cls = v; }, get className() { return this._cls || ""; },
     set innerHTML(v) { this._html = v; },
@@ -24,7 +24,7 @@ function makeEl(tag) {
   return el;
 }
 const byIdMap = {};
-const ids = ["map-scroll", "legend", "begrippen-lijst", "branch-chips", "tickets", "missie-list", "progress", "trophy",
+const ids = ["map-scroll", "legend", "begrippen-lijst", "release-badge", "release-badge-label", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert",
   "env-dev", "env-test", "env-live", "env-live-box",
   "start-label", "start-hint", "btn-clear-start"];
@@ -51,7 +51,10 @@ const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.i
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("CI monitoring unavailable"), "vaktermen bevatten CI monitoring unavailable");
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
 
-assert(html.includes('class="release-badge">release: v1.1.0<'), "kaart toont de echte release-badge v1.1.0");
+assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"), "badge haalt releases live op via GitHub API");
+assert(html.includes("RELEASE_FALLBACK") && html.includes("catch (error)"), "badge heeft een netwerkfallback");
+assert(html.includes('id="release-badge-label">release: onbekend</span>'), "badge heeft veilige beginwaarde vóór de API-response");
+assert(html.includes("release-badge.dev") && html.includes("release-badge.test") && html.includes("release-badge.live"), "badge heeft ontwikkel-, test- en livekleur");
 
 assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
 assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
