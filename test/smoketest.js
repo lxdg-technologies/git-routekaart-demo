@@ -55,7 +55,7 @@ assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"
 assert(html.includes("RELEASE_FALLBACK") && html.includes("catch (error)"), "badge heeft een netwerkfallback");
 assert(html.includes('class="release-badge-dev">dev: v0.1.2<'), "badge toont ontwikkelversie v0.1.2");
 assert(html.includes('id="release-badge-label">release: onbekend</span>'), "badge heeft veilige beginwaarde vóór de API-response");
-assert(html.includes("release-badge.live") && html.includes("release-badge.test"), "badge heeft live- en testkleur");
+assert(html.includes("release-badge.dev") && html.includes("release-badge.test") && html.includes("release-badge.live"), "badge heeft ontwikkel-, test- en livekleur");
 
 assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
 assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
