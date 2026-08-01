@@ -329,6 +329,7 @@
       mergeKinds: new Set(),
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
       selectedStart: null,
+      selectedStartAuto: false,
     };
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
@@ -395,6 +396,7 @@
     issue.branch = name;
     S.active = name;
     S.selectedStart = null;
+    S.selectedStartAuto = false;
     let why;
     if (isMainHead) {
       why = "Een branch is een eigen zijspoor: je vertrekt vanaf het laatste station van main en kunt vrij experimenteren zonder dat main (en dus de live-omgeving) er iets van merkt. Dit is je <b>ontwikkelomgeving</b>.";
@@ -478,12 +480,14 @@
   }
   function selectStart(id) {
     S.selectedStart = id;
+    S.selectedStartAuto = false;
     const c = byId(id);
     log(`Startpunt gekozen: commit <code>${id.slice(0, 5)}</code> op <code>${c ? c.branch : "?"}</code>`, "De volgende nieuwe branch vertrekt vanaf hier in plaats van vanaf de huidige kop van main. Maak nu een issue (of gebruik een bestaand open issue) en klik 'Maak branch'.");
     render();
   }
   function clearStart() {
     S.selectedStart = null;
+    S.selectedStartAuto = false;
     log("Startpunt teruggezet naar main", "De volgende nieuwe branch vertrekt weer gewoon vanaf de huidige kop van main.");
     render();
   }
@@ -526,7 +530,7 @@
   function renderStartPicker() {
     if (S.selectedStart) {
       const c = byId(S.selectedStart);
-      el("start-label").textContent = c ? `commit ${c.id.slice(0, 5)} op ${c.branch}` : "onbekend";
+      el("start-label").textContent = c ? `${S.selectedStartAuto ? "automatisch: " : ""}commit ${c.id.slice(0, 5)} op ${c.branch}` : "onbekend";
       el("start-hint").textContent = "";
       el("btn-clear-start").style.display = "inline";
     } else {
@@ -554,7 +558,18 @@
       c.className = "chip" + (S.active === b.name ? " active" : "");
       c.style.color = b.color;
       c.textContent = b.name + (b.merged ? " ✓" : "");
-      c.onclick = () => { S.active = b.name; render(); };
+      c.onclick = () => {
+        S.active = b.name;
+        if (b.name === "main") {
+          S.selectedStart = null;
+          S.selectedStartAuto = false;
+        } else {
+          S.selectedStart = b.head;
+          S.selectedStartAuto = true;
+          log(`Actieve branch gekozen: <code>${b.name}</code>`, "Het startpunt voor een nieuwe branch staat nu automatisch op de laatste commit van deze branch. Klik gerust een ouder station op de kaart aan als je bewust vanaf daar wilt vertakken.");
+        }
+        render();
+      };
       box.appendChild(c);
     });
   }
