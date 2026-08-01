@@ -63,6 +63,14 @@ byIdMap["btn-issue"].onclick();                       // missie 1
 findBtn("Maak branch").onclick();                     // missie 2
 byIdMap["btn-commit"].onclick();                      // commit 1
 byIdMap["btn-commit"].onclick();                      // commit 2 → missie 3
+const autoBranch = __state().active;
+const autoHead = __state().branches[autoBranch].head;
+const autoChip = created.filter(e => e.tag === "button" && e.className.includes("chip") && e.textContent === autoBranch).pop();
+autoChip.onclick();
+assert(__state().selectedStart === autoHead, "actieve branch kiest automatisch zijn laatste commit als startpunt");
+assert(byIdMap["start-label"].textContent.startsWith("automatisch:"), "automatisch startpunt is duidelijk gelabeld");
+byIdMap["btn-clear-start"].onclick();
+assert(__state().selectedStart === null && byIdMap["btn-clear-start"].style.display === "none", "wissen zet automatisch startpunt terug naar main");
 findBtn("Open PR").onclick();                         // missie 4
 findBtn("Merge commit").onclick();                    // missie 5 + release → test
 
