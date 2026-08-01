@@ -75,7 +75,9 @@
   .release-badge.test { border-color: var(--accent); color: var(--accent); }
   .release-badge.live { border-color: var(--ok); color: var(--ok); }
   #begrippen-lijst { display: grid; gap: .45rem; }
-  .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); }
+  .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); transition: border-color .2s, box-shadow .2s; }
+  .term-item.term-focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); animation: term-focus .9s ease-out; }
+  @keyframes term-focus { 0% { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); } 100% { background: var(--panel); } }
   .term-item summary { cursor: pointer; font-weight: 650; color: var(--ink); }
   .term-item summary::marker { color: var(--accent); }
   .term-explanation { margin: .4rem 0 0; color: var(--ink-soft); font-size: .86rem; }
@@ -206,7 +208,7 @@
     </div>
 
     <div class="card" id="begrippen">
-      <h2>Vaktermen</h2>
+      <h2>Git- en workflowbegrippen</h2>
       <p class="col-note">Klik een term open voor een korte uitleg en een voorbeeld uit de workflow.</p>
       <div id="begrippen-lijst"></div>
     </div>
@@ -453,12 +455,25 @@
     return c;
   }
   function renderGlossary() {
-    el("begrippen-lijst").innerHTML = TERMS.map(({ term, explanation, example }) => `
-      <details class="term-item">
+    el("begrippen-lijst").innerHTML = TERMS.map(({ term, explanation, example }) => {
+      const id = `term-${term.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+      return `
+      <details class="term-item" id="${id}" data-term="${term}">
         <summary>${term}</summary>
         <p class="term-explanation">${explanation}</p>
         <p class="term-example"><b>Voorbeeld:</b> ${example}</p>
-      </details>`).join("");
+      </details>`;
+    }).join("");
+  }
+  function focusTerm(term) {
+    const id = `term-${term.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+    const item = document.getElementById(id);
+    if (!item) return;
+    item.open = true;
+    item.classList.remove("term-focus");
+    void item.offsetWidth;
+    item.classList.add("term-focus");
+    item.scrollIntoView({ behavior: "smooth", block: "center" });
   }
   function init() {
     S = freshState();
@@ -764,10 +779,12 @@
         const color = pi === 1 ? branchOf(p).color : (pb.lane === b.lane ? b.color : b.color);
         const faded = c.squashed || p.squashed;
         const dash = faded ? 'stroke-dasharray="3 6" opacity=".45"' : "";
-        if (py === y) edges += `<path d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}/>`;
+        const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch";
+        const lineAttrs = `class="branch-line" role="button" tabindex="0" onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
+        if (py === y) edges += `<path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         else {
           const mid = px + Math.min(40, (x - px) / 2);
-          edges += `<path d="M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}/>`;
+          edges += `<path ${lineAttrs} d="M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         }
       });
     });
@@ -818,6 +835,7 @@
   el("btn-clear-start").onclick = clearStart;
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
+  window.focusTerm = focusTerm;
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   init();
 })();
