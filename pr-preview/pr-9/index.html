@@ -60,8 +60,9 @@
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
   .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
   .release-badge-dev { font-size: .8rem; font-weight: 700; }
+  .release-badge.dev { border-color: var(--warn); color: var(--warn); }
+  .release-badge.test { border-color: var(--accent); color: var(--accent); }
   .release-badge.live { border-color: var(--ok); color: var(--ok); }
-  .release-badge.test { border-color: var(--warn); color: var(--warn); }
   #begrippen-lijst { display: grid; gap: .45rem; }
   .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); }
   .term-item summary { cursor: pointer; font-weight: 650; color: var(--ink); }
@@ -328,12 +329,20 @@
 
   const RELEASE_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/releases/latest";
   const RELEASE_FALLBACK = "v1.1.0";
-  const RELEASE_ENVIRONMENT = typeof location !== "undefined" && location.pathname.includes("/pr-preview/") ? "test" : "live";
+  const RELEASE_ENVIRONMENT = typeof location !== "undefined"
+    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
+      ? "dev"
+      : location.pathname.includes("/pr-preview/") ? "test" : "live")
+    : "dev";
 
   function setupReleaseBadge() {
     const badge = el("release-badge");
     badge.classList.add(RELEASE_ENVIRONMENT);
-    badge.title = RELEASE_ENVIRONMENT === "live" ? "Laatste GitHub-release op live" : "Laatste GitHub-release op test/preview";
+    badge.title = {
+      dev: "Laatste GitHub-release op ontwikkeling",
+      test: "Laatste GitHub-release op test/preview",
+      live: "Laatste GitHub-release op live",
+    }[RELEASE_ENVIRONMENT];
   }
   function setReleaseTag(tag, fromApi) {
     const label = el("release-badge-label");
