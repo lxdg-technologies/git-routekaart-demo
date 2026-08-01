@@ -53,6 +53,7 @@ assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakter
 
 assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"), "badge haalt releases live op via GitHub API");
 assert(html.includes("RELEASE_FALLBACK") && html.includes("catch (error)"), "badge heeft een netwerkfallback");
+assert(html.includes('class="release-badge-dev">dev: v0.1.2<'), "badge toont ontwikkelversie v0.1.2");
 assert(html.includes('id="release-badge-label">release: onbekend</span>'), "badge heeft veilige beginwaarde vóór de API-response");
 assert(html.includes("release-badge.live") && html.includes("release-badge.test"), "badge heeft live- en testkleur");
 
