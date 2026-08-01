@@ -779,7 +779,7 @@
         const color = pi === 1 ? branchOf(p).color : (pb.lane === b.lane ? b.color : b.color);
         const faded = c.squashed || p.squashed;
         const dash = faded ? 'stroke-dasharray="3 6" opacity=".45"' : "";
-        const lineTerm = b.name === "main" ? "Repository" : "Branch";
+        const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch";
         const lineAttrs = `class="branch-line" role="button" tabindex="0" onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
         if (py === y) edges += `<path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         else {
