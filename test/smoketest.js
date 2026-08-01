@@ -50,7 +50,11 @@ const assert = (cond, msg) => {
 const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.includes(txt)).pop();
 
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("CI monitoring unavailable"), "vaktermen bevatten CI monitoring unavailable");
+assert(html.includes("Git- en workflowbegrippen"), "begrippenlijst heeft de nieuwe Git- en workflownaam");
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
+assert(html.includes('const lineTerm = b.name === "main" ? "Repository" : "Branch"'), "branch- en main-lijnen verwijzen naar uitleg");
+assert(html.includes("class=\"branch-line\"") && html.includes("role=\"button\""), "kaartlijnen zijn klikbaar en toegankelijk");
+assert(html.includes("onclick=\"selectStart('${c.id}')\""), "bestaande commit-startpuntklik blijft behouden");
 
 assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"), "badge haalt releases live op via GitHub API");
 assert(html.includes("RELEASE_HISTORY_API_URL") && html.includes("fetch(RELEASE_HISTORY_API_URL"), "badge heeft een releasegeschiedenis-API");
@@ -70,6 +74,7 @@ assert(byIdMap["map-scroll"].innerHTML.includes("🧪🚀"), "kaart toont gecomb
 byIdMap["btn-issue"].onclick();                       // missie 1
 findBtn("Maak branch").onclick();                     // missie 2
 byIdMap["btn-commit"].onclick();                      // commit 1
+assert(byIdMap["map-scroll"].innerHTML.includes("focusTerm('Branch')"), "branch-lijn opent Branch-uitleg");
 byIdMap["btn-commit"].onclick();                      // commit 2 → missie 3
 const autoBranch = __state().active;
 const autoHead = __state().branches[autoBranch].head;
