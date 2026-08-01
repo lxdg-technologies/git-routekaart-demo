@@ -24,7 +24,7 @@ function makeEl(tag) {
   return el;
 }
 const byIdMap = {};
-const ids = ["map-scroll", "legend", "branch-chips", "tickets", "missie-list", "progress", "trophy",
+const ids = ["map-scroll", "legend", "begrippen-lijst", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert",
   "env-dev", "env-test", "env-live", "env-live-box",
   "start-label", "start-hint", "btn-clear-start"];
@@ -47,6 +47,9 @@ const assert = (cond, msg) => {
 };
 // helper: vind de laatst gemaakte dynamische knop met deze tekst
 const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.includes(txt)).pop();
+
+assert(byIdMap["begrippen-lijst"].innerHTML.includes("CI monitoring unavailable"), "vaktermen bevatten CI monitoring unavailable");
+assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
 
 assert(html.includes('class="release-badge">release: v1.1.0<'), "kaart toont de echte release-badge v1.1.0");
 
