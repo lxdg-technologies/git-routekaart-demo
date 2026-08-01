@@ -58,7 +58,19 @@
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: .35rem; }
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
-  .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
+  .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; min-width: 145px; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
+  .release-badge summary { cursor: pointer; list-style: none; text-align: right; }
+  .release-badge summary::-webkit-details-marker { display: none; }
+  .release-badge summary::after { content: "⌄"; margin-left: .35rem; color: currentColor; }
+  .release-badge[open] summary::after { content: "⌃"; }
+  .release-history-panel { position: absolute; right: 0; bottom: calc(100% + .55rem); width: min(270px, calc(100vw - 2rem)); padding: .65rem .75rem; border: 1px solid currentColor; border-radius: 10px; background: var(--panel); box-shadow: 0 8px 22px rgb(0 0 0 / .16); }
+  .release-history-panel h3 { margin: 0 0 .45rem; font: 700 .75rem var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+  .release-current-link { display: block; margin-bottom: .55rem; font-weight: 700; color: currentColor; }
+  .release-history-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+  .release-history-list li { display: grid; gap: .1rem; padding-top: .4rem; border-top: 1px solid var(--line); }
+  .release-history-list a { color: var(--ink); font-weight: 650; }
+  .release-history-list time { color: var(--ink-soft); font-size: .7rem; }
+  .release-history-empty { margin: 0; color: var(--ink-soft); font: .75rem var(--sans); }
   .release-badge.dev { border-color: var(--warn); color: var(--warn); }
   .release-badge.test { border-color: var(--accent); color: var(--accent); }
   .release-badge.live { border-color: var(--ok); color: var(--ok); }
@@ -293,9 +305,16 @@
   </div>
 </div>
 
-<div class="release-badge" id="release-badge" aria-live="polite" title="Laatste GitHub-release wordt opgehaald">
-  <span id="release-badge-label">release: onbekend</span>
-</div>
+<details class="release-badge" id="release-history" aria-live="polite">
+  <summary id="release-badge-label">release: onbekend</summary>
+  <div class="release-history-panel">
+    <h3>Releasegeschiedenis</h3>
+    <a class="release-current-link" id="release-current-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/releases" target="_blank" rel="noreferrer">Bekijk release op GitHub ↗</a>
+    <ul class="release-history-list" id="release-history-list">
+      <li><p class="release-history-empty">Klik opnieuw als de geschiedenis nog wordt opgehaald.</p></li>
+    </ul>
+  </div>
+</details>
 
 <script>
 (() => {
@@ -326,6 +345,7 @@
   ];
 
   const RELEASE_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/releases/latest";
+  const RELEASE_HISTORY_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/releases?per_page=5";
   const RELEASE_FALLBACK = "v1.1.0";
   const RELEASE_ENVIRONMENT = typeof location !== "undefined"
     ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
@@ -334,18 +354,66 @@
     : "dev";
 
   function setupReleaseBadge() {
-    const badge = el("release-badge");
-    badge.classList.add(RELEASE_ENVIRONMENT);
+    const badge = el("release-history");
+    badge.classList.add(`release-badge`, RELEASE_ENVIRONMENT);
     badge.title = {
       dev: "Laatste GitHub-release op ontwikkeling",
       test: "Laatste GitHub-release op test/preview",
       live: "Laatste GitHub-release op live",
     }[RELEASE_ENVIRONMENT];
+    badge.addEventListener("toggle", () => {
+      if (badge.open && badge.dataset.historyLoaded !== "true") loadReleaseHistory();
+    });
   }
-  function setReleaseTag(tag, fromApi) {
+  function setReleaseTag(tag, fromApi, releaseUrl) {
     const label = el("release-badge-label");
+    const link = el("release-current-link");
     label.textContent = `release: ${tag}`;
-    el("release-badge").dataset.source = fromApi ? "github-api" : "fallback";
+    link.textContent = `Bekijk ${tag} op GitHub ↗`;
+    link.href = releaseUrl || `https://github.com/lxdg-technologies/git-routekaart-demo/releases/tag/${encodeURIComponent(tag)}`;
+    el("release-history").dataset.source = fromApi ? "github-api" : "fallback";
+  }
+  function renderReleaseHistory(releases) {
+    const list = el("release-history-list");
+    list.innerHTML = "";
+    if (!releases.length) {
+      const empty = document.createElement("li");
+      empty.innerHTML = '<p class="release-history-empty">Geen eerdere releases gevonden.</p>';
+      list.appendChild(empty);
+      return;
+    }
+    releases.forEach(release => {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      const date = document.createElement("time");
+      link.textContent = release.tag_name || release.name || "release zonder tag";
+      link.href = release.html_url || "https://github.com/lxdg-technologies/git-routekaart-demo/releases";
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      date.dateTime = release.published_at || release.created_at || "";
+      date.textContent = new Date(release.published_at || release.created_at).toLocaleDateString("nl-NL");
+      item.append(link, date);
+      list.appendChild(item);
+    });
+  }
+  async function loadReleaseHistory() {
+    const badge = el("release-history");
+    if (typeof fetch !== "function") {
+      renderReleaseHistory([]);
+      badge.dataset.historyLoaded = "true";
+      return;
+    }
+    try {
+      const response = await fetch(RELEASE_HISTORY_API_URL, { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) throw new Error(`GitHub Releases API: ${response.status}`);
+      const releases = await response.json();
+      if (!Array.isArray(releases)) throw new Error("GitHub-releasegeschiedenis is geen lijst");
+      renderReleaseHistory(releases.slice(0, 5));
+    } catch (error) {
+      renderReleaseHistory([]);
+    } finally {
+      badge.dataset.historyLoaded = "true";
+    }
   }
   async function loadLatestRelease() {
     if (typeof fetch !== "function") {
@@ -357,7 +425,7 @@
       if (!response.ok) throw new Error(`GitHub Releases API: ${response.status}`);
       const release = await response.json();
       if (!release.tag_name) throw new Error("GitHub-release heeft geen tag_name");
-      setReleaseTag(release.tag_name, true);
+      setReleaseTag(release.tag_name, true, release.html_url);
     } catch (error) {
       setReleaseTag(RELEASE_FALLBACK, false);
     }
