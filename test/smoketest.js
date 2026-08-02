@@ -26,7 +26,7 @@ function makeEl(tag) {
 }
 const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "release-history", "release-badge-label", "release-current-link", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
-  "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert",
+  "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version",
   "env-dev", "env-test", "env-live", "env-live-box",
   "start-label", "start-hint", "btn-clear-start"];
 for (const id of ids) byIdMap[id] = makeEl("div");
@@ -117,6 +117,11 @@ assert(byIdMap["env-live"].textContent === "v0.1.1", "live nog onaangeroerd door
 assert(byIdMap["btn-revert"].disabled === true, "revert uitgeschakeld na revert (head is revert-commit)");
 byIdMap["btn-promote"].onclick();
 assert(byIdMap["env-live"].textContent === "v0.1.3", "fix gepromoveerd naar live");
+byIdMap["rollback-version"].value = "1";             // v0.1.1: laatste eerdere live-versie
+byIdMap["btn-rollback"].onclick();
+assert(byIdMap["env-live"].textContent === "v0.1.1", "rollback zet live terug naar een eerdere versie");
+assert(byIdMap["env-test"].textContent === "v0.1.3", "rollback laat test op de nieuwere versie staan");
+assert(__state().env.liveCommit !== __state().env.testCommit, "rollback schuift live terug terwijl test vooruit blijft");
 
 findBtn("Verwijder branch").onclick();                // missie 7
 
@@ -145,7 +150,7 @@ byIdMap["btn-issue"].onclick();
 findBtn("Maak branch").onclick();                     // missie 12 (branch-van-branch)
 assert(__state().branches[__state().active].head === branchXHead, "nieuwe branch vertrekt vanaf de commit op de andere (niet-main) branch");
 
-assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 12 missies voltooid → 100%");
+assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 13 missies voltooid → 100%");
 
 if (failed) { console.error("\n" + failed + " CHECK(S) GEFAALD"); process.exit(1); }
 console.log("\nALLE CHECKS GESLAAGD");
