@@ -54,6 +54,11 @@ assert(html.includes("Git- en workflowbegrippen"), "begrippenlijst heeft de nieu
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
 assert(html.includes('const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch"'), "branch- en main-lijnen verwijzen naar uitleg");
 assert(html.includes("class=\"branch-line\"") && html.includes("role=\"button\""), "kaartlijnen zijn klikbaar en toegankelijk");
+assert(html.includes("branch-line-hit") && html.includes("stroke-width=\"28\""), "branch-lijnen hebben een ruim transparant raakgebied");
+assert(html.includes("station-hit") && html.includes('r=\"22\"'), "commitstations hebben een ruim transparant raakgebied");
+assert(html.includes("branch-line:hover") && html.includes("branch-line:focus-visible"), "branch-lijnen tonen hover- en focusfeedback");
+assert(html.includes("max-width: 700px") && html.includes("html.mobile-layout .release-badge"), "badge loopt op mobiel mee in de paginastroom");
+assert(html.includes("window.innerWidth <= 700 ? 90 : 78"), "kaart spreidt commits ruimer op smalle schermen");
 assert(html.includes("onclick=\"selectStart('${c.id}')\""), "bestaande commit-startpuntklik blijft behouden");
 
 assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"), "badge haalt releases live op via GitHub API");
