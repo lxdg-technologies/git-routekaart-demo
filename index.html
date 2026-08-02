@@ -46,7 +46,22 @@
   header.top h1 .metro { color: var(--main-line); }
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
   .wrap { max-width: 1520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr) 300px 300px; gap: 1rem; align-items: start; }
-  @media (max-width: 1150px) { .wrap { grid-template-columns: 1fr; } }
+  @media (max-width: 1150px) {
+    .wrap { display: flex; flex-direction: column; }
+    .wrap > div { display: contents; }
+    .wrap > div > .card { width: 100%; box-sizing: border-box; }
+    #map-card { order: 1; position: sticky; top: 0; z-index: 5; max-height: 45vh; overflow: auto; background: var(--panel); }
+    #omgevingen { display: contents; }
+    #omgevingen > h2 { order: 2; width: 100%; box-sizing: border-box; margin: 0; padding: .9rem 1rem .35rem; background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+    #omgevingen > .envs { order: 2; width: 100%; box-sizing: border-box; padding: 0 .9rem .9rem; background: var(--panel); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); }
+    .side-b > .card:nth-child(1) { order: 3; }
+    #omgevingen > #btn-promote, #omgevingen > #btn-revert { order: 4; margin-top: 0; }
+    .side-b > .card:nth-child(2) { order: 5; }
+    #missies { order: 6; }
+    #omg-uitleg { order: 7; }
+    #begrippen { order: 8; }
+    #vgl { order: 9; }
+  }
 
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
   .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 .6rem; font-weight: 600; }
