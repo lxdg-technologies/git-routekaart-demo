@@ -78,10 +78,12 @@
   .release-badge.dev { border-color: var(--warn); color: var(--warn); }
   .release-badge.test { border-color: var(--accent); color: var(--accent); }
   .release-badge.live { border-color: var(--ok); color: var(--ok); }
-  @media (max-width: 700px) {
+  @media (max-width: 700px), (max-device-width: 700px) {
     .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
     .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
   }
+  html.mobile-layout .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
+  html.mobile-layout .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
   #begrippen-lijst { display: grid; gap: .45rem; }
   .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); transition: border-color .2s, box-shadow .2s; }
   .term-item.term-focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); animation: term-focus .9s ease-out; }
@@ -329,6 +331,7 @@
 <script>
 (() => {
   "use strict";
+  if (document.documentElement?.classList?.toggle) document.documentElement.classList.toggle("mobile-layout", window.innerWidth <= 700);
   const LANE_COLORS = ["#e07a1f", "#7a3fa0", "#0e8a83", "#c43b3b"];
   const ISSUE_POOL = [
     ["Versienummer in dashboard klopt niet", "fix/versienummer"],
