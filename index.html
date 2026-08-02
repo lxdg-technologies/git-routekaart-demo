@@ -47,6 +47,10 @@
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
   .wrap { max-width: 1520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr) 300px 300px; gap: 1rem; align-items: start; }
   @media (max-width: 1150px) { .wrap { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) {
+    .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
+    .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
+  }
 
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
   .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 .6rem; font-weight: 600; }
@@ -55,6 +59,10 @@
   #map-card { padding: .6rem .6rem .2rem; }
   #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
   #map-scroll svg { display: block; }
+  .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
+  .branch-line:hover, .branch-line:focus-visible { stroke-width: 8px; filter: drop-shadow(0 0 3px currentColor); }
+  .branch-line-hit { cursor: pointer; pointer-events: stroke; }
+  .station-hit { cursor: pointer; }
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: .35rem; }
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
@@ -763,7 +771,7 @@
   }
 
   function renderMap() {
-    const SP = 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
+    const SP = typeof window !== "undefined" && window.innerWidth <= 700 ? 90 : 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
     const lanes = Math.max(2, ...Object.values(S.branches).filter(b => !b.deleted || S.commits.some(c => c.branch === b.name)).map(b => b.lane + 1));
     const W = X0 + S.commits.length * SP + 60, H = Y0 + lanes * LH;
     const laneY = l => Y0 + l * LH - LH / 2 + 10;
@@ -781,10 +789,12 @@
         const dash = faded ? 'stroke-dasharray="3 6" opacity=".45"' : "";
         const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch";
         const lineAttrs = `class="branch-line" role="button" tabindex="0" onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
-        if (py === y) edges += `<path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+        const hitAttrs = `class="branch-line-hit" aria-hidden="true" onclick="focusTerm('${lineTerm}')"`;
+        if (py === y) edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         else {
           const mid = px + Math.min(40, (x - px) / 2);
-          edges += `<path ${lineAttrs} d="M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+          const path = `M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}`;
+          edges += `<path ${hitAttrs} d="${path}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="${path}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         }
       });
     });
@@ -794,6 +804,7 @@
       const isHub = c.kind === "merge";
       const selected = c.id === S.selectedStart;
       stations += `<g ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
+      stations += `<circle class="station-hit" cx="${x}" cy="${y}" r="22" fill="transparent" stroke="none"/>`;
       if (selected) stations += `<circle cx="${x}" cy="${y}" r="${R + 6}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 3"/>`;
       stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 3 : R}" fill="var(--station)" stroke="${b.color}" stroke-width="3"><title>${c.id} — ${c.msg}</title></circle>`;
       if (isHub) stations += `<circle cx="${x}" cy="${y}" r="3.5" fill="${b.color}"/>`;
