@@ -55,7 +55,7 @@
     #omgevingen > h2 { order: 2; width: 100%; box-sizing: border-box; margin: 0; padding: .9rem 1rem .35rem; background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
     #omgevingen > .envs { order: 2; width: 100%; box-sizing: border-box; padding: 0 .9rem .9rem; background: var(--panel); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); }
     .side-b > .card:nth-child(1) { order: 3; }
-    #omgevingen > #btn-promote, #omgevingen > #btn-revert { order: 4; margin-top: 0; }
+    #omgevingen > #btn-promote, #omgevingen > #btn-revert, #omgevingen > #rollback-controls { order: 4; margin-top: 0; }
     .side-b > .card:nth-child(2) { order: 5; }
     #missies { order: 6; }
     #omg-uitleg { order: 7; }
@@ -139,6 +139,11 @@
   button.act:hover:not(:disabled) { border-color: var(--accent); }
   button.act:disabled { opacity: .45; cursor: not-allowed; }
   button.act small { display: block; color: var(--ink-soft); font-size: .78rem; }
+  .rollback-controls { margin-top: .45rem; padding-top: .55rem; border-top: 1px dashed var(--line); }
+  .rollback-controls label { display: block; color: var(--ink-soft); font-size: .78rem; margin-bottom: .25rem; }
+  .rollback-controls select { width: 100%; background: var(--panel); color: var(--ink); border: 1.5px solid var(--line); border-radius: 7px; padding: .38rem .5rem; font: .82rem var(--mono); }
+  .rollback-controls select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rollback-controls small { display: block; margin-top: .3rem; color: var(--ink-soft); font-size: .75rem; }
   button.act.primary { border-color: var(--accent); }
   button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -300,6 +305,11 @@
       </div>
       <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
       <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
+      <div class="rollback-controls" id="rollback-controls">
+        <label for="rollback-version">Terugrollen naar eerdere live-versie</label>
+        <select id="rollback-version" aria-label="Kies eerdere live-versie"></select>
+        <button class="act" id="btn-rollback">↶ Rollback live<small>zet een eerder bewezen versie direct terug</small></button>
+      </div>
     </div>
 
     <div class="card" id="missies">
@@ -514,8 +524,8 @@
     return {
       commits: [], branches: {}, issues: [], prs: [],
       active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
-      missions: [false, false, false, false, false, false, false, false, false, false, false, false],
-      mergeKinds: new Set(),
+      missions: [false, false, false, false, false, false, false, false, false, false, false, false, false],
+      mergeKinds: new Set(), releases: [],
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
       selectedStart: null,
       selectedStartAuto: false,
@@ -558,6 +568,7 @@
     const rel0 = addCommit("main", "release v0.1.0", [S.branches.main.head], "normal");
     S.env.testCommit = rel0.id;
     S.env.liveCommit = rel0.id;
+    S.releases.push({ version: "v0.1.0", commitId: rel0.id });
     S.active = "main";
     renderGlossary();
     setupReleaseBadge();
@@ -632,6 +643,7 @@
     const v = "v0.1." + (++S.relNum);
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
+    S.releases.push({ version: v, commitId: S.env.testCommit });
     log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Elke wijziging op <code>main</code> triggert de CI: die bouwt automatisch een nieuwe versie en rolt hem uit naar de <b>test</b>-omgeving. <b>Live</b> draait nog gewoon ${S.env.live} — gebruikers merken hier niets van, totdat jij bewust promoveert. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
   }
@@ -673,6 +685,15 @@
     log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
     tick(8); render();
   }
+  function rollback() {
+    const targetIndex = Number(el("rollback-version").value);
+    const target = S.releases[targetIndex];
+    if (!target || target.version === S.env.live) return;
+    S.env.live = target.version;
+    S.env.liveCommit = target.commitId;
+    log(`${target.version} teruggezet naar <b>live</b>`, "Je hebt geen nieuwe code geschreven: je zet een versie terug die eerder al bewezen heeft te werken. Daarom is dit direct klaar, terwijl een revert eerst gebouwd en getest moet worden. Bij een kapotte live-omgeving doe je dit eerst, en repareer je daarna pas rustig. <b>Test blijft op de nieuwere versie staan</b>, zodat het werk aan de fix gewoon door kan gaan.");
+    tick(12); render();
+  }
   function revertLast() {
     const head = byId(S.branches.main.head);
     if (!head || (head.kind !== "merge" && head.kind !== "squash")) return;
@@ -710,6 +731,7 @@
     "Draai een merge terug met een <b>revert</b> — ook dát is gewoon een nieuwe versie",
     "Klik een oudere commit op <code>main</code> aan en maak daar een branch vanaf — een \"tijdreis\"",
     "Klik een commit op een niet-gemergde branch aan en maak daar een branch vanaf — een \"branch-van-branch\"",
+    "Zet live terug naar een eerdere versie — en zie dat test gewoon vooruit blijft lopen.",
   ];
   function tick(i) { S.missions[i] = true; }
 
@@ -753,6 +775,13 @@
     el("btn-promote").disabled = !behind;
     const head = byId(S.branches.main.head);
     el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
+    const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
+    const rollbackCandidates = liveIndex > 0 ? S.releases.slice(0, liveIndex) : [];
+    const rollbackSelect = el("rollback-version");
+    rollbackSelect.innerHTML = rollbackCandidates.length
+      ? rollbackCandidates.map((r, i) => `<option value="${S.releases.indexOf(r)}"${i === rollbackCandidates.length - 1 ? " selected" : ""}>${r.version}</option>`).join("")
+      : "<option value=\"\">Geen eerdere versie beschikbaar</option>";
+    el("btn-rollback").disabled = rollbackCandidates.length === 0;
   }
 
   function renderChips() {
@@ -911,6 +940,7 @@
   el("btn-commit").onclick = commit;
   el("btn-promote").onclick = promote;
   el("btn-revert").onclick = revertLast;
+  el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
