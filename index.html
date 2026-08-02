@@ -138,6 +138,8 @@
   }
   button.act:hover:not(:disabled) { border-color: var(--accent); }
   button.act:disabled { opacity: .45; cursor: not-allowed; }
+  .log-term { border: 0; border-bottom: 1px dashed var(--accent); background: transparent; color: var(--accent); padding: 0 .08rem; font: inherit; cursor: pointer; }
+  .log-term:hover, .log-term:focus-visible { background: color-mix(in srgb, var(--accent) 12%, transparent); border-bottom-style: solid; }
   button.act small { display: block; color: var(--ink-soft); font-size: .78rem; }
   .rollback-controls { margin-top: .45rem; padding-top: .55rem; border-top: 1px dashed var(--line); }
   .rollback-controls label { display: block; color: var(--ink-soft); font-size: .78rem; margin-bottom: .25rem; }
@@ -369,19 +371,32 @@
   ];
   const COMMIT_MSGS = ["eerste opzet", "fix review-opmerking", "test toegevoegd", "typo", "wip", "randgeval afgevangen"];
   const TERMS = [
-    { term: "Repository (repo)", explanation: "De gezamenlijke opslagplaats van de code, geschiedenis en werkinstructies.", example: "git-routekaart-demo is de repository voor deze simulatie." },
-    { term: "Commit", explanation: "Een vastgelegde wijziging met een korte beschrijving, zodat je later kunt zien wat er veranderde.", example: "Een commit kan de release-badge of een nieuwe uitleg toevoegen." },
-    { term: "Branch", explanation: "Een tijdelijk zijspoor waarop je veilig aan een wijziging werkt zonder main direct te veranderen.", example: "feat/dcs-152-vaktermen is een branch voor deze woordenlijst." },
-    { term: "Merge", explanation: "Het samenvoegen van een goedgekeurde branch met main.", example: "Na de merge komt de wijziging op main en kan GitHub Pages deployen." },
-    { term: "Pull Request (PR)", explanation: "Een voorstel om een branch te mergen, zodat anderen de wijziging en checks kunnen beoordelen.", example: "PR #6 stelde de release-badge voor en wachtte op menselijke beoordeling." },
-    { term: "Tag", explanation: "Een vast label op één specifieke commit, vaak gebruikt voor een versie.", example: "Tag v1.1.0 markeert de release van de branch-van-commit-feature." },
-    { term: "Release", explanation: "Een uitgebrachte versie met een herkenbare tag en vaak release-notes.", example: "GitHub Release v1.1.0 hoort bij tag v1.1.0." },
-    { term: "Issue", explanation: "Een werkitem met een doel, context en acceptatiepunten.", example: "DCS-152 beschrijft de klikbare woordenlijst met uitleg en voorbeelden." },
-    { term: "Workflow", explanation: "De afgesproken route van werk: issue, branch, commit, PR, checks, review, merge en deploy.", example: "Deze demo maakt die workflow zichtbaar als een metrokaart." },
-    { term: "Deploy / Deployment", explanation: "Het beschikbaar maken van een versie in een omgeving.", example: "Een merge naar main start automatisch de GitHub Pages-deployment." },
-    { term: "CI (Continuous Integration)", explanation: "Automatische controle die wijzigingen bouwt en test zodra ze worden gepusht.", example: "De preview-workflow draait bij een nieuwe PR-commit." },
-    { term: "CI checks", explanation: "De afzonderlijke controles binnen CI, zoals tests, linting of een preview-build.", example: "Een groene preview-check betekent dat de preview-workflow geslaagd is." },
-    { term: "CI monitoring unavailable", explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
+    { term: "Repository (repo)", keywords: ["repository", "repo"], explanation: "De gezamenlijke opslagplaats van de code, geschiedenis en werkinstructies.", example: "git-routekaart-demo is de repository voor deze simulatie." },
+    { term: "Commit", keywords: ["commit"], explanation: "Een vastgelegde wijziging met een korte beschrijving, zodat je later kunt zien wat er veranderde.", example: "Een commit kan de release-badge of een nieuwe uitleg toevoegen." },
+    { term: "Branch", keywords: ["branch", "branches"], explanation: "Een tijdelijk zijspoor waarop je veilig aan een wijziging werkt zonder main direct te veranderen.", example: "feat/dcs-152-vaktermen is een branch voor deze woordenlijst." },
+    { term: "Merge", keywords: ["merge"], explanation: "Het samenvoegen van een goedgekeurde branch met main.", example: "Na de merge komt de wijziging op main en kan GitHub Pages deployen." },
+    { term: "Pull Request (PR)", keywords: ["pull request", "PR"], explanation: "Een voorstel om een branch te mergen, zodat anderen de wijziging en checks kunnen beoordelen.", example: "PR #6 stelde de release-badge voor en wachtte op menselijke beoordeling." },
+    { term: "Tag", keywords: ["tag"], explanation: "Een vast label op één specifieke commit, vaak gebruikt voor een versie.", example: "Tag v1.1.0 markeert de release van de branch-van-commit-feature." },
+    { term: "Release", keywords: ["release"], explanation: "Een uitgebrachte versie met een herkenbare tag en vaak release-notes. In deze kaart is een release gekoppeld aan het station waar een pakketje van die commit is gebouwd en uitgerold; niet elke commit is dus een versie.", example: "Release v1.1.0 hoort bij één release-station op main; de andere commits zijn wel geschiedenis maar geen rollback-doel." },
+    { term: "Issue", keywords: ["issue"], explanation: "Een werkitem met een doel, context en acceptatiepunten.", example: "DCS-152 beschrijft de klikbare woordenlijst met uitleg en voorbeelden." },
+    { term: "Workflow", keywords: ["workflow"], explanation: "De afgesproken route van werk: issue, branch, commit, PR, checks, review, merge en deploy.", example: "Deze demo maakt die workflow zichtbaar als een metrokaart." },
+    { term: "Deploy / Deployment", keywords: ["deployment", "deploy"], explanation: "Het beschikbaar maken van een versie in een omgeving.", example: "Een merge naar main start automatisch de GitHub Pages-deployment." },
+    { term: "CI (Continuous Integration)", keywords: ["continuous integration", "CI"], explanation: "Automatische controle die wijzigingen bouwt en test zodra ze worden gepusht.", example: "De preview-workflow draait bij een nieuwe PR-commit." },
+    { term: "CI checks", keywords: ["CI checks", "CI-checks"], explanation: "De afzonderlijke controles binnen CI, zoals tests, linting of een preview-build.", example: "Een groene preview-check betekent dat de preview-workflow geslaagd is." },
+    { term: "CI monitoring unavailable", keywords: ["CI monitoring unavailable"], explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
+    { term: "Review / reviewer / review-aanvraag", keywords: ["review-aanvraag", "reviewer", "review"], explanation: "Een review is de beoordeling van een PR; een reviewer moet expliciet als beoordelaar worden aangevraagd. Reviews is de wachtrij met PR's die op beoordeling wachten, niet hetzelfde als de werkitemstatus In Review.", example: "Vraag DCS-Rob aan als reviewer; daarna verschijnt de PR in diens Reviews-lijst." },
+    { term: "Reviews versus In Review", keywords: ["In Review", "Reviews"], explanation: "Reviews is de plek waar pull requests op jouw beoordeling wachten. In Review is alleen de status van een Linear-issue — de twee lijken op elkaar maar betekenen iets anders.", example: "DCS-171 kan In Review staan terwijl PR #16 in Robs Reviews-lijst wacht." },
+    { term: "Approve / Request changes", keywords: ["Request changes", "Approve"], explanation: "Approve keurt een PR goed; Request changes vraagt om aanpassingen voordat hij gemerged kan worden.", example: "Een reviewer kiest Approve als de checks en code kloppen, of Request changes bij een probleem." },
+    { term: "Draft PR", keywords: ["Draft PR", "draft pull request"], explanation: "Een PR die nog niet klaar is om formeel beoordeeld te worden.", example: "Gebruik Draft PR terwijl de implementatie nog niet klaar is voor DCS-Rob." },
+    { term: "Semver (major / minor / patch)", keywords: ["semver", "major", "minor", "patch"], explanation: "Semver is versionering volgens major.minor.patch: major voor brekende wijzigingen, minor voor nieuwe compatibele functionaliteit en patch voor compatibele fixes.", example: "Een bugfix kan v1.2.3 naar v1.2.4 brengen; nieuwe compatibele functionaliteit naar v1.3.0." },
+    { term: "Pre-release (alpha / beta / rc)", keywords: ["pre-release", "alpha", "beta", "rc"], explanation: "Een pre-release is een versie vóór de stabiele release. Alpha is vroeg, beta is breder testbaar en rc (release candidate) is bijna definitief.", example: "v1.2.0-beta.1 is testbaar, maar nog geen stabiele v1.2.0." },
+    { term: "Rollback versus revert", keywords: ["rollback", "revert"], explanation: "Een rollback zet een eerder gebouwd en bewezen pakket direct terug; een revert maakt een nieuwe commit die een wijziging omkeert en opnieuw gebouwd en getest moet worden.", example: "Zet live terug naar v0.1.1 met rollback; gebruik revert om een merge structureel uit main terug te draaien." },
+    { term: "HEAD", keywords: ["HEAD"], explanation: "HEAD is de huidige kop: de commit waar een branch of checkout op staat.", example: "main ◀ HEAD betekent dat deze commit nu de kop van main is." },
+    { term: "Squash & merge versus merge commit", keywords: ["Squash & merge", "merge commit"], explanation: "Squash & merge maakt één nieuwe commit van alle branch-commits; een merge commit voegt de branch samen en bewaart alle tussenstations met twee ouders.", example: "Kies squash voor een rustige main-lijn of merge commit als je de volledige branchhistorie wilt bewaren." },
+    { term: "Merge conflict", keywords: ["merge conflict"], explanation: "Een merge conflict ontstaat als twee wijzigingen niet automatisch samen te voegen zijn en iemand handmatig moet kiezen welke code blijft.", example: "Los de conflictmarkeringen op, test de uitkomst en maak daarna de merge af." },
+    { term: "PR-preview", keywords: ["PR-preview", "preview"], explanation: "Een tijdelijke website die de versie van één pull request laat zien voordat die naar main gaat.", example: "Open de PR-preview om DCS-171 op mobiel te controleren vóór de merge." },
+    { term: "Webhook", keywords: ["webhook"], explanation: "Een automatisch HTTP-seintje waarmee het ene systeem een ander systeem informeert dat er iets gebeurde.", example: "Een GitHub-webhook kan Linear waarschuwen dat een PR is geopend." },
+    { term: "Scope (rechten)", keywords: ["scope", "rechten"], explanation: "Een scope bepaalt welke acties een token of geautomatiseerde gebruiker mag uitvoeren.", example: "Zonder workflow-scope kan een agent broncode wel pushen maar workflowbestanden niet wijzigen." },
   ];
 
   const VERSION_FILE_URL = "version.json";
@@ -736,10 +751,34 @@
   ];
   function tick(i) { S.missions[i] = true; }
 
+  function decorateLogTerms(html, seen = new Set()) {
+    const patterns = TERMS.flatMap(({ term, keywords }) => (keywords || [term]).map(keyword => ({ term, keyword })))
+      .sort((a, b) => b.keyword.length - a.keyword.length);
+    const placeholders = [];
+    const escaped = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const decorated = html.split(/(<[^>]*>)/g).map(part => {
+      if (part.startsWith("<")) return part;
+      let text = part;
+      patterns.forEach(({ term, keyword }) => {
+        if (seen.has(term)) return;
+        const pattern = new RegExp(`(^|[^\\p{L}\\p{N}])(${escaped(keyword)})(?=$|[^\\p{L}\\p{N}])`, "iu");
+        const match = text.match(pattern);
+        if (!match) return;
+        const token = `__LOG_TERM_${placeholders.length}__`;
+        text = text.replace(pattern, `$1${token}`);
+        placeholders.push(`<button type="button" class="log-term" onclick="focusTerm('${term.replace(/'/g, "\\\\'")}')">${match[2]}</button>`);
+        seen.add(term);
+      });
+      return text;
+    }).join("");
+    return decorated.replace(/__LOG_TERM_(\d+)__/g, (_, index) => placeholders[Number(index)]);
+  }
+
   function log(title, why) {
     const d = document.createElement("div");
     d.className = "log-entry";
-    d.innerHTML = `<b>${title}</b><span class="why">${why}</span>`;
+    const seen = new Set();
+    d.innerHTML = `<b>${decorateLogTerms(title, seen)}</b><span class="why">${decorateLogTerms(why, seen)}</span>`;
     el("log").prepend(d);
   }
 

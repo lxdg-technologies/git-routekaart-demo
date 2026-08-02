@@ -52,6 +52,8 @@ const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.i
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("CI monitoring unavailable"), "vaktermen bevatten CI monitoring unavailable");
 assert(html.includes("Git- en workflowbegrippen"), "begrippenlijst heeft de nieuwe Git- en workflownaam");
 assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
+assert((byIdMap["begrippen-lijst"].innerHTML.match(/<details class="term-item"/g) || []).length === 26, "begrippenlijst bevat precies 26 termen");
+assert(byIdMap["begrippen-lijst"].innerHTML.includes("Review / reviewer / review-aanvraag") && byIdMap["begrippen-lijst"].innerHTML.includes("Scope (rechten)"), "nieuwe review- en scope-termen zijn zichtbaar");
 assert(html.includes('const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch"'), "branch- en main-lijnen verwijzen naar uitleg");
 assert(html.includes("class=\"branch-line\"") && html.includes("role=\"button\""), "kaartlijnen zijn klikbaar en toegankelijk");
 assert(html.includes("branch-line-hit") && html.includes("stroke-width=\"28\""), "branch-lijnen hebben een ruim transparant raakgebied");
