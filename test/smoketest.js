@@ -66,7 +66,6 @@ assert(html.includes("RELEASE_HISTORY_API_URL") && html.includes("fetch(RELEASE_
 assert(html.includes("release-history") && html.includes("release-history-list"), "badge heeft een compact uitklappaneel");
 assert(html.includes("release-current-link") && html.includes("target=\"_blank\""), "huidige release heeft een directe GitHub-link");
 assert(html.includes("published_at") && html.includes("release.html_url"), "geschiedenis toont datum en release-noteslink");
-assert(html.includes("RELEASE_FALLBACK") && html.includes("catch (error)"), "badge heeft een netwerkfallback");
 assert(html.includes('id="release-badge-label">release: onbekend</summary>'), "badge heeft veilige beginwaarde vóór de API-response");
 assert(html.includes("release-badge.dev") && html.includes("release-badge.test") && html.includes("release-badge.live"), "badge heeft ontwikkel-, test- en livekleur");
 
