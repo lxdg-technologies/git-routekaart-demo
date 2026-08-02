@@ -85,6 +85,7 @@
   .release-history-panel { position: absolute; right: 0; bottom: calc(100% + .55rem); width: min(270px, calc(100vw - 2rem)); padding: .65rem .75rem; border: 1px solid currentColor; border-radius: 10px; background: var(--panel); box-shadow: 0 8px 22px rgb(0 0 0 / .16); }
   .release-history-panel h3 { margin: 0 0 .45rem; font: 700 .75rem var(--mono); text-transform: uppercase; letter-spacing: .04em; }
   .release-current-link { display: block; margin-bottom: .55rem; font-weight: 700; color: currentColor; }
+  .release-build-note { margin: 0 0 .55rem; color: var(--ink-soft); font: .72rem var(--sans); }
   .release-history-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
   .release-history-list li { display: grid; gap: .1rem; padding-top: .4rem; border-top: 1px solid var(--line); }
   .release-history-list a { color: var(--ink); font-weight: 650; }
@@ -337,6 +338,7 @@
   <div class="release-history-panel">
     <h3>Releasegeschiedenis</h3>
     <a class="release-current-link" id="release-current-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/releases" target="_blank" rel="noreferrer">Bekijk release op GitHub ↗</a>
+    <p class="release-build-note" id="release-build-note"></p>
     <ul class="release-history-list" id="release-history-list">
       <li><p class="release-history-empty">Klik opnieuw als de geschiedenis nog wordt opgehaald.</p></li>
     </ul>
@@ -372,9 +374,10 @@
     { term: "CI monitoring unavailable", explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
   ];
 
+  const VERSION_FILE_URL = "version.json";
   const RELEASE_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/releases/latest";
+  const RELEASE_COMPARE_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/compare/";
   const RELEASE_HISTORY_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/releases?per_page=5";
-  const RELEASE_FALLBACK = "v1.1.0";
   const RELEASE_ENVIRONMENT = typeof location !== "undefined"
     ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
       ? "dev"
@@ -393,13 +396,22 @@
       if (badge.open && badge.dataset.historyLoaded !== "true") loadReleaseHistory();
     });
   }
-  function setReleaseTag(tag, fromApi, releaseUrl) {
+  function formatBuild(build) {
+    const parts = [build.version || "versie onbekend"];
+    if (Number.isInteger(build.commitsAhead) && build.commitsAhead > 0) parts.push(`+${build.commitsAhead}`);
+    if (build.sha) parts.push(`· ${String(build.sha).slice(0, 7)}`);
+    return parts.join(" ");
+  }
+  function setReleaseBuild(build, source, noteText, releaseUrl) {
     const label = el("release-badge-label");
     const link = el("release-current-link");
-    label.textContent = `release: ${tag}`;
-    link.textContent = `Bekijk ${tag} op GitHub ↗`;
-    link.href = releaseUrl || `https://github.com/lxdg-technologies/git-routekaart-demo/releases/tag/${encodeURIComponent(tag)}`;
-    el("release-history").dataset.source = fromApi ? "github-api" : "fallback";
+    const buildLabel = formatBuild(build);
+    label.textContent = `release: ${buildLabel}`;
+    link.textContent = `Bekijk ${build.version || "release"} op GitHub ↗`;
+    link.href = releaseUrl || `https://github.com/lxdg-technologies/git-routekaart-demo/releases/tag/${encodeURIComponent(build.version || "")}`;
+    const note = el("release-build-note");
+    if (note) note.textContent = noteText;
+    el("release-history").dataset.source = source;
   }
   function renderReleaseHistory(releases) {
     const list = el("release-history-list");
@@ -443,19 +455,57 @@
       badge.dataset.historyLoaded = "true";
     }
   }
+  async function loadVersionFile() {
+    if (typeof fetch !== "function") return { status: "unavailable" };
+    try {
+      const response = await fetch(VERSION_FILE_URL, { cache: "no-store" });
+      if (response.status === 404) return { status: "missing" };
+      if (!response.ok) return { status: "unavailable" };
+      const data = await response.json();
+      if (!data || typeof data.version !== "string" || !data.version.trim()) return { status: "invalid" };
+      return {
+        status: "ready",
+        build: {
+          version: data.version.trim(),
+          commitsAhead: Number.isInteger(data.commitsAhead) ? data.commitsAhead : null,
+          sha: typeof data.sha === "string" && data.sha.trim() ? data.sha.trim() : null,
+        },
+      };
+    } catch (error) {
+      return { status: "unavailable" };
+    }
+  }
   async function loadLatestRelease() {
+    const stamped = await loadVersionFile();
+    if (stamped.status === "ready") {
+      setReleaseBuild(stamped.build, "version-file", "Deze badge is gestempeld bij de deploy en beschrijft exact de build op deze pagina.", stamped.build.version && `https://github.com/lxdg-technologies/git-routekaart-demo/releases/tag/${encodeURIComponent(stamped.build.version)}`);
+      return;
+    }
+    if (stamped.status === "invalid") {
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Het version.json-bestand is ongeldig; de build kan niet betrouwbaar worden geïdentificeerd.");
+      return;
+    }
     if (typeof fetch !== "function") {
-      setReleaseTag(RELEASE_FALLBACK, false);
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Buildinformatie is niet beschikbaar.");
       return;
     }
     try {
-      const response = await fetch(RELEASE_API_URL, { headers: { Accept: "application/vnd.github+json" } });
-      if (!response.ok) throw new Error(`GitHub Releases API: ${response.status}`);
-      const release = await response.json();
+      const latestResponse = await fetch(RELEASE_API_URL, { headers: { Accept: "application/vnd.github+json" } });
+      if (!latestResponse.ok) throw new Error(`GitHub Releases API: ${latestResponse.status}`);
+      const release = await latestResponse.json();
       if (!release.tag_name) throw new Error("GitHub-release heeft geen tag_name");
-      setReleaseTag(release.tag_name, true, release.html_url);
+      const compareResponse = await fetch(`${RELEASE_COMPARE_API_URL}${encodeURIComponent(`${release.tag_name}...main`)}`, { headers: { Accept: "application/vnd.github+json" } });
+      if (!compareResponse.ok) throw new Error(`GitHub Compare API: ${compareResponse.status}`);
+      const comparison = await compareResponse.json();
+      if (!Number.isInteger(comparison.ahead_by)) throw new Error("GitHub-compare heeft geen ahead_by");
+      setReleaseBuild(
+        { version: release.tag_name, commitsAhead: comparison.ahead_by },
+        "github-api",
+        `Dit is de nieuwste GitHub-release. De pagina kan nieuwer zijn (+${comparison.ahead_by} commits op main).`,
+        release.html_url,
+      );
     } catch (error) {
-      setReleaseTag(RELEASE_FALLBACK, false);
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "De buildinformatie kon niet betrouwbaar worden opgehaald.");
     }
   }
 
