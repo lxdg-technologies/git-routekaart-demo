@@ -51,7 +51,7 @@
     .wrap > div { display: contents; }
     .wrap > div > .card { width: 100%; box-sizing: border-box; }
     #map-card { order: 1; position: sticky; top: 0; z-index: 5; max-height: 45vh; overflow: auto; background: var(--panel); }
-    #omgevingen { display: contents; }
+    #omgevingen { display: contents; order: 2; }
     #omgevingen > h2 { order: 2; width: 100%; box-sizing: border-box; margin: 0; padding: .9rem 1rem .35rem; background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
     #omgevingen > .envs { order: 2; width: 100%; box-sizing: border-box; padding: 0 .9rem .9rem; background: var(--panel); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); }
     .side-b > .card:nth-child(1) { order: 3; }
@@ -525,7 +525,7 @@
       commits: [], branches: {}, issues: [], prs: [],
       active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
       missions: [false, false, false, false, false, false, false, false, false, false, false, false, false],
-      mergeKinds: new Set(), releases: [],
+      mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
       selectedStart: null,
       selectedStartAuto: false,
@@ -644,7 +644,7 @@
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
     S.releases.push({ version: v, commitId: S.env.testCommit });
-    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Elke wijziging op <code>main</code> triggert de CI: die bouwt automatisch een nieuwe versie en rolt hem uit naar de <b>test</b>-omgeving. <b>Live</b> draait nog gewoon ${S.env.live} — gebruikers merken hier niets van, totdat jij bewust promoveert. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
+    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Deze merge-commit levert versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
   }
   function doMerge(pr, squash) {
@@ -691,6 +691,7 @@
     if (!target || target.version === S.env.live) return;
     S.env.live = target.version;
     S.env.liveCommit = target.commitId;
+    S.rollbackPreviewCommit = target.commitId;
     log(`${target.version} teruggezet naar <b>live</b>`, "Je hebt geen nieuwe code geschreven: je zet een versie terug die eerder al bewezen heeft te werken. Daarom is dit direct klaar, terwijl een revert eerst gebouwd en getest moet worden. Bij een kapotte live-omgeving doe je dit eerst, en repareer je daarna pas rustig. <b>Test blijft op de nieuwere versie staan</b>, zodat het werk aan de fix gewoon door kan gaan.");
     tick(12); render();
   }
@@ -778,9 +779,16 @@
     const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
     const rollbackCandidates = liveIndex > 0 ? S.releases.slice(0, liveIndex) : [];
     const rollbackSelect = el("rollback-version");
+    const previewIndex = rollbackCandidates.findIndex(r => r.commitId === S.rollbackPreviewCommit);
+    const selectedCandidateIndex = previewIndex >= 0 ? previewIndex : rollbackCandidates.length - 1;
     rollbackSelect.innerHTML = rollbackCandidates.length
-      ? rollbackCandidates.map((r, i) => `<option value="${S.releases.indexOf(r)}"${i === rollbackCandidates.length - 1 ? " selected" : ""}>${r.version}</option>`).join("")
+      ? rollbackCandidates.map((r, i) => `<option value="${S.releases.indexOf(r)}"${i === selectedCandidateIndex ? " selected" : ""}>${r.version}</option>`).join("")
       : "<option value=\"\">Geen eerdere versie beschikbaar</option>";
+    rollbackSelect.onchange = () => {
+      const target = S.releases[Number(rollbackSelect.value)];
+      S.rollbackPreviewCommit = target ? target.commitId : null;
+      render();
+    };
     el("btn-rollback").disabled = rollbackCandidates.length === 0;
   }
 
@@ -875,6 +883,7 @@
     const cx = c => X0 + c.x * SP;
     const branchOf = c => S.branches[c.branch];
     let edges = "", stations = "", labels = "", flags = "";
+    const releaseByCommit = new Map(S.releases.map(release => [release.commitId, release]));
 
     S.commits.forEach(c => {
       const b = branchOf(c), y = laneY(b.lane), x = cx(c);
@@ -900,8 +909,12 @@
       const fade = c.squashed ? 'opacity=".4"' : "";
       const isHub = c.kind === "merge";
       const selected = c.id === S.selectedStart;
+      const release = c.branch === "main" ? releaseByCommit.get(c.id) : null;
+      const rollbackPreview = c.id === S.rollbackPreviewCommit;
       stations += `<g ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
       stations += `<circle class="station-hit" cx="${x}" cy="${y}" r="22" fill="transparent" stroke="none"/>`;
+      if (release) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 7 : R + 5}" fill="none" stroke="var(--ok)" stroke-width="2"><title>release station ${release.version}</title></circle>`;
+      if (rollbackPreview) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 11 : R + 9}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 3"><title>terugrol naar ${release ? release.version : "dit station"}</title></circle>`;
       if (selected) stations += `<circle cx="${x}" cy="${y}" r="${R + 6}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 3"/>`;
       stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 3 : R}" fill="var(--station)" stroke="${b.color}" stroke-width="3"><title>${c.id} — ${c.msg}</title></circle>`;
       if (isHub) stations += `<circle cx="${x}" cy="${y}" r="3.5" fill="${b.color}"/>`;
@@ -909,6 +922,7 @@
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
       stations += `</g>`;
       labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade}>${c.id.slice(0, 5)}</text>`;
+      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700" style="font-family:var(--mono)" ${fade}>${release.version}</text>`;
     });
     // branch-naambordjes + HEAD
     Object.values(S.branches).forEach(b => {
@@ -933,7 +947,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;

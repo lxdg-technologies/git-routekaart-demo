@@ -74,6 +74,7 @@ assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
 assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld (test == live)");
 assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld (geen merge op main)");
 assert(byIdMap["map-scroll"].innerHTML.includes("🧪🚀"), "kaart toont gecombineerde vlag bij de start (test == live)");
+assert(byIdMap["map-scroll"].innerHTML.includes("v0.1.0") && byIdMap["map-scroll"].innerHTML.includes("release station v0.1.0"), "startstation toont versielabel en release-markering");
 
 byIdMap["btn-issue"].onclick();                       // missie 1
 findBtn("Maak branch").onclick();                     // missie 2
@@ -93,6 +94,7 @@ findBtn("Merge commit").onclick();                    // missie 5 + release → 
 
 assert(byIdMap["env-test"].textContent === "v0.1.1", "na merge staat test op v0.1.1");
 assert(byIdMap["env-live"].textContent === "v0.1.0", "live blijft op v0.1.0 na merge");
+assert(byIdMap["map-scroll"].innerHTML.includes("v0.1.1") && byIdMap["map-scroll"].innerHTML.includes("release station v0.1.1"), "nieuwe release krijgt stationlabel op de kaart");
 assert(byIdMap["btn-promote"].disabled === false, "promote is nu beschikbaar");
 assert(byIdMap["btn-revert"].disabled === false, "revert is nu beschikbaar");
 assert(!byIdMap["map-scroll"].innerHTML.includes("🧪🚀") && byIdMap["map-scroll"].innerHTML.includes("🧪") && byIdMap["map-scroll"].innerHTML.includes("🚀"), "kaart toont losse test- en live-vlag na merge (nog niet gepromoveerd)");
@@ -118,6 +120,8 @@ assert(byIdMap["btn-revert"].disabled === true, "revert uitgeschakeld na revert 
 byIdMap["btn-promote"].onclick();
 assert(byIdMap["env-live"].textContent === "v0.1.3", "fix gepromoveerd naar live");
 byIdMap["rollback-version"].value = "1";             // v0.1.1: laatste eerdere live-versie
+byIdMap["rollback-version"].onchange();
+assert(byIdMap["map-scroll"].innerHTML.includes("terugrol naar v0.1.1"), "gekozen rollback-versie licht het juiste station op");
 byIdMap["btn-rollback"].onclick();
 assert(byIdMap["env-live"].textContent === "v0.1.1", "rollback zet live terug naar een eerdere versie");
 assert(byIdMap["env-test"].textContent === "v0.1.3", "rollback laat test op de nieuwere versie staan");
