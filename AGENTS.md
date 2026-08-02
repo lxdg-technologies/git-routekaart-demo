@@ -63,7 +63,7 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 
 1. Branch vanaf `main` (`feat/...` of `fix/...`) — nooit direct op `main` committen.
 2. Pas `index.html` aan; werk zo nodig `test/smoketest.js` mee bij.
-3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe.
+3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe. **Een nieuwe assert controleert gedrag of een uiteindelijk DOM-resultaat, nooit de letterlijke inhoud van het `<script>`-blok.**
 4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken in de preview"-regel**, bijv. "Klik X aan, kijk of Y verschijnt" — de automatische preview-link (zie hieronder) toont alleen dát er iets is, niet wát. Zonder die regel is een kale link net zo onduidelijk als geen link.
 5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Onthoud: merge = binnen een minuut live op de Pages-URL.
 

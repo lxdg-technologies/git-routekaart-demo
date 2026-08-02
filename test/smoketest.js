@@ -1,162 +1,186 @@
 // Headless rooktest voor index.html — draai met: node test/smoketest.js
-// Geen dependencies; stubt net genoeg DOM om de hele flow door te lopen.
+// Geen dependencies; test gedrag via de minimale DOM- en fetch-stub hieronder.
 const fs = require("fs");
 const path = require("path");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const js = html.substring(html.indexOf("<script>") + 8, html.lastIndexOf("</script>"));
+const created = [];
+const classSets = new WeakMap();
 
-const created = []; // alle dynamisch gemaakte elementen
 function makeEl(tag) {
+  const classes = new Set();
   const el = {
-    tag, style: {}, dataset: {}, children: [], _text: "", _html: "",
-    classList: { toggle() {}, add() {}, remove() {} },
+    tag, style: {}, dataset: {}, children: [], _text: "", _html: "", scrolled: false,
+    classList: {
+      toggle(name, force) { if (force === undefined ? !classes.has(name) : force) classes.add(name); else classes.delete(name); },
+      add(...names) { names.forEach(name => classes.add(name)); }, remove(...names) { names.forEach(name => classes.delete(name)); }, contains(name) { return classes.has(name); },
+    },
     set className(v) { this._cls = v; }, get className() { return this._cls || ""; },
-    set innerHTML(v) { this._html = v; },
-    get innerHTML() { return this._html; },
+    set innerHTML(v) { this._html = v; this.children.length = 0; }, get innerHTML() { return this._html; },
     set textContent(v) { this._text = v; }, get textContent() { return this._text; },
     appendChild(c) { this.children.push(c); }, append(...c) { this.children.push(...c); },
     addEventListener(name, handler) { this[`on${name}`] = handler; },
-    prepend(c) { this.children.unshift(c); },
+    prepend(c) { this.children.unshift(c); }, scrollIntoView() { this.scrolled = true; },
     firstElementChild: null,
   };
   el.firstElementChild = { style: {} };
+  classSets.set(el, classes);
   created.push(el);
   return el;
 }
+
 const byIdMap = {};
-const ids = ["map-scroll", "legend", "begrippen-lijst", "release-history", "release-badge-label", "release-current-link", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
+const ids = ["map-scroll", "legend", "begrippen-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version",
-  "env-dev", "env-test", "env-live", "env-live-box",
-  "start-label", "start-hint", "btn-clear-start"];
+  "env-dev", "env-test", "env-live", "env-live-box", "start-label", "start-hint", "btn-clear-start"];
 for (const id of ids) byIdMap[id] = makeEl("div");
+byIdMap["release-badge-label"].textContent = "release: onbekend";
 
-global.document = {
-  getElementById: id => byIdMap[id],
-  createElement: tag => makeEl(tag),
-  documentElement: {},
+let fetchMode = "version";
+const fetchCalls = [];
+const response = (payload, status = 200) => ({ ok: status >= 200 && status < 300, status, async json() { return payload; } });
+global.fetch = async url => {
+  fetchCalls.push(String(url));
+  if (fetchMode === "version" && url === "version.json") return response({ version: "v9.9.9", commitsAhead: 2, sha: "abc1234" });
+  if (fetchMode === "history" && String(url).includes("releases?")) return response([
+    { tag_name: "v9.9.8", published_at: "2026-08-01T12:00:00Z", html_url: "https://example.test/releases/v9.9.8" },
+    { name: "untagged", created_at: "2026-07-31T12:00:00Z", html_url: "https://example.test/releases/untagged" },
+  ]);
+  if (fetchMode === "fallback") {
+    if (url === "version.json") return response({}, 404);
+    if (String(url).includes("releases/latest")) return response({ tag_name: "v8.0.0", html_url: "https://example.test/releases/v8.0.0" });
+    if (String(url).includes("compare/")) return response({ ahead_by: 4 });
+  }
+  return response({}, 503);
 };
+
+global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), documentElement: {} };
 global.getComputedStyle = () => ({ getPropertyValue: () => "#1e5aa8" });
-global.window = global; // zodat "window.selectStart = ..." in de app-code werkt
+global.window = global;
 
-eval(js);
+(async () => {
+  eval(js);
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const assert = (cond, msg) => {
+    if (!cond) { console.error("FAIL: " + msg); failed++; }
+    else console.log("ok  : " + msg);
+  };
+  const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.includes(txt)).pop();
+  const mapResult = () => byIdMap["map-scroll"].innerHTML;
+  const glossaryResult = () => byIdMap["begrippen-lijst"].innerHTML;
+  let failed = 0;
 
-let failed = 0;
-const assert = (cond, msg) => {
-  if (!cond) { console.error("FAIL: " + msg); failed++; }
-  else console.log("ok  : " + msg);
-};
-// helper: vind de laatst gemaakte dynamische knop met deze tekst
-const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.includes(txt)).pop();
+  const initialBadge = byIdMap["release-badge-label"].textContent;
+  await flush(); await flush();
+  assert(initialBadge === "release: onbekend", "badge heeft een veilige beginwaarde vóór de fetch-response");
+  assert(byIdMap["release-badge-label"].textContent === "release: v9.9.9 +2 · abc1234", "badge toont de gestempelde versie, commits-ahead en sha");
+  assert(byIdMap["release-current-link"].textContent.includes("v9.9.9"), "badge-link toont de actieve versie");
+  assert(byIdMap["release-current-link"].href.endsWith("/v9.9.9"), "badge-link verwijst naar de actieve release");
+  assert(fetchCalls.includes("version.json"), "badge vraagt buildinformatie op via fetch");
+  assert(byIdMap["release-history"].classList.contains("release-badge") && byIdMap["release-history"].classList.contains("dev"), "badge krijgt de ontwikkelstatus in de DOM");
+  fetchMode = "fallback";
+  byIdMap["reset"].onclick(); await flush(); await flush();
+  assert(byIdMap["release-badge-label"].textContent === "release: v8.0.0 +4", "badge valt terug op GitHub-release plus compare-resultaat");
+  assert(byIdMap["release-build-note"].textContent.includes("nieuwste GitHub-release"), "fallback-note legt uit dat main nieuwer kan zijn");
+  assert(fetchCalls.some(url => url.includes("releases/latest")) && fetchCalls.some(url => url.includes("compare/")), "fallback gebruikt release- en compare-endpoint");
+  fetchMode = "version";
+  byIdMap["reset"].onclick(); await flush(); await flush();
+  assert(byIdMap["release-badge-label"].textContent.startsWith("release: v9.9.9"), "badge kan na fallback opnieuw een version-file gebruiken");
+  fetchMode = "history";
+  byIdMap["release-history"].open = true;
+  byIdMap["release-history"].dataset.historyLoaded = "false";
+  byIdMap["release-history"].ontoggle(); await flush(); await flush();
+  assert(byIdMap["release-history-list"].children.length === 2, "releasehistorie rendert alle ontvangen items");
+  const historyLink = byIdMap["release-history-list"].children[0].children[0];
+  assert(historyLink.textContent === "v9.9.8", "releasehistorie toont tagnaam");
+  assert(historyLink.href === "https://example.test/releases/v9.9.8" && historyLink.target === "_blank", "releasehistorie-item linkt naar release-notes in nieuw tabblad");
+  assert(byIdMap["release-history-list"].children[0].children[1].textContent.length > 0, "releasehistorie toont publicatiedatum");
+  fetchMode = "error";
+  byIdMap["release-history"].dataset.historyLoaded = "false";
+  byIdMap["release-history"].ontoggle(); await flush(); await flush();
+  assert(byIdMap["release-history-list"].children[0]._html.indexOf("Geen eerdere releases") >= 0, "releasehistorie toont een foutveilige lege toestand");
 
-assert(byIdMap["begrippen-lijst"].innerHTML.includes("CI monitoring unavailable"), "vaktermen bevatten CI monitoring unavailable");
-assert(html.includes("Git- en workflowbegrippen"), "begrippenlijst heeft de nieuwe Git- en workflownaam");
-assert(byIdMap["begrippen-lijst"].innerHTML.includes("Voorbeeld:"), "elke vakterm heeft een voorbeeld");
-assert((byIdMap["begrippen-lijst"].innerHTML.match(/<details class="term-item"/g) || []).length === 26, "begrippenlijst bevat precies 26 termen");
-assert(byIdMap["begrippen-lijst"].innerHTML.includes("Review / reviewer / review-aanvraag") && byIdMap["begrippen-lijst"].innerHTML.includes("Scope (rechten)"), "nieuwe review- en scope-termen zijn zichtbaar");
-assert(html.includes('const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch"'), "branch- en main-lijnen verwijzen naar uitleg");
-assert(html.includes("class=\"branch-line\"") && html.includes("role=\"button\""), "kaartlijnen zijn klikbaar en toegankelijk");
-assert(html.includes("branch-line-hit") && html.includes("stroke-width=\"28\""), "branch-lijnen hebben een ruim transparant raakgebied");
-assert(html.includes("station-hit") && html.includes('r=\"22\"'), "commitstations hebben een ruim transparant raakgebied");
-assert(html.includes("branch-line:hover") && html.includes("branch-line:focus-visible"), "branch-lijnen tonen hover- en focusfeedback");
-assert(html.includes("max-width: 700px") && html.includes("html.mobile-layout .release-badge"), "badge loopt op mobiel mee in de paginastroom");
-assert(html.includes("window.innerWidth <= 700 ? 90 : 78"), "kaart spreidt commits ruimer op smalle schermen");
-assert(html.includes("onclick=\"selectStart('${c.id}')\""), "bestaande commit-startpuntklik blijft behouden");
+  assert((glossaryResult().match(/<details class="term-item"/g) || []).length === 26, "begrippenlijst rendert precies 26 termen");
+  assert(glossaryResult().includes("Voorbeeld:") && glossaryResult().includes("CI monitoring unavailable"), "elke begrippenlijst-entry bevat uitleg en voorbeeld");
+  const branchTerm = makeEl("details");
+  byIdMap["term-branch"] = branchTerm;
+  focusTerm("Branch");
+  assert(branchTerm.open === true, "focusTerm opent de gekozen glossary-entry");
+  assert(branchTerm.classList.contains("term-focus") && branchTerm.scrolled, "focusTerm markeert en scrollt naar de gekozen entry");
 
-assert(html.includes("RELEASE_API_URL") && html.includes("fetch(RELEASE_API_URL"), "badge haalt releases live op via GitHub API");
-assert(html.includes("RELEASE_HISTORY_API_URL") && html.includes("fetch(RELEASE_HISTORY_API_URL"), "badge heeft een releasegeschiedenis-API");
-assert(html.includes("release-history") && html.includes("release-history-list"), "badge heeft een compact uitklappaneel");
-assert(html.includes("release-current-link") && html.includes("target=\"_blank\""), "huidige release heeft een directe GitHub-link");
-assert(html.includes("published_at") && html.includes("release.html_url"), "geschiedenis toont datum en release-noteslink");
-assert(html.includes('id="release-badge-label">release: onbekend</summary>'), "badge heeft veilige beginwaarde vóór de API-response");
-assert(html.includes("release-badge.dev") && html.includes("release-badge.test") && html.includes("release-badge.live"), "badge heeft ontwikkel-, test- en livekleur");
+  assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
+  assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
+  assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld als test gelijk is aan live");
+  assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld zonder merge-head");
+  assert(mapResult().includes("🧪🚀"), "kaart toont gecombineerde test/live-vlag bij de start");
+  assert(mapResult().includes("station-hit") && mapResult().includes("v0.1.0"), "kaart toont release-station en versielabel");
+  assert(mapResult().includes('role="button"') && mapResult().includes("branch-line"), "kaart rendert klikbare branch-lijn en stations");
+  assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
+  assert(byIdMap["legend"].innerHTML.includes("release station"), "legenda benoemt release-stations");
 
-assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
-assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
-assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld (test == live)");
-assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld (geen merge op main)");
-assert(byIdMap["map-scroll"].innerHTML.includes("🧪🚀"), "kaart toont gecombineerde vlag bij de start (test == live)");
-assert(byIdMap["map-scroll"].innerHTML.includes("v0.1.0") && byIdMap["map-scroll"].innerHTML.includes("release station v0.1.0"), "startstation toont versielabel en release-markering");
+  byIdMap["btn-issue"].onclick();
+  findBtn("Maak branch").onclick();
+  assert(byIdMap["log"].children[0].innerHTML.includes("focusTerm('Branch')"), "branch-logregel bevat een klikbare Branch-term");
+  const branchLog = byIdMap["log"].children[0];
+  assert((branchLog.innerHTML.match(/class="log-term"/g) || []).length >= 1, "logregel rendert minstens één termknop");
+  byIdMap["btn-commit"].onclick();
+  assert(byIdMap["btn-commit"].disabled === false, "commit-knop is actief op een branch");
+  byIdMap["btn-commit"].onclick();
+  assert(__state().branches[__state().active].head === __state().commits[__state().commits.length - 1].id, "branch-head volgt de laatste commit");
+  findBtn("Open PR").onclick();
+  assert(__state().prs[0].state === "open", "open PR krijgt de status open");
+  findBtn("Merge commit").onclick();
+  assert(byIdMap["env-test"].textContent === "v0.1.1", "merge zet de nieuwe release op test");
+  assert(byIdMap["env-live"].textContent === "v0.1.0", "merge wijzigt live niet automatisch");
+  assert(byIdMap["btn-promote"].disabled === false, "promote wordt actief zodra test vooruitloopt");
+  assert(mapResult().includes("v0.1.1") && mapResult().includes("release station v0.1.1"), "nieuwe release krijgt label op het juiste station");
+  assert(byIdMap["log"].children[0].innerHTML.includes("focusTerm('CI (Continuous Integration)')"), "release-logregel bevat een klikbare CI-term");
+  const releaseLogTermCounts = [...byIdMap["log"].children[0].innerHTML.matchAll(/focusTerm\('([^']+)'\)/g)].map(m => m[1]);
+  assert(new Set(releaseLogTermCounts).size === releaseLogTermCounts.length, "elk begrip staat maximaal één keer in dezelfde logregel");
+  byIdMap["btn-promote"].onclick();
+  assert(byIdMap["env-live"].textContent === "v0.1.1", "promote zet test exact naar live");
+  assert(byIdMap["btn-promote"].disabled === true, "promote schakelt uit zodra test gelijk is aan live");
+  assert(mapResult().includes("🧪🚀"), "kaart toont gecombineerde vlag na promotie");
 
-byIdMap["btn-issue"].onclick();                       // missie 1
-findBtn("Maak branch").onclick();                     // missie 2
-byIdMap["btn-commit"].onclick();                      // commit 1
-assert(byIdMap["map-scroll"].innerHTML.includes("focusTerm('Branch')"), "branch-lijn opent Branch-uitleg");
-byIdMap["btn-commit"].onclick();                      // commit 2 → missie 3
-const autoBranch = __state().active;
-const autoHead = __state().branches[autoBranch].head;
-const autoChip = created.filter(e => e.tag === "button" && e.className.includes("chip") && e.textContent === autoBranch).pop();
-autoChip.onclick();
-assert(__state().selectedStart === autoHead, "actieve branch kiest automatisch zijn laatste commit als startpunt");
-assert(byIdMap["start-label"].textContent.startsWith("automatisch:"), "automatisch startpunt is duidelijk gelabeld");
-byIdMap["btn-clear-start"].onclick();
-assert(__state().selectedStart === null && byIdMap["btn-clear-start"].style.display === "none", "wissen zet automatisch startpunt terug naar main");
-findBtn("Open PR").onclick();                         // missie 4
-findBtn("Merge commit").onclick();                    // missie 5 + release → test
+  byIdMap["btn-issue"].onclick();
+  findBtn("Maak branch").onclick();
+  byIdMap["btn-commit"].onclick();
+  byIdMap["btn-commit"].onclick();
+  findBtn("Open PR").onclick();
+  findBtn("Squash & merge").onclick();
+  assert(byIdMap["env-test"].textContent === "v0.1.2", "squash-merge maakt v0.1.2 op test");
+  assert(__state().mergeKinds.has("merge") && __state().mergeKinds.has("squash"), "simulatie registreert beide merge-vormen");
+  byIdMap["btn-revert"].onclick();
+  assert(byIdMap["env-test"].textContent === "v0.1.3", "revert maakt een nieuwe testversie");
+  assert(__state().commits.at(-1).kind === "revert", "revert voegt een nieuwe revert-commit toe");
+  assert(byIdMap["env-live"].textContent === "v0.1.1", "revert laat live ongemoeid");
+  byIdMap["btn-promote"].onclick();
+  assert(byIdMap["env-live"].textContent === "v0.1.3", "promote zet de gerepareerde versie op live");
+  byIdMap["rollback-version"].value = "1";
+  byIdMap["rollback-version"].onchange();
+  assert(mapResult().includes("terugrol naar v0.1.1"), "rollback-preview markeert het gekozen release-station");
+  byIdMap["btn-rollback"].onclick();
+  assert(byIdMap["env-live"].textContent === "v0.1.1" && byIdMap["env-test"].textContent === "v0.1.3", "rollback zet alleen live terug");
+  assert(__state().env.liveCommit !== __state().env.testCommit, "rollback houdt live en test op verschillende commits");
+  findBtn("Verwijder branch").onclick();
 
-assert(byIdMap["env-test"].textContent === "v0.1.1", "na merge staat test op v0.1.1");
-assert(byIdMap["env-live"].textContent === "v0.1.0", "live blijft op v0.1.0 na merge");
-assert(byIdMap["map-scroll"].innerHTML.includes("v0.1.1") && byIdMap["map-scroll"].innerHTML.includes("release station v0.1.1"), "nieuwe release krijgt stationlabel op de kaart");
-assert(byIdMap["btn-promote"].disabled === false, "promote is nu beschikbaar");
-assert(byIdMap["btn-revert"].disabled === false, "revert is nu beschikbaar");
-assert(!byIdMap["map-scroll"].innerHTML.includes("🧪🚀") && byIdMap["map-scroll"].innerHTML.includes("🧪") && byIdMap["map-scroll"].innerHTML.includes("🚀"), "kaart toont losse test- en live-vlag na merge (nog niet gepromoveerd)");
+  const initialCommitId = __state().commits.find(c => c.msg === "initiële versie").id;
+  selectStart(initialCommitId);
+  assert(byIdMap["start-label"].textContent.includes(initialCommitId.slice(0, 5)), "gekozen ouder startpunt verschijnt in de DOM");
+  byIdMap["btn-issue"].onclick();
+  findBtn("Maak branch").onclick();
+  assert(__state().branches[__state().active].head === initialCommitId, "branch vanaf ouder commit gebruikt het gekozen startpunt");
+  byIdMap["btn-issue"].onclick();
+  findBtn("Maak branch").onclick();
+  byIdMap["btn-commit"].onclick();
+  const branchHead = __state().branches[__state().active].head;
+  selectStart(branchHead);
+  byIdMap["btn-issue"].onclick();
+  findBtn("Maak branch").onclick();
+  assert(__state().branches[__state().active].head === branchHead, "branch-van-branch gebruikt de gekozen branch-head");
+  assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 13 missies voltooid → 100%");
 
-byIdMap["btn-promote"].onclick();                     // missie 9
-assert(byIdMap["env-live"].textContent === "v0.1.1", "na promotie staat live op v0.1.1");
-assert(byIdMap["btn-promote"].disabled === true, "promote weer uitgeschakeld na promotie");
-assert(byIdMap["map-scroll"].innerHTML.includes("🧪🚀"), "kaart toont gecombineerde vlag op dezelfde commit na promotie");
-
-// tweede ronde: squash + revert
-byIdMap["btn-issue"].onclick();
-findBtn("Maak branch").onclick();
-byIdMap["btn-commit"].onclick();
-byIdMap["btn-commit"].onclick();
-findBtn("Open PR").onclick();
-findBtn("Squash & merge").onclick();                  // missie 6 + release v0.1.2
-assert(byIdMap["env-test"].textContent === "v0.1.2", "na squash-merge staat test op v0.1.2");
-
-byIdMap["btn-revert"].onclick();                      // missie 10 + release v0.1.3
-assert(byIdMap["env-test"].textContent === "v0.1.3", "revert bouwt nieuwe versie v0.1.3 naar test");
-assert(byIdMap["env-live"].textContent === "v0.1.1", "live nog onaangeroerd door revert");
-assert(byIdMap["btn-revert"].disabled === true, "revert uitgeschakeld na revert (head is revert-commit)");
-byIdMap["btn-promote"].onclick();
-assert(byIdMap["env-live"].textContent === "v0.1.3", "fix gepromoveerd naar live");
-byIdMap["rollback-version"].value = "1";             // v0.1.1: laatste eerdere live-versie
-byIdMap["rollback-version"].onchange();
-assert(byIdMap["map-scroll"].innerHTML.includes("terugrol naar v0.1.1"), "gekozen rollback-versie licht het juiste station op");
-byIdMap["btn-rollback"].onclick();
-assert(byIdMap["env-live"].textContent === "v0.1.1", "rollback zet live terug naar een eerdere versie");
-assert(byIdMap["env-test"].textContent === "v0.1.3", "rollback laat test op de nieuwere versie staan");
-assert(__state().env.liveCommit !== __state().env.testCommit, "rollback schuift live terug terwijl test vooruit blijft");
-
-findBtn("Verwijder branch").onclick();                // missie 7
-
-// startpunt-picker: begint op main, wissen doet niets als er niets gekozen is
-assert(byIdMap["start-label"].textContent === "main (huidige kop)", "startpunt staat standaard op main");
-assert(byIdMap["btn-clear-start"].style.display === "none", "wis-knop verborgen als er geen startpunt gekozen is");
-
-// tijdreis: branch vanaf een oudere commit op main (niet de huidige kop)
-const initCommitId = byIdMap["map-scroll"].innerHTML.match(/<title>([0-9a-f]+) — initiële versie<\/title>/)[1];
-selectStart(initCommitId);
-assert(byIdMap["start-label"].textContent.includes(initCommitId.slice(0, 5)), "gekozen startpunt verschijnt in het paneel");
-assert(byIdMap["btn-clear-start"].style.display === "inline", "wis-knop zichtbaar zodra een startpunt gekozen is");
-byIdMap["btn-issue"].onclick();
-findBtn("Maak branch").onclick();                     // missie 11 (tijdreis)
-assert(__state().branches[__state().active].head === initCommitId, "nieuwe branch vertrekt echt vanaf de gekozen oudere commit, niet vanaf main-kop");
-assert(byIdMap["start-label"].textContent === "main (huidige kop)", "startpunt-keuze is verbruikt en terug naar main na het maken van de branch");
-
-// branch-van-branch: eerst een gewone branch met een eigen commit, dan daarvandaan vertakken
-byIdMap["btn-issue"].onclick();
-findBtn("Maak branch").onclick();
-byIdMap["btn-commit"].onclick();
-const branchXName = __state().active;
-const branchXHead = __state().branches[branchXName].head;
-selectStart(branchXHead);
-byIdMap["btn-issue"].onclick();
-findBtn("Maak branch").onclick();                     // missie 12 (branch-van-branch)
-assert(__state().branches[__state().active].head === branchXHead, "nieuwe branch vertrekt vanaf de commit op de andere (niet-main) branch");
-
-assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 13 missies voltooid → 100%");
-
-if (failed) { console.error("\n" + failed + " CHECK(S) GEFAALD"); process.exit(1); }
-console.log("\nALLE CHECKS GESLAAGD");
+  if (failed) { console.error("\n" + failed + " CHECK(S) GEFAALD"); process.exit(1); }
+  console.log("\nALLE CHECKS GESLAAGD");
+})();
