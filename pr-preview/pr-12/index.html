@@ -47,10 +47,6 @@
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
   .wrap { max-width: 1520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr) 300px 300px; gap: 1rem; align-items: start; }
   @media (max-width: 1150px) { .wrap { grid-template-columns: 1fr; } }
-  @media (max-width: 700px) {
-    .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
-    .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
-  }
 
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
   .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 .6rem; font-weight: 600; }
@@ -82,6 +78,10 @@
   .release-badge.dev { border-color: var(--warn); color: var(--warn); }
   .release-badge.test { border-color: var(--accent); color: var(--accent); }
   .release-badge.live { border-color: var(--ok); color: var(--ok); }
+  @media (max-width: 700px) {
+    .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
+    .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
+  }
   #begrippen-lijst { display: grid; gap: .45rem; }
   .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); transition: border-color .2s, box-shadow .2s; }
   .term-item.term-focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); animation: term-focus .9s ease-out; }
