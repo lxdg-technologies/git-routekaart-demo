@@ -1,0 +1,141 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+	--font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+	font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+	font-synthesis: none;
+	color-scheme: light;
+	--route-ink: #162435;
+	--route-muted: #607083;
+	--route-line: #d5dee8;
+	--route-main: #1756a4;
+	--route-orange: #dc7b1d;
+	--route-purple: #7a3fa0;
+	--route-teal: #078779;
+	--route-red: #c43b3b;
+	--route-good: #2e8b57;
+	--route-warn: #c47f17;
+	--route-surface: #ffffff;
+	--route-bg: #eef2f6;
+}
+
+[data-theme="dark"] {
+	color-scheme: dark;
+	--route-ink: #e8edf2;
+	--route-muted: #9aabba;
+	--route-line: #2d3a48;
+	--route-main: #71a7e8;
+	--route-orange: #f1a04e;
+	--route-purple: #c398e0;
+	--route-teal: #55c6b7;
+	--route-red: #f38b8b;
+	--route-good: #79d59c;
+	--route-warn: #f5bd66;
+	--route-surface: #172330;
+	--route-bg: #101922;
+}
+
+html {
+	background: var(--route-bg);
+}
+
+body {
+	min-width: 320px;
+	margin: 0;
+	background:
+		radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--route-main) 9%, transparent), transparent 28rem),
+		var(--route-bg);
+	color: var(--route-ink);
+}
+
+button,
+a {
+	-webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--route-main) 70%, transparent);
+	outline-offset: 2px;
+}
+
+.surface {
+	background: var(--route-surface);
+	border: 1px solid var(--route-line);
+	box-shadow: 0 14px 36px color-mix(in srgb, var(--route-ink) 5%, transparent);
+}
+
+.mono {
+	font-family: var(--font-mono);
+}
+
+.map-scroll {
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	background:
+		linear-gradient(90deg, var(--route-surface) 0%, transparent 2rem, transparent calc(100% - 2rem), var(--route-surface) 100%);
+	scrollbar-width: thin;
+}
+
+.map-scroll::-webkit-scrollbar {
+	height: 8px;
+}
+
+.map-scroll::-webkit-scrollbar-thumb {
+	background: var(--route-line);
+	border-radius: 999px;
+}
+
+.map-svg text {
+	font-family: var(--font-mono);
+}
+
+.map-svg .station {
+	transition: transform 160ms ease;
+	transform-box: fill-box;
+	transform-origin: center;
+}
+
+.map-svg .station:hover {
+	transform: scale(1.12);
+}
+
+.log-scroll {
+	max-height: 19rem;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.log-entry + .log-entry {
+	border-top: 1px solid var(--route-line);
+	padding-top: .7rem;
+	margin-top: .7rem;
+}
+
+.ticket-copy {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+
+.mission-item.next .mission-label {
+	color: var(--route-ink);
+	font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: .01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: .01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
