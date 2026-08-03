@@ -34,7 +34,7 @@ function makeEl(tag) {
 
 const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
-  "log", "btn-issue", "btn-commit", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version",
+  "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version",
   "env-dev", "env-test", "env-live", "env-live-box", "start-label", "start-hint", "btn-clear-start"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
@@ -101,6 +101,7 @@ const delen = [
     revert: () => byIdMap["btn-revert"].onclick(),
     kiesRollback: index => { byIdMap["rollback-version"].value = String(index); byIdMap["rollback-version"].onchange(); },
     rollback: () => byIdMap["btn-rollback"].onclick(),
+    collega: () => byIdMap["btn-collega"].onclick(),
     // issue → branch → twee commits → PR → merge; soort is "merge" of "squash"
     mergeRonde: soort => {
       stappen.nieuwIssue(); stappen.maakBranch();

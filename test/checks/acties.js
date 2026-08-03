@@ -35,5 +35,13 @@ module.exports = async function acties({ assert, byIdMap, state, stappen }) {
   stappen.nieuwIssue();
   stappen.maakBranch();
   assert(state().branches[state().active].head === branchHead, "branch-van-branch gebruikt de gekozen branch-head");
-  assert(byIdMap["progress"].firstElementChild.style.width === "100%", "alle 13 missies voltooid → 100%");
+  assert(byIdMap["progress"].firstElementChild.style.width === (13 / 14 * 100) + "%", "13 van 14 missies voltooid vóór de collega-actie");
+
+  const colleagueBranch = state().active;
+  const mainBeforeColleague = state().branches.main.head;
+  const testBeforeColleague = state().env.test;
+  const liveBeforeColleague = state().env.live;
+  stappen.collega();
+  const colleagueCommit = state().commits.at(-1);
+  assert(colleagueCommit.branch === "main" && colleagueCommit.msg.startsWith("collega:") && colleagueCommit.byCollega === true && state().branches.main.head !== mainBeforeColleague && state().branches[colleagueBranch].head !== colleagueCommit.id && state().env.test !== testBeforeColleague && state().env.live === liveBeforeColleague && state().missions[13] === true && byIdMap["map-scroll"].innerHTML.includes("👤") && byIdMap["log"].children[0].innerHTML.includes("Een collega heeft iets naar main gemerged"), "collega-actie schuift main op, laat test oplopen, houdt live gelijk en markeert kaart/logboek/missie");
 };
