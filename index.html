@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Git Routekaart — issues, branches & merges</title>
 <style>
+  /* ==== SECTIE: THEMA ==== */
   :root {
     --bg: #eef1f4;
     --panel: #ffffff;
@@ -35,6 +36,7 @@
     --bg: #eef1f4; --panel: #ffffff; --ink: #1b2733; --ink-soft: #5a6a7a;
     --line: #d5dce3; --station: #ffffff; --chip-bg: #e7ecf1;
   }
+  /* ==== SECTIE: LAYOUT ==== */
   * { box-sizing: border-box; }
   body {
     background: var(--bg); color: var(--ink);
@@ -66,7 +68,7 @@
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
   .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 .6rem; font-weight: 600; }
 
-  /* ── kaart ── */
+  /* ==== SECTIE: KAART ==== */
   #map-card { padding: .6rem .6rem .2rem; }
   #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
   #map-scroll svg { display: block; }
@@ -77,6 +79,7 @@
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: .35rem; }
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
+  /* ==== SECTIE: RELEASE-BADGE ==== */
   .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; min-width: 145px; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
   .release-badge summary { cursor: pointer; list-style: none; text-align: right; }
   .release-badge summary::-webkit-details-marker { display: none; }
@@ -100,6 +103,7 @@
   }
   html.mobile-layout .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
   html.mobile-layout .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
+  /* ==== SECTIE: BEGRIPPEN ==== */
   #begrippen-lijst { display: grid; gap: .45rem; }
   .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); transition: border-color .2s, box-shadow .2s; }
   .term-item.term-focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); animation: term-focus .9s ease-out; }
@@ -109,7 +113,7 @@
   .term-explanation { margin: .4rem 0 0; color: var(--ink-soft); font-size: .86rem; }
   .term-example { margin: .35rem 0 0; padding: .35rem .5rem; border-left: 3px solid var(--accent); color: var(--ink); font-size: .82rem; }
 
-  /* ── omgevingen ── */
+  /* ==== SECTIE: OMGEVINGEN ==== */
   .envs { display: flex; align-items: stretch; gap: .3rem; }
   .env { flex: 1 1 0; border: 1.5px solid var(--line); border-radius: 8px; padding: .45rem .4rem; text-align: center; min-width: 0; }
   .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
@@ -121,7 +125,7 @@
   .env.live.behind .env-val { color: var(--warn); }
   .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
 
-  /* ── chips / knoppen ── */
+  /* ==== SECTIE: ACTIES ==== */
   .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
   .chip {
     border: 1.5px solid var(--line); background: var(--chip-bg); color: var(--ink);
@@ -167,7 +171,7 @@
   .badge.open { color: var(--ok); }
   .badge.merged { color: #8250df; }
 
-  /* ── missies ── */
+  /* ==== SECTIE: MISSIES ==== */
   #missies ol { list-style: none; margin: 0; padding: 0; }
   #missies li { display: flex; gap: .55rem; padding: .32rem 0; font-size: .87rem; color: var(--ink-soft); align-items: baseline; }
   #missies li.done { color: var(--ink); }
@@ -182,7 +186,7 @@
   #trophy { display: none; margin-top: .5rem; padding: .5rem .7rem; border-radius: 8px; background: var(--chip-bg); font-size: .88rem; }
   #trophy.show { display: block; }
 
-  /* ── logboek ── */
+  /* ==== SECTIE: LOGBOEK ==== */
   #log { max-height: 300px; overflow-y: auto; }
   .log-entry { border-top: 1px solid var(--line); padding: .5rem .1rem; font-size: .84rem; }
   .log-entry:first-child { border-top: 0; }
@@ -190,7 +194,7 @@
   .log-entry .why { color: var(--ink-soft); display: block; margin-top: .1rem; }
   code { font-family: var(--mono); font-size: .85em; background: var(--chip-bg); padding: .05em .35em; border-radius: 4px; }
 
-  /* ── uitleg merge vs squash / omgevingen ── */
+  /* ==== SECTIE: STATE ==== */
   #vgl, #omg-uitleg { margin-top: 1rem; }
   .vgl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
   .omg-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .8rem; }
@@ -214,8 +218,10 @@
   <p>Speel een moderne git-werkstroom na: issue → branch → PR → merge → test → live. Elke lijn is een branch, elk station een commit.</p>
 </header>
 
+<!-- ==== SECTIE: LAYOUT ==== -->
 <div class="wrap">
   <div>
+    <!-- ==== SECTIE: KAART ==== -->
     <div class="card" id="map-card">
       <div id="map-scroll"></div>
       <div class="legend" id="legend"></div>
@@ -240,6 +246,7 @@
       <p class="col-note">De kernregel: <b>een merge mag nooit rechtstreeks live gaan.</b> Probeer het rechts: merge een PR en kijk welke omgeving verandert.</p>
     </div>
 
+    <!-- ==== SECTIE: BEGRIPPEN ==== -->
     <div class="card" id="begrippen">
       <h2>Git- en workflowbegrippen</h2>
       <p class="col-note">Klik een term open voor een korte uitleg en een voorbeeld uit de workflow.</p>
@@ -284,6 +291,7 @@
   </div>
 
   <div class="side-a">
+    <!-- ==== SECTIE: OMGEVINGEN ==== -->
     <div class="card" id="omgevingen">
       <h2>Omgevingen</h2>
       <div class="envs">
@@ -314,6 +322,7 @@
       </div>
     </div>
 
+    <!-- ==== SECTIE: MISSIES ==== -->
     <div class="card" id="missies">
       <h2>Missies</h2>
       <div id="progress"><div></div></div>
@@ -323,6 +332,7 @@
   </div>
 
   <div class="side-b">
+    <!-- ==== SECTIE: ACTIES ==== -->
     <div class="card">
       <h2>Acties</h2>
       <div id="start-picker" style="font-size:.8rem;color:var(--ink-soft);margin-bottom:.6rem;padding:.4rem .55rem;border:1px dashed var(--line);border-radius:7px;">
@@ -338,6 +348,7 @@
       <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
     </div>
 
+    <!-- ==== SECTIE: LOGBOEK ==== -->
     <div class="card">
       <h2>Logboek — wat gebeurde er net?</h2>
       <div id="log"><div class="log-entry"><b>Welkom!</b><span class="why">De blauwe lijn is <code>main</code>: de enige branch waar versies uit gebouwd worden. Hierboven zie je de drie omgevingen. Begin met missie 1.</span></div></div>
@@ -345,6 +356,7 @@
   </div>
 </div>
 
+<!-- ==== SECTIE: RELEASE-BADGE ==== -->
 <details class="release-badge" id="release-history" aria-live="polite">
   <summary id="release-badge-label">release: onbekend</summary>
   <div class="release-history-panel">
@@ -399,6 +411,7 @@
     { term: "Scope (rechten)", keywords: ["scope", "rechten"], explanation: "Een scope bepaalt welke acties een token of geautomatiseerde gebruiker mag uitvoeren.", example: "Zonder workflow-scope kan een agent broncode wel pushen maar workflowbestanden niet wijzigen." },
   ];
 
+  /* ==== SECTIE: RELEASE-BADGE ==== */
   const VERSION_FILE_URL = "version.json";
   const RELEASE_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/releases/latest";
   const RELEASE_COMPARE_API_URL = "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo/compare/";
@@ -534,6 +547,7 @@
     }
   }
 
+  /* ==== SECTIE: STATE ==== */
   let S;
   function freshState() {
     return {
@@ -608,7 +622,7 @@
     return [...ancestry(S.branches[branch].head)].filter(id => !mainSet.has(id)).map(byId);
   }
 
-  /* ── acties ── */
+  /* ==== SECTIE: ACTIES ==== */
   function newIssue() {
     const [title, slug] = ISSUE_POOL[S.issues.length % ISSUE_POOL.length];
     S.issues.push({ num: ++S.issueNo, title, slug, branch: null, closed: false });
@@ -733,7 +747,7 @@
     render();
   }
 
-  /* ── missies ── */
+  /* ==== SECTIE: MISSIES ==== */
   const MISSIONS = [
     "Maak een issue aan",
     "Maak een branch voor het issue",
@@ -751,6 +765,7 @@
   ];
   function tick(i) { S.missions[i] = true; }
 
+  /* ==== SECTIE: LOGBOEK ==== */
   function decorateLogTerms(html, seen = new Set()) {
     const patterns = TERMS.flatMap(({ term, keywords }) => (keywords || [term]).map(keyword => ({ term, keyword })))
       .sort((a, b) => b.keyword.length - a.keyword.length);
@@ -782,7 +797,7 @@
     el("log").prepend(d);
   }
 
-  /* ── render ── */
+  /* ==== SECTIE: KAART ==== */
   function render() {
     renderMap(); renderChips(); renderTickets(); renderMissions(); renderEnv(); renderStartPicker();
     const b = S.branches[S.active];
