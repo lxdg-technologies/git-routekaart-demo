@@ -8,7 +8,27 @@ Een leermiddel voor mensen **zonder software-achtergrond** die git van nul leren
 
 Alles wat je toevoegt moet die ene persoon helpen. Een uitbreiding die alleen een programmeur waardeert, hoort hier niet.
 
-## 2. De eindstreep
+## 2. Wat de simulatie nabootst
+
+Ben je nieuw: lees dit hoofdstuk eerst. Daarna weet je waar elke knop in de simulatie in het echt over gaat.
+
+De simulatie speelt de route na die een wijziging in een echt softwareproject aflegt, van "iemand bedenkt iets" tot "het draait bij de gebruiker". Elke knop hoort bij een echte handeling.
+
+| Wat je in de simulatie doet | Wat er in het echt gebeurt | Waar je dat in het echt terugziet |
+|---|---|---|
+| Nieuw issue | Iemand schrijft op wát er moet gebeuren en waarom — nog geen code | Het issuebord van het project |
+| Maak branch | Er ontstaat een eigen werkkopie waarin je vrij kunt experimenteren | Bij de branches van de repository |
+| Commit | Een tussenstap wordt vastgelegd met een korte omschrijving | Bij de commits van die branch |
+| Open pull request | Het voorstel om jouw werk aan te sluiten op de hoofdlijn | Bij de pull requests |
+| Merge (merge commit of squash) | Het werk komt op de hoofdlijn `main` terecht | Op `main` |
+| Er verschijnt een versie op test | Er wordt automatisch een pakket gebouwd en op de testomgeving gezet | Op het test-adres van het project |
+| Promoveer test → live | Iemand zet bewust exact hetzelfde pakket op het echte systeem | Op het live-adres |
+| Rollback | Een eerder bewezen pakket wordt teruggezet — er wordt niets opnieuw gebouwd | Op het live-adres |
+| Revert | Een nieuwe commit draait de wijziging om; die gaat zelf ook weer eerst naar test | Op `main` |
+
+**Twee stappen zitten er in het echt tussen, maar niet in de simulatie:** de automatische controles die een pull request tegenhouden als er iets stuk is, en de beoordeling door een mens die goedkeurt of wijzigingen vraagt. Allebei bewust weggelaten — zie hoofdstuk 5.
+
+## 3. De eindstreep
 
 **v1 is af** als iemand na één keer doorlopen, zonder hulp:
 
@@ -16,11 +36,11 @@ Alles wat je toevoegt moet die ene persoon helpen. Een uitbreiding die alleen ee
 2. een pull request kan openen;
 3. kan uitleggen waaróm een merge niet meteen op live staat.
 
-**Status: v1 is af** (03-08-2026). De lijst in hoofdstuk 3 staat volledig op `af`.
+**Status: v1 is af** (03-08-2026). De lijst in hoofdstuk 4 staat volledig op `af`.
 
-Dat betekent niet dat er niets meer bij mag. Het betekent dat er niets meer bij komt **zonder de route uit hoofdstuk 5**.
+Dat betekent niet dat er niets meer bij mag. Het betekent dat er niets meer bij komt **zonder de route uit hoofdstuk 6**.
 
-## 3. Wat je oefent
+## 4. Wat je oefent
 
 Elke regel hieronder is één missie in de simulatie. Deze tabel is de enige bron: een missie in de code die hier niet staat, is een fout — en de rooktest weigert hem.
 
@@ -42,7 +62,7 @@ Elke regel hieronder is één missie in de simulatie. Deze tabel is de enige bro
 
 Statuswaarden: `af` · `gepland` · `wens` · `niet`.
 
-## 4. Wat er bewust NIET in zit
+## 5. Wat er bewust NIET in zit
 
 Dit is geen achterstand. Dit zijn keuzes, met datum. Constateer je een van deze punten opnieuw: het is bekend, maak er geen issue van.
 
@@ -57,20 +77,20 @@ Dit is geen achterstand. Dit zijn keuzes, met datum. Constateer je een van deze 
 
 **v2, als het er ooit komt, heet:** *wat gaat er mis en hoe kom je eruit.* Eigen eindstreep, apart te starten. Niet stukje bij beetje in v1 laten sijpelen.
 
-## 5. Hoe komt er iets nieuws bij
+## 6. Hoe komt er iets nieuws bij
 
 Één route, geen uitzonderingen:
 
-1. Het idee wordt een regel in de tabel van hoofdstuk 3, met status `wens`.
+1. Het idee wordt een regel in de tabel van hoofdstuk 4, met status `wens`.
 2. De eigenaar van de repo zet hem op `gepland` — dát is het akkoord om te bouwen.
 3. Pas dan wordt het gebouwd, en gaat de status naar `af`.
-4. Wordt het afgewezen? Dan verhuist de regel naar hoofdstuk 4 met een datum, zodat niemand hem opnieuw "ontdekt".
+4. Wordt het afgewezen? Dan verhuist de regel naar hoofdstuk 5 met een datum, zodat niemand hem opnieuw "ontdekt".
 
-**Dit wordt afgedwongen, niet onthouden.** De rooktest telt de missies in `index.html` en vergelijkt dat met het aantal regels op `af` in hoofdstuk 3. Klopt het niet, dan is de test rood en kan de wijziging niet gemergd worden.
+**Dit wordt afgedwongen, niet onthouden.** De rooktest telt de missies in `index.html` en vergelijkt dat met het aantal regels op `af` in hoofdstuk 4. Klopt het niet, dan is de test rood en kan de wijziging niet gemergd worden.
 
 Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doet: beoordelen of het een goed idee was — dat blijft een mens.
 
-## 6. Besluiten
+## 7. Besluiten
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
