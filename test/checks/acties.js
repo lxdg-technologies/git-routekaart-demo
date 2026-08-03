@@ -35,7 +35,7 @@ module.exports = async function acties({ assert, byIdMap, state, stappen }) {
   stappen.nieuwIssue();
   stappen.maakBranch();
   assert(state().branches[state().active].head === branchHead, "branch-van-branch gebruikt de gekozen branch-head");
-  assert(byIdMap["progress"].firstElementChild.style.width === (13 / 14 * 100) + "%", "13 van 14 missies voltooid vóór de collega-actie");
+  assert(byIdMap["progress"].firstElementChild.style.width === (13 / 15 * 100) + "%", "13 van 15 missies voltooid vóór de collega-actie");
 
   const colleagueBranch = state().active;
   const mainBeforeColleague = state().branches.main.head;

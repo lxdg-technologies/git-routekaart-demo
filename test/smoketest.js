@@ -13,7 +13,7 @@ const classSets = new WeakMap();
 function makeEl(tag) {
   const classes = new Set();
   const el = {
-    tag, style: {}, dataset: {}, children: [], _text: "", _html: "", scrolled: false,
+    tag, style: {}, dataset: {}, attributes: {}, children: [], _text: "", _html: "", scrolled: false,
     classList: {
       toggle(name, force) { if (force === undefined ? !classes.has(name) : force) classes.add(name); else classes.delete(name); },
       add(...names) { names.forEach(name => classes.add(name)); }, remove(...names) { names.forEach(name => classes.delete(name)); }, contains(name) { return classes.has(name); },
@@ -23,6 +23,7 @@ function makeEl(tag) {
     set textContent(v) { this._text = v; }, get textContent() { return this._text; },
     appendChild(c) { this.children.push(c); }, append(...c) { this.children.push(...c); },
     addEventListener(name, handler) { this[`on${name}`] = handler; },
+    setAttribute(name, value) { this.attributes[name] = String(value); },
     prepend(c) { this.children.unshift(c); }, scrollIntoView() { this.scrolled = true; },
     firstElementChild: null,
   };
@@ -34,9 +35,10 @@ function makeEl(tag) {
 
 const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
-  "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version",
+  "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-box", "start-label", "start-hint", "btn-clear-start"];
 for (const id of ids) byIdMap[id] = makeEl("div");
+for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
 
 let fetchMode = "version";
@@ -102,6 +104,7 @@ const delen = [
     kiesRollback: index => { byIdMap["rollback-version"].value = String(index); byIdMap["rollback-version"].onchange(); },
     rollback: () => byIdMap["btn-rollback"].onclick(),
     collega: () => byIdMap["btn-collega"].onclick(),
+    kiesOmgeving: filter => byIdMap[`env-${filter}-box`].onclick(),
     // issue → branch → twee commits → PR → merge; soort is "merge" of "squash"
     mergeRonde: soort => {
       stappen.nieuwIssue(); stappen.maakBranch();
