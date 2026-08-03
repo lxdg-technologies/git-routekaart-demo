@@ -72,7 +72,7 @@ Dit is geen achterstand. Dit zijn keuzes, met datum. Constateer je een van deze 
 |---|---|---|
 | Een tweede persoon die ook mergt | v1 leert de keten, niet het samenwerken. Zonder tweede hand beweegt de hoofdlijn nooit onder je voeten — dat hoort bij v2 | 03-08-2026 |
 | Een review-poort (goedkeuren / wijzigingen vragen) | Hoort niet in een nagespeelde omgeving thuis maar in de instellingen van een echte repo, waar hij echt tegenhoudt | 03-08-2026 |
-| Merge-conflicten | Het enige dat samenwerken spannend maakt, en juist daarom slecht na te spelen met knopjes. Kandidaat voor v2 | 03-08-2026 |
+| Merge-conflicten | Het enige dat samenwerken spannend maakt, en juist daarom slecht na te spelen met knopjes. Kandidaat voor v2. De werkwijze eromheen staat wél vast (zie `AGENTS.md`), alleen de simulatie speelt het niet na | 03-08-2026 |
 | Een controle die een merge tegenhoudt | Zelfde reden als de review-poort: echt of niet | 03-08-2026 |
 | Een kapotte live-omgeving | Rollback kun je nu oefenen zonder ooit paniek te voelen. Kandidaat voor v2 | 03-08-2026 |
 | Semver-nuance (major/minor) | Versienummers zijn bewust simpel (`v0.1.n`); versiebeleid is hier geen leerdoel | 29-07-2026 |
@@ -96,6 +96,7 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **03-08-2026** — Werkwijze voor parallel werken vastgelegd: sectiemarkering in index.html, rooktest per gebied, en 'Raakt:' bovenaan elk issue.
 - **03-08-2026** — Verwijzing naar de privé-companion-repo toegevoegd in `README.md`. De knip blijft: publiek = generiek leermiddel, privé = de werkwijze van de organisatie zelf.
 - **03-08-2026** — v1 verklaard tot eindstreep. Alles wat verder gaat dan de keten van issue tot live valt onder v2 en wordt niet stilzwijgend toegevoegd.
 - **03-08-2026** — Dit bestand toegevoegd, omdat de bedoeling van de simulatie tot nu toe alleen uit de code viel af te leiden en elke sessie op een eigen interpretatie uitkwam.

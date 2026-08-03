@@ -69,6 +69,23 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken in de preview"-regel**, bijv. "Klik X aan, kijk of Y verschijnt" — de automatische preview-link (zie hieronder) toont alleen dát er iets is, niet wát. Zonder die regel is een kale link net zo onduidelijk als geen link.
 5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Onthoud: merge = binnen een minuut live op de Pages-URL.
 
+## Met meerdere mensen tegelijk werken
+
+**Git voegt per regel samen, niet per bestand.** Twee mensen die verschillende stukken van `index.html` aanpassen, gaan vanzelf goed samen. Een conflict ontstaat alleen als jullie dezelfde regels aanraken.
+
+**Elk issue begint met een regel `Raakt: <bestand of sectie>`.** Voor `index.html` gebruik je de sectienaam uit de bannerkoppen (`/* ==== SECTIE: KAART ==== */`). Twee taken in verschillende secties mogen tegelijk lopen; in dezelfde sectie doe je ze achter elkaar. De tien secties zijn:
+
+`THEMA`, `LAYOUT`, `RELEASE-BADGE`, `KAART`, `OMGEVINGEN`, `ACTIES`, `MISSIES`, `LOGBOEK`, `BEGRIPPEN`, `STATE`.
+
+**Vóór het openen van een PR:** haal de laatste `main` op, zet je werk daar bovenop, en draai de rooktest opnieuw. Dat vangt de meeste botsingen weg voordat iemand ze ziet.
+
+**Botst het toch?** Dat is routinewerk, geen storing:
+
+1. Bekijk beide versies naast elkaar.
+2. Kies wat blijft (of allebei, in de goede volgorde).
+3. Draai de rooktest opnieuw.
+4. Zet in de PR-tekst wat je gekozen hebt en waarom — die keuze moet zichtbaar zijn voor de beoordelaar.
+
 ## PR-previews
 
 Elke PR krijgt automatisch een comment met een klikbare preview-link (`pr-preview/pr-<nummer>/`
