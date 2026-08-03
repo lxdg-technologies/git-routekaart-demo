@@ -2,6 +2,8 @@
 
 Dit bestand is de volledige overdracht: alles wat je moet weten om aan deze repo te werken zonder de oorspronkelijke chatsessie.
 
+Lees eerst `WERKWIJZE.md` — dat legt vast wat de simulatie moet leren en waar hij ophoudt. Dit bestand gaat alleen over hoe je aan de code werkt.
+
 ## Wat is dit?
 
 Een **interactieve git-simulatie als metrokaart**: issue → branch → PR → merge → test → live. Leermiddel voor mensen zonder software-achtergrond. Eén HTML-bestand, geen dependencies, geen build, geen server.
@@ -28,7 +30,7 @@ Een **interactieve git-simulatie als metrokaart**: issue → branch → PR → m
 - `README.md` — gebruikersuitleg
 - `AGENTS.md` — dit bestand
 
-De nul-dependency `index.html` blijft de downloadbare referentiedemo. Nieuwe productfunctionaliteit hoort in `sveltekit/`, zodat daar later server-side GitHub Actions-integratie aan toegevoegd kan worden zonder de standalone demo te doorbreken.
+De nul-dependency `index.html` blijft de downloadbare referentiedemo. `sveltekit/` staat er, wordt op dit moment niet doorontwikkeld, en het besluit erover ligt bij de repo-eigenaar.
 
 ## Hoe de simulatie werkt (architectuur)
 
@@ -37,7 +39,7 @@ Alle logica zit in één IIFE onderin `index.html`. Kernstate is het object `S` 
 - `S.commits[]` — elke commit: `{id, branch, msg, parents[], kind, x}`. `kind` ∈ `normal | merge | squash | revert`. `x` is de horizontale positie op de kaart (globale volgorde).
 - `S.branches{}` — per branch: `{name, lane, color, head, merged, deleted, issue}`. `main` heeft altijd lane 0. Zijbranches krijgen een lane uit `S.laneFree` (max 4 tegelijk, lanes worden hergebruikt na opruimen).
 - `S.issues[]`, `S.prs[]` — de kaartjes in het actie-paneel.
-- `S.missions[]` — 10 booleans; `tick(i)` vinkt af, `renderMissions()` toont voortgang + trofee bij 10/10.
+- `S.missions[]` — de missies uit `WERKWIJZE.md`; `tick(i)` vinkt af, `renderMissions()` toont voortgang + trofee.
 - `S.env` — `{test, live}` met versiestrings; `S.relNum` telt releases (`v0.1.<n>`).
 
 Gedragsregels van het omgevingsmodel (de kern van het leerdoel):

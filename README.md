@@ -6,12 +6,19 @@ Interactieve simulatie van een moderne git-werkstroom: **issue → branch → PR
 
 ## Wat je ermee oefent
 
-- Issues aanmaken en er branches bij maken
-- Committen op een branch (nooit direct op `main`)
-- Pull requests openen
-- Het verschil tussen **merge commit** en **squash & merge** — zichtbaar op de kaart
-- De drie omgevingen: **ontwikkel → test → live**, met bewuste promotie naar live
-- Een merge terugdraaien met een **revert** — zonder historie weg te gooien
+- Een issue aanmaken
+- Een branch maken bij het issue
+- Minstens twee commits zetten
+- Een pull request openen
+- Mergen met een merge commit
+- Mergen met squash & merge
+- Een gemergde branch opruimen
+- Zien dat een merge alléén op test komt
+- Test bewust naar live promoveren
+- Een merge terugdraaien met een revert
+- Branchen vanaf een oudere commit
+- Branchen vanaf een andere branch
+- Live terugzetten naar een eerdere versie
 
 ## Lokaal draaien
 
