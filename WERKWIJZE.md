@@ -8,6 +8,8 @@ Een leermiddel voor mensen **zonder software-achtergrond** die git van nul leren
 
 Alles wat je toevoegt moet die ene persoon helpen. Een uitbreiding die alleen een programmeur waardeert, hoort hier niet.
 
+**Deze repo blijft generiek.** Geen organisatienamen, machines, personen, interne URL's of projectafspraken. Alles wat wél over een specifieke organisatie gaat, hoort in een eigen privé-companion-repo — voor dit project is dat [`lxdg-technologies/git-routekaart`](https://github.com/lxdg-technologies/git-routekaart), waar de werkelijke rolverdeling, route en regels staan. Zie het `README` voor hoe je toegang aanvraagt.
+
 ## 2. Wat de simulatie nabootst
 
 Ben je nieuw: lees dit hoofdstuk eerst. Daarna weet je waar elke knop in de simulatie in het echt over gaat.
@@ -94,6 +96,7 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **03-08-2026** — Verwijzing naar de privé-companion-repo toegevoegd in `README.md`. De knip blijft: publiek = generiek leermiddel, privé = de werkwijze van de organisatie zelf.
 - **03-08-2026** — v1 verklaard tot eindstreep. Alles wat verder gaat dan de keten van issue tot live valt onder v2 en wordt niet stilzwijgend toegevoegd.
 - **03-08-2026** — Dit bestand toegevoegd, omdat de bedoeling van de simulatie tot nu toe alleen uit de code viel af te leiden en elke sessie op een eigen interpretatie uitkwam.
 - **02-08-2026** — Rooktests testen gedrag of het uiteindelijke scherm, nooit de letterlijke brontekst van het script.
