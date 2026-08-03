@@ -20,6 +20,15 @@ Interactieve simulatie van een moderne git-werkstroom: **issue → branch → PR
 - Branchen vanaf een andere branch
 - Live terugzetten naar een eerdere versie
 
+## De werkwijze in de praktijk
+
+Deze simulatie is de **generieke** versie: hij leert de route, zonder afspraken van een specifieke organisatie.
+
+De werkwijze zoals wij die zelf toepassen — rolverdeling, de route van issue tot live, en de regels die daarbij gelden — staat in een **privé-companion-repo**: [`lxdg-technologies/git-routekaart`](https://github.com/lxdg-technologies/git-routekaart).
+
+- **Heb je toegang?** Dan opent die link direct.
+- **Nog geen toegang?** Dan zie je een 404-pagina. Open een [issue in deze repo](https://github.com/lxdg-technologies/git-routekaart-demo/issues) om toegang aan te vragen.
+
 ## Lokaal draaien
 
 Download of clone deze repo en open `index.html` in een browser. Eén bestand, geen build, geen server.
