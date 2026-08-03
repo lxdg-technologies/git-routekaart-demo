@@ -98,6 +98,7 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **03-08-2026** — Het omgevingsfilter maakt de actieve omgeving zichtbaar met een kader en Ontwikkel toont alleen het werk-in-uitvoering plus het vertrekpunt; bordjes worden tegen de werkelijke lijnbochten geplaatst.
 - **03-08-2026** — Omgevingsfilter op de kaart toegevoegd, zodat het verschil tussen test en live zichtbaar wordt in plaats van alleen beschreven.
 - **03-08-2026** — Eerste stukje samenwerken toegevoegd: een collega die naar main mergt. De rest van v2 (conflicten, kapotte live-omgeving) blijft open.
 - **03-08-2026** — v1 verklaard tot eindstreep.

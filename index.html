@@ -832,7 +832,8 @@
     }
     const labels = { dev: "Ontwikkel", test: "Test", live: "Live" };
     const explanations = {
-      dev: "Je ziet de zijsporen waarop nog gewerkt wordt; de rest van main is grijs.",
+      all: "Alles staat vol: zo ziet de hele geschiedenis eruit.",
+      dev: "Je ziet waar op dit moment aan gewerkt wordt en vanaf welk punt dat vertrok. De rest van de geschiedenis is grijs.",
       test: "Je ziet main tot en met wat op test staat; alles daarna en alle zijsporen zijn grijs.",
       live: "Dit is wat je gebruikers nu hebben. Alles wat grijs is, is al gebouwd en getest — maar staat nog niet bij hen. Het komt er pas als iemand bewust op promoveren drukt.",
     };
@@ -845,7 +846,13 @@
     if (S.envFilter === "dev") {
       const branch = S.branches[c.branch];
       if (c.branch !== "main" && branch && !branch.merged && !branch.deleted) return false;
-      return !Object.values(S.branches).some(branch => branch.name !== "main" && !branch.merged && !branch.deleted && ancestry(branch.head).has(c.id));
+      if (c.id === S.branches.main.head) return false;
+      const openBranches = Object.values(S.branches).filter(b => b.name !== "main" && !b.merged && !b.deleted);
+      const departurePoints = openBranches.map(b => {
+        const first = S.commits.find(commit => commit.branch === b.name);
+        return first && first.parents[0];
+      }).filter(Boolean);
+      return !departurePoints.includes(c.id);
     }
     if (c.branch !== "main") return true;
     const target = byId(S.envFilter === "live" ? S.env.liveCommit : S.env.testCommit);
@@ -879,7 +886,7 @@
     el("env-dev").textContent = S.active === "main" ? "—" : S.active;
     el("env-test").textContent = S.env.test;
     el("env-live").textContent = S.env.live;
-    const filterLabels = { all: "", dev: "Weergave: Ontwikkel — zijsporen in ontwikkeling zijn vol; de rest van main is grijs.", test: "Weergave: Test — main tot en met test is vol; alles daarna en alle zijsporen zijn grijs.", live: "Weergave: Live — grijs is gebouwd en getest, maar nog niet bij gebruikers." };
+    const filterLabels = { all: "", dev: "Weergave: Ontwikkel — je ziet waar nu gewerkt wordt en vanaf welk punt dat vertrok; de rest van de geschiedenis is grijs.", test: "Weergave: Test — main tot en met test is vol; alles daarna en alle zijsporen zijn grijs.", live: "Weergave: Live — grijs is gebouwd en getest, maar nog niet bij gebruikers." };
     el("env-filter-note").textContent = filterLabels[S.envFilter];
     ["dev", "test", "live"].forEach(filter => {
       const box = el(`env-${filter}-box`);
@@ -1000,7 +1007,18 @@
     const cx = c => X0 + c.x * SP;
     const branchOf = c => S.branches[c.branch];
     let edges = "", stations = "", labels = "", flags = "";
-    const lineBoxes = [];
+    const lineSamples = [];
+    let frameBounds = null;
+    const sampleLine = (x1, y1, x2, y2, steps = 20) => Array.from({ length: steps + 1 }, (_, i) => {
+      const t = i / steps;
+      return { x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t };
+    });
+    const includeFrame = (left, top, right, bottom) => {
+      frameBounds = frameBounds ? {
+        left: Math.min(frameBounds.left, left), top: Math.min(frameBounds.top, top),
+        right: Math.max(frameBounds.right, right), bottom: Math.max(frameBounds.bottom, bottom),
+      } : { left, top, right, bottom };
+    };
     const releaseByCommit = new Map(S.releases.map(release => [release.commitId, release]));
 
     S.commits.forEach(c => {
@@ -1016,12 +1034,20 @@
         const lineAttrs = `class="branch-line" role="button" tabindex="0"${envFade} onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
         const hitAttrs = `class="branch-line-hit" aria-hidden="true" onclick="focusTerm('${lineTerm}')"`;
         if (py === y) {
-          lineBoxes.push({ left: Math.min(px, x), right: Math.max(px, x), top: py - 3, bottom: py + 3 });
+          lineSamples.push(...sampleLine(px, py, x, y));
           edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         } else {
           const mid = px + Math.min(40, (x - px) / 2);
-          const path = `M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}`;
-          lineBoxes.push({ left: Math.min(px, x), right: Math.max(px, x), top: Math.min(py, y) - 3, bottom: Math.max(py, y) + 3 });
+          const curveEnd = Math.min(px + 80, x);
+          const curvePoints = Array.from({ length: 31 }, (_, i) => {
+            const t = i / 30, mt = 1 - t;
+            return {
+              x: mt ** 3 * px + 3 * mt ** 2 * t * mid + 3 * mt * t ** 2 * mid + t ** 3 * curveEnd,
+              y: mt ** 3 * py + 3 * mt ** 2 * t * py + 3 * mt * t ** 2 * y + t ** 3 * y,
+            };
+          });
+          lineSamples.push(...curvePoints, ...sampleLine(curveEnd, y, x, y));
+          const path = `M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${curveEnd} ${y} H ${x}`;
           edges += `<path ${hitAttrs} d="${path}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="${path}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         }
       });
@@ -1035,6 +1061,10 @@
       const selected = c.id === S.selectedStart;
       const release = c.branch === "main" ? releaseByCommit.get(c.id) : null;
       const rollbackPreview = c.id === S.rollbackPreviewCommit;
+      if (!envFaded) {
+        const stationRadius = isHub ? R + 3 : R;
+        includeFrame(x - stationRadius, y - stationRadius, x + stationRadius, y + (c.byCollega ? 59 : release ? 45 : 32));
+      }
       stations += `<g ${envFadeAttr} ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
       stations += `<circle class="station-hit" cx="${x}" cy="${y}" r="22" fill="transparent" stroke="none"/>`;
       if (rollbackPreview) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 11 : R + 9}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 3"><title>terugrol naar ${release ? release.version : "dit station"}</title></circle>`;
@@ -1060,17 +1090,25 @@
     const placedLabels = [];
     const laneRows = [...new Set(Object.values(S.branches).filter(b => !b.deleted).map(b => laneY(b.lane)))];
     const overlaps = (a, b) => a.left < b.right + 4 && a.right + 4 > b.left && a.top < b.bottom + 3 && a.bottom + 3 > b.top;
+    const lineCollisions = rect => lineSamples.reduce((hits, point) => hits + (point.x >= rect.left - 5 && point.x <= rect.right + 5 && point.y >= rect.top - 5 && point.y <= rect.bottom + 5 ? 1 : 0), 0);
+    const placementScore = rect => lineCollisions(rect) + placedLabels.reduce((hits, placed) => hits + (overlaps(rect, placed) ? 100 : 0), 0);
     branchLabels.forEach(({ b, head, x, y, width }) => {
       const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
-      const candidates = [0, -1, 1, -2, 2, -3, 3, -4, 4].map(step => y - 14 + step * 14);
-      const labelY = candidates.find(candidate => {
-        const rect = { left: x, right: x + width, top: candidate - 11, bottom: candidate + 2 };
-        return rect.top >= 12 && rect.bottom <= H - 4 && !laneRows.some(lineY => rect.top <= lineY + 3 && rect.bottom >= lineY - 3) && !lineBoxes.some(line => overlaps(rect, line)) && !placedLabels.some(placed => overlaps(rect, placed));
-      }) ?? Math.max(12, Math.min(H - 4, y - 14));
-      const rect = { left: x, right: x + width, top: labelY - 11, bottom: labelY + 2 };
-      placedLabels.push(rect);
+      const yCandidates = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8].map(step => y - 14 + step * 14).filter(candidate => candidate >= 12 && candidate <= H - 4);
+      const xCandidates = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6].map(step => Math.max(4, Math.min(W - width - 4, x + step * 24)));
+      const candidates = xCandidates.flatMap(candidateX => yCandidates.map(candidateY => ({ x: candidateX, y: candidateY })));
+      const rectFor = candidate => ({ left: candidate.x, right: candidate.x + width, top: candidate.y - 11, bottom: candidate.y + 2 });
+      const free = candidates.find(candidate => {
+        const rect = rectFor(candidate);
+        return !laneRows.some(lineY => rect.top <= lineY + 3 && rect.bottom >= lineY - 3) && placementScore(rect) === 0;
+      });
+      const label = free ?? candidates.slice().sort((a, b) => placementScore(rectFor(a)) - placementScore(rectFor(b)))[0] ?? { x, y: Math.max(12, Math.min(H - 4, y - 14)) };
+      const labelX = label.x, labelY = label.y;
+      const rect = rectFor(label);
       const faded = head && isEnvFaded(head);
-      labels += `<text x="${x}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
+      placedLabels.push(rect);
+      if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
+      labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
     // vlaggetjes: waar staat test, waar staat live (altijd op main)
     const flagY = laneY(0) - R - 14;
@@ -1081,7 +1119,14 @@
       if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige test-versie</title>🧪</text>`;
       if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(liveC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige live-versie</title>🚀</text>`;
     }
-    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${edges}${stations}${labels}${flags}</svg>`;
+    const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
+    const frame = S.envFilter !== "all" && frameBounds ? (() => {
+      const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);
+      const right = Math.min(W, frameBounds.right + 14), bottom = Math.min(H, frameBounds.bottom + 14);
+      return `<rect data-env-frame="${S.envFilter}" x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" rx="8" fill="none" stroke="${frameColors[S.envFilter]}" stroke-width="2" stroke-dasharray="6 5"/>`;
+    })() : "";
+    S.mapLayout = { lineSamples, branchLabels: placedLabels.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
+    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${frame}${edges}${stations}${labels}${flags}</svg>`;
     el("map-scroll").scrollLeft = 1e6;
 
     const lg = el("legend");
