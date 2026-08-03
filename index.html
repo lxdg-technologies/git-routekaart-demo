@@ -129,7 +129,6 @@
   .env.dev { border-color: var(--warn); }
   .env.test { border-color: var(--accent); }
   .env.live { border-color: var(--ok); }
-  .env.live.behind .env-val { color: var(--warn); }
   .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
 
   /* ==== SECTIE: ACTIES ==== */
@@ -889,6 +888,8 @@
     });
     const behind = S.env.test !== S.env.live;
     el("env-live-box").classList.toggle("behind", behind);
+    const liveSub = el("env-live-box").querySelector ? el("env-live-box").querySelector(".env-sub") : null;
+    if (liveSub) liveSub.textContent = behind ? "loopt achter op test" : "alleen na jouw akkoord";
     el("btn-promote").disabled = !behind;
     const head = byId(S.branches.main.head);
     el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
@@ -999,6 +1000,7 @@
     const cx = c => X0 + c.x * SP;
     const branchOf = c => S.branches[c.branch];
     let edges = "", stations = "", labels = "", flags = "";
+    const lineBoxes = [];
     const releaseByCommit = new Map(S.releases.map(release => [release.commitId, release]));
 
     S.commits.forEach(c => {
@@ -1013,10 +1015,13 @@
         const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch";
         const lineAttrs = `class="branch-line" role="button" tabindex="0"${envFade} onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
         const hitAttrs = `class="branch-line-hit" aria-hidden="true" onclick="focusTerm('${lineTerm}')"`;
-        if (py === y) edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
-        else {
+        if (py === y) {
+          lineBoxes.push({ left: Math.min(px, x), right: Math.max(px, x), top: py - 3, bottom: py + 3 });
+          edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+        } else {
           const mid = px + Math.min(40, (x - px) / 2);
           const path = `M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}`;
+          lineBoxes.push({ left: Math.min(px, x), right: Math.max(px, x), top: Math.min(py, y) - 3, bottom: Math.max(py, y) + 3 });
           edges += `<path ${hitAttrs} d="${path}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="${path}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         }
       });
@@ -1032,24 +1037,40 @@
       const rollbackPreview = c.id === S.rollbackPreviewCommit;
       stations += `<g ${envFadeAttr} ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
       stations += `<circle class="station-hit" cx="${x}" cy="${y}" r="22" fill="transparent" stroke="none"/>`;
-      if (release) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 7 : R + 5}" fill="none" stroke="var(--ok)" stroke-width="2"><title>release station ${release.version}</title></circle>`;
       if (rollbackPreview) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 11 : R + 9}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 3"><title>terugrol naar ${release ? release.version : "dit station"}</title></circle>`;
       if (selected) stations += `<circle cx="${x}" cy="${y}" r="${R + 6}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 3"/>`;
       stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 3 : R}" fill="var(--station)" stroke="${b.color}" stroke-width="3"><title>${c.id} — ${c.msg}</title></circle>`;
+      if (release) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R - 1 : R - 3}" fill="none" stroke="var(--ok)" stroke-width="2"><title>release station ${release.version}</title></circle>`;
       if (isHub) stations += `<circle cx="${x}" cy="${y}" r="3.5" fill="${b.color}"/>`;
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
       stations += `</g>`;
       labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${c.id.slice(0, 5)}</text>`;
-      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
-      if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega" ${envFadeAttr}>👤</text>`;
+      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+      if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega" ${envFaded ? 'data-env-faded="true" opacity=".4"' : ""}>👤</text>`;
     });
-    // branch-naambordjes + HEAD
-    Object.values(S.branches).forEach(b => {
-      if (b.deleted) return;
-      const head = byId(b.head), y = laneY(b.lane);
-      const x = head ? cx(head) : X0;
-      labels += `<text x="${x + 18}" y="${y - 14}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)">${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}</text>`;
+    // branch-naambordjes + HEAD: plaats ze na een eenvoudige overlapcheck.
+    const branchLabels = Object.values(S.branches).filter(b => !b.deleted).map(b => {
+      const head = byId(b.head);
+      const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
+      const width = Math.max(24, text.length * 6.1);
+      const headX = head ? cx(head) : X0;
+      return { b, head, text, x: Math.max(4, Math.min(headX + 18, W - width - 4)), y: laneY(b.lane), width };
+    });
+    const placedLabels = [];
+    const laneRows = [...new Set(Object.values(S.branches).filter(b => !b.deleted).map(b => laneY(b.lane)))];
+    const overlaps = (a, b) => a.left < b.right + 4 && a.right + 4 > b.left && a.top < b.bottom + 3 && a.bottom + 3 > b.top;
+    branchLabels.forEach(({ b, head, x, y, width }) => {
+      const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
+      const candidates = [0, -1, 1, -2, 2, -3, 3, -4, 4].map(step => y - 14 + step * 14);
+      const labelY = candidates.find(candidate => {
+        const rect = { left: x, right: x + width, top: candidate - 11, bottom: candidate + 2 };
+        return rect.top >= 12 && rect.bottom <= H - 4 && !laneRows.some(lineY => rect.top <= lineY + 3 && rect.bottom >= lineY - 3) && !lineBoxes.some(line => overlaps(rect, line)) && !placedLabels.some(placed => overlaps(rect, placed));
+      }) ?? Math.max(12, Math.min(H - 4, y - 14));
+      const rect = { left: x, right: x + width, top: labelY - 11, bottom: labelY + 2 };
+      placedLabels.push(rect);
+      const faded = head && isEnvFaded(head);
+      labels += `<text x="${x}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
     // vlaggetjes: waar staat test, waar staat live (altijd op main)
     const flagY = laneY(0) - R - 14;
