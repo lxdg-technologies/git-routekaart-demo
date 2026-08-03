@@ -62,6 +62,7 @@ Elke regel hieronder is één missie in de simulatie. Deze tabel is de enige bro
 | 12 | Branchen vanaf een andere branch | Werk stapelen dat afhangt van iets wat nog in beoordeling staat | af |
 | 13 | Live terugzetten naar een eerdere versie | Rollback: een bewezen pakket terug, zonder te bouwen of te testen | af |
 | 14 | Een collega laten mergen terwijl jij op je eigen branch zit | De hoofdlijn beweegt terwijl jij werkt; jouw werk vertrekt vanaf een ouder punt | af |
+| 15 | De kaart bekijken per omgeving | Zichtbaar maken dat live achterloopt op test, en hoeveel | af |
 
 Statuswaarden: `af` · `gepland` · `wens` · `niet`.
 
@@ -97,11 +98,11 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **03-08-2026** — Omgevingsfilter op de kaart toegevoegd, zodat het verschil tussen test en live zichtbaar wordt in plaats van alleen beschreven.
 - **03-08-2026** — Eerste stukje samenwerken toegevoegd: een collega die naar main mergt. De rest van v2 (conflicten, kapotte live-omgeving) blijft open.
 - **03-08-2026** — v1 verklaard tot eindstreep.
 - **03-08-2026** — Werkwijze voor parallel werken vastgelegd: sectiemarkering in index.html, rooktest per gebied, en 'Raakt:' bovenaan elk issue.
 - **03-08-2026** — Verwijzing naar de privé-companion-repo toegevoegd in `README.md`. De knip blijft: publiek = generiek leermiddel, privé = de werkwijze van de organisatie zelf.
-- **03-08-2026** — v1 verklaard tot eindstreep. Alles wat verder gaat dan de keten van issue tot live valt onder v2 en wordt niet stilzwijgend toegevoegd.
 - **03-08-2026** — Dit bestand toegevoegd, omdat de bedoeling van de simulatie tot nu toe alleen uit de code viel af te leiden en elke sessie op een eigen interpretatie uitkwam.
 - **02-08-2026** — Rooktests testen gedrag of het uiteindelijke scherm, nooit de letterlijke brontekst van het script.
 - **02-08-2026** — Versienummers verschijnen op de kaart bij de stations die een release opleverden, zodat zichtbaar is dat niet elke commit een versie is.

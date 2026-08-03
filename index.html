@@ -72,6 +72,7 @@
   #map-card { padding: .6rem .6rem .2rem; }
   #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
   #map-scroll svg { display: block; }
+  .env-filter-note { min-height: 1.35em; margin: 0 .25rem .35rem; color: var(--ink-soft); font-size: .82rem; }
   .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
   .branch-line:hover, .branch-line:focus-visible { stroke-width: 8px; filter: drop-shadow(0 0 3px currentColor); }
   .branch-line-hit { cursor: pointer; pointer-events: stroke; }
@@ -116,6 +117,12 @@
   /* ==== SECTIE: OMGEVINGEN ==== */
   .envs { display: flex; align-items: stretch; gap: .3rem; }
   .env { flex: 1 1 0; border: 1.5px solid var(--line); border-radius: 8px; padding: .45rem .4rem; text-align: center; min-width: 0; }
+  button.env { color: var(--ink); background: var(--panel); font: inherit; cursor: pointer; }
+  button.env:hover, button.env:focus-visible { filter: brightness(.98); }
+  button.env.active { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); }
+  button.env.dev.active { border-color: var(--warn); }
+  button.env.test.active { border-color: var(--accent); }
+  button.env.live.active { border-color: var(--ok); }
   .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
   .env-val { font-family: var(--mono); font-weight: 700; font-size: .92rem; margin: .15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .env-sub { font-size: .67rem; color: var(--ink-soft); line-height: 1.25; }
@@ -223,6 +230,7 @@
   <div>
     <!-- ==== SECTIE: KAART ==== -->
     <div class="card" id="map-card">
+      <p id="env-filter-note" class="env-filter-note" aria-live="polite"></p>
       <div id="map-scroll"></div>
       <div class="legend" id="legend"></div>
     </div>
@@ -294,24 +302,24 @@
     <!-- ==== SECTIE: OMGEVINGEN ==== -->
     <div class="card" id="omgevingen">
       <h2>Omgevingen</h2>
-      <div class="envs">
-        <div class="env dev">
+      <div class="envs" aria-label="Kies omgevingsweergave">
+        <button type="button" class="env dev" id="env-dev-box" aria-pressed="false" aria-label="Toon Ontwikkel-weergave">
           <div class="env-name">Ontwikkel</div>
           <div class="env-val" id="env-dev">—</div>
           <div class="env-sub">jouw branch</div>
-        </div>
+        </button>
         <div class="env-arrow">→</div>
-        <div class="env test">
+        <button type="button" class="env test" id="env-test-box" aria-pressed="false" aria-label="Toon Test-weergave">
           <div class="env-name">Test</div>
           <div class="env-val" id="env-test">v0.1.0</div>
           <div class="env-sub">elke merge, automatisch</div>
-        </div>
+        </button>
         <div class="env-arrow">→</div>
-        <div class="env live" id="env-live-box">
+        <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
           <div class="env-name">Live</div>
           <div class="env-val" id="env-live">v0.1.0</div>
           <div class="env-sub">alleen na jouw akkoord</div>
-        </div>
+        </button>
       </div>
       <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
       <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
@@ -560,6 +568,7 @@
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
       selectedStart: null,
       selectedStartAuto: false,
+      envFilter: "all",
     };
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
@@ -778,6 +787,7 @@
     "Klik een commit op een niet-gemergde branch aan en maak daar een branch vanaf — een \"branch-van-branch\"",
     "Zet live terug naar een eerdere versie — en zie dat test gewoon vooruit blijft lopen.",
     "Laat een collega mergen terwijl jij op je eigen branch zit — zie main opschuiven",
+    "Bekijk de kaart in de stand Live en zie wat je gebruikers écht hebben",
   ];
   function tick(i) { S.missions[i] = true; }
 
@@ -814,6 +824,35 @@
   }
 
   /* ==== SECTIE: KAART ==== */
+  function setEnvFilter(filter) {
+    const next = S.envFilter === filter ? "all" : filter;
+    S.envFilter = next;
+    if (next === "all") {
+      render();
+      return;
+    }
+    const labels = { dev: "Ontwikkel", test: "Test", live: "Live" };
+    const explanations = {
+      dev: "Je ziet de zijsporen waarop nog gewerkt wordt; de rest van main is grijs.",
+      test: "Je ziet main tot en met wat op test staat; alles daarna en alle zijsporen zijn grijs.",
+      live: "Dit is wat je gebruikers nu hebben. Alles wat grijs is, is al gebouwd en getest — maar staat nog niet bij hen. Het komt er pas als iemand bewust op promoveren drukt.",
+    };
+    log(`Weergave: ${labels[next]}`, explanations[next]);
+    if (next === "live" && S.env.test !== S.env.live) tick(14);
+    render();
+  }
+  function isEnvFaded(c) {
+    if (S.envFilter === "all") return false;
+    if (S.envFilter === "dev") {
+      const branch = S.branches[c.branch];
+      if (c.branch !== "main" && branch && !branch.merged && !branch.deleted) return false;
+      return !Object.values(S.branches).some(branch => branch.name !== "main" && !branch.merged && !branch.deleted && ancestry(branch.head).has(c.id));
+    }
+    if (c.branch !== "main") return true;
+    const target = byId(S.envFilter === "live" ? S.env.liveCommit : S.env.testCommit);
+    return !target || !ancestry(target.id).has(c.id);
+  }
+
   function render() {
     renderMap(); renderChips(); renderTickets(); renderMissions(); renderEnv(); renderStartPicker();
     const b = S.branches[S.active];
@@ -841,6 +880,13 @@
     el("env-dev").textContent = S.active === "main" ? "—" : S.active;
     el("env-test").textContent = S.env.test;
     el("env-live").textContent = S.env.live;
+    const filterLabels = { all: "", dev: "Weergave: Ontwikkel — zijsporen in ontwikkeling zijn vol; de rest van main is grijs.", test: "Weergave: Test — main tot en met test is vol; alles daarna en alle zijsporen zijn grijs.", live: "Weergave: Live — grijs is gebouwd en getest, maar nog niet bij gebruikers." };
+    el("env-filter-note").textContent = filterLabels[S.envFilter];
+    ["dev", "test", "live"].forEach(filter => {
+      const box = el(`env-${filter}-box`);
+      box.classList.toggle("active", S.envFilter === filter);
+      box.setAttribute("aria-pressed", String(S.envFilter === filter));
+    });
     const behind = S.env.test !== S.env.live;
     el("env-live-box").classList.toggle("behind", behind);
     el("btn-promote").disabled = !behind;
@@ -961,27 +1007,30 @@
         const p = byId(pid); if (!p) return;
         const pb = branchOf(p), px = cx(p), py = laneY(pb.lane);
         const color = pi === 1 ? branchOf(p).color : (pb.lane === b.lane ? b.color : b.color);
-        const faded = c.squashed || p.squashed;
-        const dash = faded ? 'stroke-dasharray="3 6" opacity=".45"' : "";
+        const dash = c.squashed || p.squashed ? 'stroke-dasharray="3 6" opacity=".45"' : "";
+        const envFade = isEnvFaded(c) || isEnvFaded(p) ? ' data-env-faded="true"' : "";
+        const envOpacity = envFade ? ' opacity=".4"' : "";
         const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch";
-        const lineAttrs = `class="branch-line" role="button" tabindex="0" onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
+        const lineAttrs = `class="branch-line" role="button" tabindex="0"${envFade} onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
         const hitAttrs = `class="branch-line-hit" aria-hidden="true" onclick="focusTerm('${lineTerm}')"`;
-        if (py === y) edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+        if (py === y) edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         else {
           const mid = px + Math.min(40, (x - px) / 2);
           const path = `M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${Math.min(px + 80, x)} ${y} H ${x}`;
-          edges += `<path ${hitAttrs} d="${path}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="${path}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+          edges += `<path ${hitAttrs} d="${path}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="${path}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
         }
       });
     });
     S.commits.forEach(c => {
       const b = branchOf(c), y = laneY(b.lane), x = cx(c);
-      const fade = c.squashed ? 'opacity=".4"' : "";
+      const envFaded = isEnvFaded(c);
+      const fade = c.squashed || envFaded ? 'opacity=".4"' : "";
+      const envFadeAttr = envFaded ? 'data-env-faded="true"' : "";
       const isHub = c.kind === "merge";
       const selected = c.id === S.selectedStart;
       const release = c.branch === "main" ? releaseByCommit.get(c.id) : null;
       const rollbackPreview = c.id === S.rollbackPreviewCommit;
-      stations += `<g ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
+      stations += `<g ${envFadeAttr} ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
       stations += `<circle class="station-hit" cx="${x}" cy="${y}" r="22" fill="transparent" stroke="none"/>`;
       if (release) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 7 : R + 5}" fill="none" stroke="var(--ok)" stroke-width="2"><title>release station ${release.version}</title></circle>`;
       if (rollbackPreview) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 11 : R + 9}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 3"><title>terugrol naar ${release ? release.version : "dit station"}</title></circle>`;
@@ -991,9 +1040,9 @@
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
       stations += `</g>`;
-      labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade}>${c.id.slice(0, 5)}</text>`;
-      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700" style="font-family:var(--mono)" ${fade}>${release.version}</text>`;
-      if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega">👤</text>`;
+      labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${c.id.slice(0, 5)}</text>`;
+      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+      if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega" ${envFadeAttr}>👤</text>`;
     });
     // branch-naambordjes + HEAD
     Object.values(S.branches).forEach(b => {
@@ -1006,10 +1055,10 @@
     const flagY = laneY(0) - R - 14;
     const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
     if (testC && liveC && testC.id === liveC.id) {
-      flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>test én live staan hier</title>🧪🚀</text>`;
+      flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>test én live staan hier</title>🧪🚀</text>`;
     } else {
-      if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>huidige test-versie</title>🧪</text>`;
-      if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"><title>huidige live-versie</title>🚀</text>`;
+      if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige test-versie</title>🧪</text>`;
+      if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(liveC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige live-versie</title>🚀</text>`;
     }
     el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${edges}${stations}${labels}${flags}</svg>`;
     el("map-scroll").scrollLeft = 1e6;
@@ -1024,6 +1073,9 @@
   el("btn-issue").onclick = newIssue;
   el("btn-commit").onclick = commit;
   el("btn-collega").onclick = colleagueMerge;
+  el("env-dev-box").onclick = () => setEnvFilter("dev");
+  el("env-test-box").onclick = () => setEnvFilter("test");
+  el("env-live-box").onclick = () => setEnvFilter("live");
   el("btn-promote").onclick = promote;
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
