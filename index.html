@@ -344,6 +344,7 @@
       <div class="chips" id="branch-chips"></div>
       <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
       <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
+      <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small>iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
       <div id="tickets"></div>
       <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
     </div>
@@ -553,7 +554,8 @@
     return {
       commits: [], branches: {}, issues: [], prs: [],
       active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
-      missions: [false, false, false, false, false, false, false, false, false, false, false, false, false],
+      missions: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      colleagueSeq: 0,
       mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
       selectedStart: null,
@@ -662,6 +664,19 @@
     if (aheadOfMain(b.name).length >= 2) tick(2);
     render();
   }
+  function colleagueMerge() {
+    const active = S.branches[S.active];
+    if (!active || active.name === "main" || active.merged) return;
+    const messages = ["collega: typefout hersteld", "collega: logo bijgewerkt", "collega: test toegevoegd"];
+    const mainHead = S.branches.main.head;
+    const c = addCommit("main", messages[S.colleagueSeq % messages.length], [mainHead]);
+    c.byCollega = true;
+    S.colleagueSeq++;
+    release();
+    log("Een collega heeft iets naar main gemerged", "Jij hebt niets gedaan, en toch is <code>main</code> opgeschoven. Kijk op de kaart: jouw zijspoor hangt nog aan het <b>oudere</b> station waar je vertrok. Dat is geen probleem zolang jullie niet dezelfde regels aanpassen — git voegt werk van verschillende plekken vanzelf samen. Wél verstandig: haal vlak vóór het insturen van je pull request de laatste <code>main</code> op, dan werk je op de nieuwste stand.");
+    tick(13);
+    render();
+  }
   function openPR(branch) {
     const b = S.branches[branch];
     S.prs.push({ num: ++S.prNo, branch, state: "open", issue: b.issue });
@@ -762,6 +777,7 @@
     "Klik een oudere commit op <code>main</code> aan en maak daar een branch vanaf — een \"tijdreis\"",
     "Klik een commit op een niet-gemergde branch aan en maak daar een branch vanaf — een \"branch-van-branch\"",
     "Zet live terug naar een eerdere versie — en zie dat test gewoon vooruit blijft lopen.",
+    "Laat een collega mergen terwijl jij op je eigen branch zit — zie main opschuiven",
   ];
   function tick(i) { S.missions[i] = true; }
 
@@ -977,6 +993,7 @@
       stations += `</g>`;
       labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade}>${c.id.slice(0, 5)}</text>`;
       if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700" style="font-family:var(--mono)" ${fade}>${release.version}</text>`;
+      if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega">👤</text>`;
     });
     // branch-naambordjes + HEAD
     Object.values(S.branches).forEach(b => {
@@ -1006,6 +1023,7 @@
 
   el("btn-issue").onclick = newIssue;
   el("btn-commit").onclick = commit;
+  el("btn-collega").onclick = colleagueMerge;
   el("btn-promote").onclick = promote;
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
