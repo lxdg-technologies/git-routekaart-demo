@@ -13,23 +13,26 @@ jobs:
   quality:
     name: quality
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: sveltekit
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Run simulator smoke test
+        run: node test/smoketest.js
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: Install SvelteKit dependencies
+        working-directory: sveltekit
         run: bun install --frozen-lockfile
 
       - name: Typecheck and Svelte check
+        working-directory: sveltekit
         run: bun run check
 
-      - name: Build
+      - name: Build SvelteKit app
+        working-directory: sveltekit
         run: bun run build
