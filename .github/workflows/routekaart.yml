@@ -44,6 +44,14 @@ jobs:
     environment:
       name: test
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Run the real test suite (smoketest.js)
+        run: node test/smoketest.js
+
       - name: Download exactly the build from this commit
         uses: actions/download-artifact@v4
         with:
@@ -57,7 +65,7 @@ jobs:
           {
             echo "## Testomgeving"
             echo ""
-            echo "De build voor `$GITHUB_SHA` is gevalideerd."
+            echo "De build voor `$GITHUB_SHA` is gevalideerd — inclusief de volledige rooktest (\`node test/smoketest.js\`)."
             echo ""
             echo "Deze stap vertegenwoordigt de automatische testomgeving uit de routekaart."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -66,6 +74,13 @@ jobs:
     name: promote to live
     needs: test
     runs-on: ubuntu-latest
+    # Bewuste keuze (03-08-2026): deze job draait NIET automatisch mee op elke push naar main.
+    # actions/deploy-pages kan bij de eerste succesvolle run de Pages-bron van deze repo omzetten
+    # naar "GitHub Actions" — dat zou zonder waarschuwing de bestaande deploy-main.yml en de
+    # PR-preview-links (die de gh-pages-branch nodig hebben) buiten werking stellen. Zolang die
+    # overstap niet als eigen, zichtbare stap is gedaan, blijft deze job alleen handmatig te
+    # starten (workflow_dispatch) — en zelfs dan nog achter de required reviewer op "live".
+    if: github.event_name == 'workflow_dispatch'
     environment:
       name: live
       url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
