@@ -35,11 +35,15 @@ De publieke demo is nu ook ingericht als oefenrepo voor dezelfde werkwijze:
 
     issue → branch → commits → PR → review/CI → merge naar main → test → live
 
-Na een merge naar main bouwt GitHub Actions één artifact en valideert dat automatisch in **test**. Daarna wacht dezelfde build op goedkeuring in **live**. Zie [WORKFLOW.md](WORKFLOW.md) voor de regels en eenmalige GitHub-instellingen.
+Een PR moet vóór de merge slagen voor zowel de simulator-smoketest als de SvelteKit-controles. Na een merge naar main kun je de workflow bewust handmatig starten. Die workflow maakt één artifact, valideert dat in **test** en vraagt daarna goedkeuring voor promotie naar **live**. Zie [WORKFLOW.md](WORKFLOW.md) voor de regels en eenmalige GitHub-instellingen.
 
 ## Lokaal draaien
 
 Download of clone deze repo en open index.html in een browser. Eén bestand, geen build, geen server.
+
+Voor de volledige smoketest:
+
+    node test/smoketest.js
 
 ## SvelteKit-app
 
