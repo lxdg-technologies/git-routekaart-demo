@@ -1,0 +1,59 @@
+name: Review guard
+
+on:
+  pull_request:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  review-guard:
+    name: review-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controleer geldige technische goedkeuring
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Alleen deze logins mogen de technische poort goedkeuren.
+          allowed_logins='["lxdg-dcs-reviewer[bot]","DCS-Rob","vdbergkevin"]'
+
+          reviews="$(gh api --paginate \
+            "repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" | jq -s 'add')"
+
+          self_approvals="$(jq --arg author "$PR_AUTHOR" '
+            [.[] | select(.state == "APPROVED" and .user.login == $author)] | length
+          ' <<< "$reviews")"
+
+          if [ "$self_approvals" -gt 0 ]; then
+            echo "::error::De PR-auteur heeft deze PR zelf goedgekeurd; dat is niet toegestaan."
+            exit 1
+          fi
+
+          valid_approvals="$(jq --argjson allowed "$allowed_logins" '
+            [
+              .[]
+              | select(
+                  .state == "APPROVED"
+                  and (.user.login as $login | $allowed | index($login) != null)
+                )
+              | .user.login
+            ]
+            | unique
+          ' <<< "$reviews")"
+
+          if [ "$(jq 'length' <<< "$valid_approvals")" -eq 0 ]; then
+            echo "::error::Er is nog geen geldige goedkeuring van een toegestane reviewer."
+            echo "Toegestane logins: $(jq -r 'join(", ")' <<< "$allowed_logins")"
+            exit 1
+          fi
+
+          echo "Geldige goedkeuring ontvangen van: $(jq -r 'join(", ")' <<< "$valid_approvals")"
