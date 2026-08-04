@@ -23,15 +23,45 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Alleen deze logins mogen de technische poort goedkeuren.
+          # DCS-Rob staat hier tijdelijk in als terugval, tot de reviewer-bot
+          # aantoonbaar een pull request heeft goedgekeurd en review-guard daarna
+          # groen werd. Daarna gaat DCS-Rob eruit: hij is de functionele
+          # goedkeurder van Environment live, en zolang hij ook de technische
+          # poort kan afvinken bestaat de scheiding tussen technische en
+          # functionele review niet echt.
           allowed_logins='["lxdg-dcs-reviewer[bot]","DCS-Rob","vdbergkevin"]'
 
           reviews="$(gh api --paginate \
             "repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" | jq -s 'add')"
 
-          self_approvals="$(jq --arg author "$PR_AUTHOR" '
-            [.[] | select(.state == "APPROVED" and .user.login == $author)] | length
+          # COMMENTED is geen oordeel en overschrijft dus geen eerdere
+          # APPROVED. Alleen de laatste inhoudelijke review per login telt.
+          latest_reviews="$(jq '
+            [
+              .[]
+              | select(
+                  .state == "APPROVED"
+                  or .state == "CHANGES_REQUESTED"
+                  or .state == "DISMISSED"
+                )
+              | {
+                  login: .user.login,
+                  state: .state,
+                  id: (.id // 0),
+                  submitted_at: (.submitted_at // "")
+                }
+            ]
+            | group_by(.login)
+            | map(sort_by([.submitted_at, .id]) | last)
           ' <<< "$reviews")"
+
+          self_approvals="$(jq --arg author "$PR_AUTHOR" '
+            [
+              .[]
+              | select(.state == "APPROVED" and .login == $author)
+            ]
+            | length
+          ' <<< "$latest_reviews")"
 
           if [ "$self_approvals" -gt 0 ]; then
             echo "::error::De PR-auteur heeft deze PR zelf goedgekeurd; dat is niet toegestaan."
@@ -43,12 +73,12 @@ jobs:
               .[]
               | select(
                   .state == "APPROVED"
-                  and (.user.login as $login | $allowed | index($login) != null)
+                  and (.login as $login | $allowed | index($login) != null)
                 )
-              | .user.login
+              | .login
             ]
             | unique
-          ' <<< "$reviews")"
+          ' <<< "$latest_reviews")"
 
           if [ "$(jq 'length' <<< "$valid_approvals")" -eq 0 ]; then
             echo "::error::Er is nog geen geldige goedkeuring van een toegestane reviewer."
@@ -56,4 +86,6 @@ jobs:
             exit 1
           fi
 
+          echo "Laatste inhoudelijke reviews:"
+          jq -r '.[] | "  \(.login): \(.state)"' <<< "$latest_reviews"
           echo "Geldige goedkeuring ontvangen van: $(jq -r 'join(", ")' <<< "$valid_approvals")"
