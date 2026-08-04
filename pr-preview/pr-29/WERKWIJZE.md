@@ -122,4 +122,6 @@ De repo gebruikt drie gescheiden GitHub App-identiteiten. Hun rechten zijn bewus
 
 `lxdg-dcs-author[bot]` heette tot **04-08-2026** `dcs-lxdg-core`. Oudere commits met die naam horen dus bij dezelfde technische rol.
 
-De workflow-check `review-guard` kan later naast `quality` als verplichte statuscheck worden aangezet. Dat is een repository-instelling die Rob handmatig doet; deze PR zet hem nadrukkelijk niet aan.\n\nDCS-Rob staat voorlopig in de toegestane lijst als terugval, tot de reviewer-bot aantoonbaar een pull request heeft goedgekeurd en `review-guard` daarna groen werd. Daarna wordt DCS-Rob uit deze technische lijst verwijderd: hij is de functionele goedkeurder van Environment `live`, en zolang hij ook de technische poort kan afvinken bestaat de scheiding tussen technische en functionele review niet echt.
+De workflow-check `review-guard` kan later naast `quality` als verplichte statuscheck worden aangezet. Dat is een repository-instelling die Rob handmatig doet; deze PR zet hem nadrukkelijk niet aan.
+
+DCS-Rob staat voorlopig in de toegestane lijst als terugval, tot de reviewer-bot aantoonbaar een pull request heeft goedgekeurd en `review-guard` daarna groen werd. Daarna wordt DCS-Rob uit deze technische lijst verwijderd: hij is de functionele goedkeurder van Environment `live`, en zolang hij ook de technische poort kan afvinken bestaat de scheiding tussen technische en functionele review niet echt.
