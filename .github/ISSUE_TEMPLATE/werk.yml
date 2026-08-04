@@ -1,0 +1,27 @@
+name: Werk
+description: Beschrijf één concreet stukje werk
+title: "[Werk] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Elk stukje werk begint met een issue. Maak daarna een branch vanaf `main`.
+  - type: textarea
+    id: doel
+    attributes:
+      label: Doel
+      description: Wat moet er veranderen en waarom?
+      placeholder: Als gebruiker wil ik...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptatie
+    attributes:
+      label: Acceptatiecriteria
+      description: Wanneer is dit werk klaar?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
