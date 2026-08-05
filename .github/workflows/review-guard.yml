@@ -3,7 +3,7 @@ name: Review guard
 on:
   pull_request:
   pull_request_review:
-    types: [submitted]
+    types: [submitted, dismissed]
 
 permissions:
   pull-requests: read
