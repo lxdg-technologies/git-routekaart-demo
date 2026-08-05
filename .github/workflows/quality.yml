@@ -1,0 +1,23 @@
+# Deze controle draait de rooktest, zodat kapotte wijzigingen niet kunnen worden gemerged.
+name: Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 20 instellen
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rooktest draaien
+        run: node test/smoketest.js
