@@ -116,11 +116,11 @@ De repo gebruikt drie gescheiden GitHub App-identiteiten. Hun rechten zijn bewus
 | Identiteit | Wat het mag | Wat het niet mag |
 |---|---|---|
 | `lxdg-dcs-planner[bot]` | Issues schrijven en bijhouden | Geen code schrijven en geen approvals geven |
-| `lxdg-dcs-author[bot]` | Code schrijven en pull requests openen | Nooit eigen of andermans PR goedkeuren |
+| `lxdg-dcs-coder[bot]` | Code schrijven en pull requests openen | Nooit eigen of andermans PR goedkeuren |
 | `lxdg-dcs-reviewer[bot]` | De technische review uitvoeren en pull requests reviewen | Geen `contents:write`; daardoor kan deze identiteit geen PR-auteur zijn |
 | **DCS-Rob (mens)** | Functionele review doen via de PR-preview en de uitrol naar Environment `live` goedkeuren | Niet vervangen door een agent voor de functionele beoordeling |
 
-`lxdg-dcs-author[bot]` heette tot **04-08-2026** `dcs-lxdg-core`. Oudere commits met die naam horen dus bij dezelfde technische rol.
+`lxdg-dcs-coder[bot]` wordt sinds **05-08-2026** door het Hermes-profiel `coder` gebruikt; Core gebruikt deze GitHub-identiteit niet meer. De identiteit heette tot **04-08-2026** `lxdg-dcs-author[bot]` en daarvoor `dcs-lxdg-core`. Oudere commits met die namen horen dus bij dezelfde technische rol.
 
 De workflow-check `review-guard` kan later naast `quality` als verplichte statuscheck worden aangezet. Dat is een repository-instelling die Rob handmatig doet; deze PR zet hem nadrukkelijk niet aan.
 
