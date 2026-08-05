@@ -688,7 +688,7 @@
   function openPR(branch) {
     const b = S.branches[branch];
     S.prs.push({ num: ++S.prNo, branch, state: "open", issue: b.issue });
-    log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt.");
+    log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt. Kijk op de kaart: er loopt nu een stippellijn van jouw zijspoor richting main die er nét niet bij komt — dat is het voorstel. Bij de merge wordt het een echte lijn.");
     tick(3); render();
   }
   function release() {
@@ -1092,6 +1092,29 @@
     const overlaps = (a, b) => a.left < b.right + 4 && a.right + 4 > b.left && a.top < b.bottom + 3 && a.bottom + 3 > b.top;
     const lineCollisions = rect => lineSamples.reduce((hits, point) => hits + (point.x >= rect.left - 5 && point.x <= rect.right + 5 && point.y >= rect.top - 5 && point.y <= rect.bottom + 5 ? 1 : 0), 0);
     const placementScore = rect => lineCollisions(rect) + placedLabels.reduce((hits, placed) => hits + (overlaps(rect, placed) ? 100 : 0), 0);
+    // Open PR's tekenen de toekomstige merge voor: een voorstel, nog geen feit.
+    S.prs.filter(pr => pr.state === "open").forEach(pr => {
+      const b = S.branches[pr.branch], head = b && byId(b.head);
+      if (!b || b.deleted || !head) return;
+      const y = laneY(b.lane), mainY = laneY(0), headX = cx(head);
+      const startX = headX + R + 4, bendX = startX + 40, endX = bendX + 40, endY = mainY + 24;
+      const mid = bendX + Math.min(40, (endX - bendX) / 2);
+      const path = `M${startX} ${y} H${bendX} C ${mid} ${y}, ${mid} ${endY}, ${endX} ${endY}`;
+      const points = [...sampleLine(startX, y, bendX, y), ...Array.from({ length: 31 }, (_, i) => {
+        const t = i / 30, mt = 1 - t;
+        return { x: mt ** 3 * bendX + 3 * mt ** 2 * t * mid + 3 * mt * t ** 2 * mid + t ** 3 * endX, y: mt ** 3 * y + 3 * mt ** 2 * t * y + 3 * mt * t ** 2 * endY + t ** 3 * endY };
+      })];
+      lineSamples.push(...points);
+      const faded = isEnvFaded(head);
+      const fade = faded ? ' data-env-faded="true" opacity=".4"' : "";
+      const label = `PR #${pr.num}`, labelX = endX + 9, labelY = endY + 4;
+      const labelRect = { left: labelX, right: labelX + label.length * 6.1, top: labelY - 11, bottom: labelY + 2 };
+      placedLabels.push(labelRect);
+      if (!faded) includeFrame(Math.min(startX, bendX), Math.min(y, endY), Math.max(endX, labelRect.right), Math.max(y, endY));
+      const attrs = `data-pr="${pr.num}" class="pr-preview" role="button" tabindex="0" onclick="focusTerm('Pull Request (PR)')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('Pull Request (PR)')" aria-label="open pull request naar main"`;
+      edges += `<g ${attrs}${fade}><path d="${path}" stroke="${b.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/><path d="M${endX - 7} ${endY - 5} L${endX} ${endY} L${endX - 7} ${endY + 5}" stroke="${b.color}" stroke-width="2" fill="none"/><title>open pull request naar main</title></g>`;
+      labels += `<text data-pr="${pr.num}" x="${labelX}" y="${labelY}" font-size="11" fill="${b.color}" style="font-family:var(--mono)"${fade}>${label}</text>`;
+    });
     branchLabels.forEach(({ b, head, x, y, width }) => {
       const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
       const yCandidates = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8].map(step => y - 14 + step * 14).filter(candidate => candidate >= 12 && candidate <= H - 4);
@@ -1133,7 +1156,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>R = revert-commit</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
