@@ -75,6 +75,8 @@
   .env-filter-note { min-height: 1.35em; margin: 0 .25rem .35rem; color: var(--ink-soft); font-size: .82rem; }
   .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
   .branch-line:hover, .branch-line:focus-visible { stroke-width: 8px; filter: drop-shadow(0 0 3px currentColor); }
+  .pr-preview { cursor: pointer; transition: filter .15s; }
+  .pr-preview:hover, .pr-preview:focus-visible { filter: drop-shadow(0 0 3px currentColor); }
   .branch-line-hit { cursor: pointer; pointer-events: stroke; }
   .station-hit { cursor: pointer; }
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
@@ -1008,6 +1010,8 @@
     const branchOf = c => S.branches[c.branch];
     let edges = "", stations = "", labels = "", flags = "";
     const lineSamples = [];
+    const placedLabels = [];
+    const branchLabelRects = [];
     let frameBounds = null;
     const sampleLine = (x1, y1, x2, y2, steps = 20) => Array.from({ length: steps + 1 }, (_, i) => {
       const t = i / steps;
@@ -1075,8 +1079,14 @@
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
       stations += `</g>`;
-      labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${c.id.slice(0, 5)}</text>`;
-      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+      const commitLabel = c.id.slice(0, 5), commitLabelY = y + 26;
+      labels += `<text x="${x}" y="${commitLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${commitLabel}</text>`;
+      placedLabels.push({ left: x - commitLabel.length * 6.1 / 2, right: x + commitLabel.length * 6.1 / 2, top: commitLabelY - 11, bottom: commitLabelY + 2 });
+      if (release) {
+        const releaseLabelY = y + 39;
+        labels += `<text x="${x}" y="${releaseLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+        placedLabels.push({ left: x - release.version.length * 6.1 / 2, right: x + release.version.length * 6.1 / 2, top: releaseLabelY - 11, bottom: releaseLabelY + 2 });
+      }
       if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega" ${envFaded ? 'data-env-faded="true" opacity=".4"' : ""}>👤</text>`;
     });
     // branch-naambordjes + HEAD: plaats ze na een eenvoudige overlapcheck.
@@ -1087,7 +1097,6 @@
       const headX = head ? cx(head) : X0;
       return { b, head, text, x: Math.max(4, Math.min(headX + 18, W - width - 4)), y: laneY(b.lane), width };
     });
-    const placedLabels = [];
     const laneRows = [...new Set(Object.values(S.branches).filter(b => !b.deleted).map(b => laneY(b.lane)))];
     const overlaps = (a, b) => a.left < b.right + 4 && a.right + 4 > b.left && a.top < b.bottom + 3 && a.bottom + 3 > b.top;
     const lineCollisions = rect => lineSamples.reduce((hits, point) => hits + (point.x >= rect.left - 5 && point.x <= rect.right + 5 && point.y >= rect.top - 5 && point.y <= rect.bottom + 5 ? 1 : 0), 0);
@@ -1130,6 +1139,7 @@
       const rect = rectFor(label);
       const faded = head && isEnvFaded(head);
       placedLabels.push(rect);
+      branchLabelRects.push(rect);
       if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
       labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
@@ -1148,7 +1158,7 @@
       const right = Math.min(W, frameBounds.right + 14), bottom = Math.min(H, frameBounds.bottom + 14);
       return `<rect data-env-frame="${S.envFilter}" x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" rx="8" fill="none" stroke="${frameColors[S.envFilter]}" stroke-width="2" stroke-dasharray="6 5"/>`;
     })() : "";
-    S.mapLayout = { lineSamples, branchLabels: placedLabels.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
+    S.mapLayout = { lineSamples, branchLabels: branchLabelRects.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
     el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${frame}${edges}${stations}${labels}${flags}</svg>`;
     el("map-scroll").scrollLeft = 1e6;
 
