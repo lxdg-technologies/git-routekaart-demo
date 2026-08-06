@@ -7,6 +7,19 @@ module.exports = async function kaart({ assert, byIdMap, mapResult, stappen }) {
   assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
   assert(byIdMap["legend"].innerHTML.includes("release station"), "legenda benoemt release-stations");
 
+  stappen.nieuwIssue();
+  stappen.maakBranch();
+  stappen.commit();
+  stappen.commit();
+  stappen.openPR();
+  assert(mapResult().includes('data-pr="1"') && mapResult().includes("PR #1"), "open PR verschijnt als stippellijn met label op de kaart");
+  assert(byIdMap["legend"].innerHTML.includes("open pull request"), "legenda benoemt open pull requests");
+  stappen.kiesOmgeving("live");
+  const prMarker = mapResult().match(/<g data-pr="1"[^>]*>/)?.[0] || "";
+  assert(prMarker.includes('data-env-faded="true"'), "open PR vervaagt zelf mee met de branch in Live-weergave");
+  stappen.mergeCommit();
+  assert(!mapResult().includes('data-pr="1"'), "PR-markering verdwijnt na de merge");
+
   stappen.mergeRonde("merge");
   assert(mapResult().includes("v0.1.1") && mapResult().includes("release station v0.1.1"), "nieuwe release krijgt label op het juiste station");
   stappen.promote();

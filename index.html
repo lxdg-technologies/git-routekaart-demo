@@ -75,6 +75,8 @@
   .env-filter-note { min-height: 1.35em; margin: 0 .25rem .35rem; color: var(--ink-soft); font-size: .82rem; }
   .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
   .branch-line:hover, .branch-line:focus-visible { stroke-width: 8px; filter: drop-shadow(0 0 3px currentColor); }
+  .pr-preview { cursor: pointer; transition: filter .15s; }
+  .pr-preview:hover, .pr-preview:focus-visible { filter: drop-shadow(0 0 3px currentColor); }
   .branch-line-hit { cursor: pointer; pointer-events: stroke; }
   .station-hit { cursor: pointer; }
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
@@ -688,7 +690,7 @@
   function openPR(branch) {
     const b = S.branches[branch];
     S.prs.push({ num: ++S.prNo, branch, state: "open", issue: b.issue });
-    log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt.");
+    log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt. Kijk op de kaart: er loopt nu een stippellijn van jouw zijspoor richting main die er nét niet bij komt — dat is het voorstel. Bij de merge wordt het een echte lijn.");
     tick(3); render();
   }
   function release() {
@@ -1008,6 +1010,8 @@
     const branchOf = c => S.branches[c.branch];
     let edges = "", stations = "", labels = "", flags = "";
     const lineSamples = [];
+    const placedLabels = [];
+    const branchLabelRects = [];
     let frameBounds = null;
     const sampleLine = (x1, y1, x2, y2, steps = 20) => Array.from({ length: steps + 1 }, (_, i) => {
       const t = i / steps;
@@ -1075,8 +1079,14 @@
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
       stations += `</g>`;
-      labels += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${c.id.slice(0, 5)}</text>`;
-      if (release) labels += `<text x="${x}" y="${y + 39}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+      const commitLabel = c.id.slice(0, 5), commitLabelY = y + 26;
+      labels += `<text x="${x}" y="${commitLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${commitLabel}</text>`;
+      placedLabels.push({ left: x - commitLabel.length * 6.1 / 2, right: x + commitLabel.length * 6.1 / 2, top: commitLabelY - 11, bottom: commitLabelY + 2 });
+      if (release) {
+        const releaseLabelY = y + 39;
+        labels += `<text x="${x}" y="${releaseLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+        placedLabels.push({ left: x - release.version.length * 6.1 / 2, right: x + release.version.length * 6.1 / 2, top: releaseLabelY - 11, bottom: releaseLabelY + 2 });
+      }
       if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega" ${envFaded ? 'data-env-faded="true" opacity=".4"' : ""}>👤</text>`;
     });
     // branch-naambordjes + HEAD: plaats ze na een eenvoudige overlapcheck.
@@ -1087,11 +1097,33 @@
       const headX = head ? cx(head) : X0;
       return { b, head, text, x: Math.max(4, Math.min(headX + 18, W - width - 4)), y: laneY(b.lane), width };
     });
-    const placedLabels = [];
     const laneRows = [...new Set(Object.values(S.branches).filter(b => !b.deleted).map(b => laneY(b.lane)))];
     const overlaps = (a, b) => a.left < b.right + 4 && a.right + 4 > b.left && a.top < b.bottom + 3 && a.bottom + 3 > b.top;
     const lineCollisions = rect => lineSamples.reduce((hits, point) => hits + (point.x >= rect.left - 5 && point.x <= rect.right + 5 && point.y >= rect.top - 5 && point.y <= rect.bottom + 5 ? 1 : 0), 0);
     const placementScore = rect => lineCollisions(rect) + placedLabels.reduce((hits, placed) => hits + (overlaps(rect, placed) ? 100 : 0), 0);
+    // Open PR's tekenen de toekomstige merge voor: een voorstel, nog geen feit.
+    S.prs.filter(pr => pr.state === "open").forEach(pr => {
+      const b = S.branches[pr.branch], head = b && byId(b.head);
+      if (!b || b.deleted || !head) return;
+      const y = laneY(b.lane), mainY = laneY(0), headX = cx(head);
+      const startX = headX + R + 4, bendX = startX + 40, endX = bendX + 40, endY = mainY + 24;
+      const mid = bendX + Math.min(40, (endX - bendX) / 2);
+      const path = `M${startX} ${y} H${bendX} C ${mid} ${y}, ${mid} ${endY}, ${endX} ${endY}`;
+      const points = [...sampleLine(startX, y, bendX, y), ...Array.from({ length: 31 }, (_, i) => {
+        const t = i / 30, mt = 1 - t;
+        return { x: mt ** 3 * bendX + 3 * mt ** 2 * t * mid + 3 * mt * t ** 2 * mid + t ** 3 * endX, y: mt ** 3 * y + 3 * mt ** 2 * t * y + 3 * mt * t ** 2 * endY + t ** 3 * endY };
+      })];
+      lineSamples.push(...points);
+      const faded = isEnvFaded(head);
+      const fade = faded ? ' data-env-faded="true" opacity=".4"' : "";
+      const label = `PR #${pr.num}`, labelX = endX + 9, labelY = endY + 4;
+      const labelRect = { left: labelX, right: labelX + label.length * 6.1, top: labelY - 11, bottom: labelY + 2 };
+      placedLabels.push(labelRect);
+      if (!faded) includeFrame(Math.min(startX, bendX), Math.min(y, endY), Math.max(endX, labelRect.right), Math.max(y, endY));
+      const attrs = `data-pr="${pr.num}" class="pr-preview" role="button" tabindex="0" onclick="focusTerm('Pull Request (PR)')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('Pull Request (PR)')" aria-label="open pull request naar main"`;
+      edges += `<g ${attrs}${fade}><path d="${path}" stroke="${b.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/><path d="M${endX - 7} ${endY - 5} L${endX} ${endY} L${endX - 7} ${endY + 5}" stroke="${b.color}" stroke-width="2" fill="none"/><title>open pull request naar main</title></g>`;
+      labels += `<text data-pr="${pr.num}" x="${labelX}" y="${labelY}" font-size="11" fill="${b.color}" style="font-family:var(--mono)"${fade}>${label}</text>`;
+    });
     branchLabels.forEach(({ b, head, x, y, width }) => {
       const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
       const yCandidates = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8].map(step => y - 14 + step * 14).filter(candidate => candidate >= 12 && candidate <= H - 4);
@@ -1107,6 +1139,7 @@
       const rect = rectFor(label);
       const faded = head && isEnvFaded(head);
       placedLabels.push(rect);
+      branchLabelRects.push(rect);
       if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
       labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
@@ -1125,7 +1158,7 @@
       const right = Math.min(W, frameBounds.right + 14), bottom = Math.min(H, frameBounds.bottom + 14);
       return `<rect data-env-frame="${S.envFilter}" x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" rx="8" fill="none" stroke="${frameColors[S.envFilter]}" stroke-width="2" stroke-dasharray="6 5"/>`;
     })() : "";
-    S.mapLayout = { lineSamples, branchLabels: placedLabels.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
+    S.mapLayout = { lineSamples, branchLabels: branchLabelRects.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
     el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${frame}${edges}${stations}${labels}${flags}</svg>`;
     el("map-scroll").scrollLeft = 1e6;
 
@@ -1133,7 +1166,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>R = revert-commit</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>R = revert-commit</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
