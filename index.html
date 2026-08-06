@@ -108,6 +108,18 @@
   html.mobile-layout .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
   /* ==== SECTIE: BEGRIPPEN ==== */
   #begrippen-lijst { display: grid; gap: .45rem; }
+  #commandoreferentie { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+  #commandoreferentie h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+  .command-note { margin: 0 0 .7rem; color: var(--ink-soft); font-size: .86rem; }
+  .command-groups { display: grid; gap: .5rem; }
+  .command-group { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .command-group summary { cursor: pointer; padding: .5rem .65rem; font-weight: 650; color: var(--ink); }
+  .command-list { display: grid; gap: .5rem; padding: 0 .65rem .65rem; }
+  .command-item { padding: .45rem .55rem; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--panel) 88%, var(--line)); }
+  .command-code { display: block; margin-bottom: .25rem; font: 700 .82rem var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+  .command-item p { margin: .18rem 0 0; font-size: .8rem; color: var(--ink-soft); }
+  .command-item b { color: var(--ink); }
+  .command-warning { margin-top: .35rem !important; padding: .35rem .45rem; border-left: 3px solid var(--warn); color: var(--ink) !important; background: color-mix(in srgb, var(--warn) 10%, transparent); }
   .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); transition: border-color .2s, box-shadow .2s; }
   .term-item.term-focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); animation: term-focus .9s ease-out; }
   @keyframes term-focus { 0% { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); } 100% { background: var(--panel); } }
@@ -260,6 +272,11 @@
       <h2>Git- en workflowbegrippen</h2>
       <p class="col-note">Klik een term open voor een korte uitleg en een voorbeeld uit de workflow.</p>
       <div id="begrippen-lijst"></div>
+      <section id="commandoreferentie" aria-labelledby="commandoreferentie-kop">
+        <h3 id="commandoreferentie-kop">Git-commandoreferentie</h3>
+        <p class="command-note">De kaart laat de workflow zien; deze compacte lijst is naslagwerk voor de echte terminal. Elk commando vertelt wat het doet, wanneer je het gebruikt en geeft een veilig voorbeeld.</p>
+        <div id="commandoreferentie-lijst" class="command-groups"></div>
+      </section>
     </div>
 
     <div class="card" id="vgl">
@@ -419,6 +436,60 @@
     { term: "PR-preview", keywords: ["PR-preview", "preview"], explanation: "Een tijdelijke website die de versie van één pull request laat zien voordat die naar main gaat.", example: "Open de PR-preview om DCS-171 op mobiel te controleren vóór de merge." },
     { term: "Webhook", keywords: ["webhook"], explanation: "Een automatisch HTTP-seintje waarmee het ene systeem een ander systeem informeert dat er iets gebeurde.", example: "Een GitHub-webhook kan Linear waarschuwen dat een PR is geopend." },
     { term: "Scope (rechten)", keywords: ["scope", "rechten"], explanation: "Een scope bepaalt welke acties een token of geautomatiseerde gebruiker mag uitvoeren.", example: "Zonder workflow-scope kan een agent broncode wel pushen maar workflowbestanden niet wijzigen." },
+  ];
+  const COMMAND_GROUPS = [
+    { title: "1. Installatie en eerste configuratie", commands: [
+      ["git --version", "Controleert of Git geïnstalleerd is.", "Bij de eerste keer werken op een computer.", "git --version"],
+      ["git config --global user.name \"Naam\"", "Stelt de naam in die bij jouw commits komt te staan.", "Eenmalig, vóór je commit.", "git config --global user.name \"Sam de Vries\""],
+      ["git config --global user.email \"email@example.com\"", "Stelt het e-mailadres voor jouw commits in.", "Eenmalig, vóór je commit.", "git config --global user.email \"sam@example.com\""],
+      ["git config --global init.defaultBranch main", "Maakt main de standaardnaam voor nieuwe repositories.", "Eenmalig, als je nieuwe repositories maakt.", "git config --global init.defaultBranch main"],
+    ]},
+    { title: "2. Repository en lokale wijzigingen", commands: [
+      ["git init", "Maakt in de huidige map een nieuwe lokale repository.", "Als je met een lege lokale map begint.", "mkdir mijn-project && cd mijn-project && git init"],
+      ["git status", "Toont de huidige branch en welke bestanden gewijzigd, gestaged of nieuw zijn.", "Vaak: vóór en na elke wijziging.", "git status"],
+      ["git add <bestand>", "Zet één bestand klaar voor de volgende commit.", "Als je bewust één bestand wilt meenemen.", "git add index.html"],
+      ["git add .", "Zet alle wijzigingen in de huidige map klaar voor de volgende commit.", "Als je gecontroleerd hebt dat alle wijzigingen erbij horen.", "git add ."],
+      ["git commit -m \"Bericht\"", "Legt de klaargezette wijzigingen vast als één snapshot.", "Als een kleine, afgeronde stap klaar is.", "git commit -m \"Voeg startpagina toe\""],
+      ["git log", "Toont de commitgeschiedenis.", "Als je wilt terugkijken wat er wanneer is vastgelegd.", "git log --oneline"],
+    ]},
+    { title: "3. Branches", commands: [
+      ["git branch <naam>", "Maakt een branch aan zonder ernaartoe te schakelen.", "Als je eerst alleen een zijspoor wilt klaarzetten.", "git branch experiment"],
+      ["git checkout <branch>", "Schakelt naar een bestaande branch.", "Als je op een ander zijspoor wilt werken.", "git checkout experiment"],
+      ["git checkout -b <naam>", "Maakt een branch en schakelt er direct naartoe.", "De gebruikelijke start van nieuw werk.", "git checkout -b feat/startpagina"],
+      ["git branch <nieuwe-naam> <bron-branch>", "Maakt een branch vanaf het huidige punt van een andere branch.", "Als je bewust vanaf een bepaald zijspoor start.", "git branch test-versie main"],
+      ["git branch -M main", "Hernoemt de huidige branch naar main.", "Bij het instellen van een nieuwe lokale repository.", "git branch -M main"],
+      ["git checkout <commit-hash>", "Zet je werkmap op een oude commit om die te bekijken.", "Voor onderzoek naar een eerdere versie.", "git checkout a1b2c3d"],
+      ["git checkout -f main", "Schakelt naar main en gooit lokale wijzigingen in de huidige situatie weg.", "Alleen als je zeker weet dat je die wijzigingen niet meer nodig hebt.", "git checkout -f main", "⚠️ Waarschuwing: niet-opgeslagen wijzigingen kunnen definitief verdwijnen. Controleer eerst git status."],
+    ]},
+    { title: "4. Remote repository en synchronisatie", commands: [
+      ["git remote add origin <url>", "Koppelt je lokale repository aan een repository op GitHub.", "Eenmalig, nadat je lokaal bent begonnen.", "git remote add origin https://github.com/voorbeeld/mijn-project.git"],
+      ["git push -u origin main", "Publiceert main en onthoudt de remote als upstream.", "De eerste keer dat je main naar GitHub stuurt.", "git push -u origin main"],
+      ["git push -u origin <branch>", "Publiceert een nieuwe branch en stelt de upstream in.", "De eerste keer dat je een branch deelt.", "git push -u origin feat/startpagina"],
+      ["git push origin <branch>", "Publiceert de genoemde branch naar origin.", "Als de branch al bestaat en je expliciet die branch wilt sturen.", "git push origin feat/startpagina"],
+      ["git push", "Stuurt nieuwe commits naar de gekoppelde upstream-branch.", "Na volgende commits op een al gekoppelde branch.", "git push"],
+      ["git pull", "Haalt wijzigingen van de upstream op en voegt ze lokaal samen.", "Om je huidige branch bij te werken.", "git pull"],
+      ["git pull origin main", "Haalt main van origin op en voegt die expliciet samen.", "Als je precies de remote main wilt bijwerken.", "git pull origin main"],
+    ]},
+    { title: "5. Mergen en merge-conflicten", commands: [
+      ["git merge <branch>", "Voegt de genoemde branch samen in de branch waarop je nu staat.", "Als het werk op de andere branch klaar is.", "git checkout main && git merge feat/startpagina"],
+      ["git checkout main", "Schakelt naar main.", "Als je main wilt bijwerken of daarin wilt mergen.", "git checkout main"],
+      ["git pull", "Haalt de nieuwste commits op voordat je jouw branch bijwerkt.", "Als iemand anders ondertussen naar main heeft gemergd.", "git pull"],
+      ["git checkout <eigen-branch>", "Schakelt terug naar je eigen werkbranch.", "Na het bijwerken van main.", "git checkout feat/startpagina"],
+      ["git merge main", "Voegt de bijgewerkte main samen in je eigen branch.", "Om conflicten vóór een pull request op te lossen.", "git merge main"],
+      ["git add .", "Zet opgeloste bestanden klaar nadat je conflictmarkeringen hebt verwijderd.", "Na het handmatig oplossen van een conflict.", "git add ."],
+      ["git commit -m \"Resolve merge conflicts\"", "Rondt de merge af met een commit nadat conflicten zijn opgelost.", "Als Git meldt dat de merge klaar kan.", "git commit -m \"Resolve merge conflicts\""],
+      ["git push", "Deelt de opgeloste merge met de remote branch.", "Na het afronden van de conflictmerge.", "git push"],
+    ]},
+    { title: "6. Herstellen en tijdelijk parkeren", commands: [
+      ["git reset --soft <commit>", "Zet commits terug, maar houdt de wijzigingen gestaged.", "Als je commits opnieuw wilt ordenen of samenvoegen.", "git reset --soft HEAD~1"],
+      ["git reset <commit>", "Zet commits terug en houdt de wijzigingen in de werkmap, niet staged.", "Als je de wijzigingen opnieuw wilt beoordelen vóór je ze staget.", "git reset HEAD~1"],
+      ["git reset --hard <commit>", "Zet commits terug en verwijdert ook lokale wijzigingen.", "Alleen als je bewust alles na dat punt wilt weggooien.", "git reset --hard HEAD~1", "⚠️ Waarschuwing: commits en niet-opgeslagen wijzigingen kunnen definitief verdwijnen. Gebruik liever eerst git stash."],
+      ["git revert <commit>", "Maakt een nieuwe commit die de gekozen eerdere commit omkeert.", "Als je een gedeelde wijziging veilig ongedaan wilt maken.", "git revert a1b2c3d"],
+      ["git revert --continue", "Rondt een revert af nadat je een conflict hebt opgelost.", "Als Git na een conflict om vervolgstappen vraagt.", "git add . && git revert --continue"],
+      ["git stash", "Parkeert tijdelijke staged en unstaged wijzigingen zonder ze te committen.", "Als je tijdelijk naar een andere branch moet.", "git stash"],
+      ["git stash list", "Toont alle tijdelijk geparkeerde wijzigingen.", "Als je wilt weten welke stashes beschikbaar zijn.", "git stash list"],
+      ["git stash apply stash@{0}", "Zet een gekozen stash terug en bewaart de stash zelf.", "Als je het geparkeerde werk weer nodig hebt.", "git stash apply stash@{0}"],
+    ]},
   ];
 
   /* ==== SECTIE: RELEASE-BADGE ==== */
@@ -592,6 +663,26 @@
       </details>`;
     }).join("");
   }
+  function renderCommandReference() {
+    const escapeHtml = value => String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+    el("commandoreferentie-lijst").innerHTML = COMMAND_GROUPS.map(group => `
+      <details class="command-group">
+        <summary>${group.title} (${group.commands.length} commando's)</summary>
+        <div class="command-list">${group.commands.map(([command, does, when, example, warning]) => `
+          <article class="command-item">
+            <code class="command-code">${escapeHtml(command)}</code>
+            <p><b>Wat:</b> ${escapeHtml(does)}</p>
+            <p><b>Wanneer:</b> ${escapeHtml(when)}</p>
+            <p><b>Voorbeeld:</b> <code>${escapeHtml(example)}</code></p>
+            ${warning ? `<p class="command-warning"><b>${escapeHtml(warning)}</b></p>` : ""}
+          </article>`).join("")}</div>
+      </details>`).join("");
+  }
   function focusTerm(term) {
     const id = `term-${term.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
     const item = document.getElementById(id);
@@ -612,6 +703,7 @@
     S.releases.push({ version: "v0.1.0", commitId: rel0.id });
     S.active = "main";
     renderGlossary();
+    renderCommandReference();
     setupReleaseBadge();
     loadLatestRelease();
     render();
