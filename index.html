@@ -664,16 +664,22 @@
     }).join("");
   }
   function renderCommandReference() {
+    const escapeHtml = value => String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
     el("commandoreferentie-lijst").innerHTML = COMMAND_GROUPS.map(group => `
       <details class="command-group">
         <summary>${group.title} (${group.commands.length} commando's)</summary>
         <div class="command-list">${group.commands.map(([command, does, when, example, warning]) => `
           <article class="command-item">
-            <code class="command-code">${command}</code>
-            <p><b>Wat:</b> ${does}</p>
-            <p><b>Wanneer:</b> ${when}</p>
-            <p><b>Voorbeeld:</b> <code>${example}</code></p>
-            ${warning ? `<p class="command-warning"><b>${warning}</b></p>` : ""}
+            <code class="command-code">${escapeHtml(command)}</code>
+            <p><b>Wat:</b> ${escapeHtml(does)}</p>
+            <p><b>Wanneer:</b> ${escapeHtml(when)}</p>
+            <p><b>Voorbeeld:</b> <code>${escapeHtml(example)}</code></p>
+            ${warning ? `<p class="command-warning"><b>${escapeHtml(warning)}</b></p>` : ""}
           </article>`).join("")}</div>
       </details>`).join("");
   }

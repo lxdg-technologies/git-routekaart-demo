@@ -5,6 +5,7 @@ module.exports = async function begrippen({ assert, byIdMap, makeEl, glossaryRes
   const commandReference = byIdMap["commandoreferentie-lijst"].innerHTML;
   assert((commandReference.match(/<details class="command-group"/g) || []).length === 6, "commandoreferentie rendert zes commandogroepen");
   assert((commandReference.match(/class="command-item"/g) || []).length === 40, "commandoreferentie bevat alle 40 gevraagde commando's");
+  assert(commandReference.includes("git add &lt;bestand&gt;") && commandReference.includes("git branch &lt;naam&gt;") && commandReference.includes("git merge &lt;branch&gt;") && commandReference.includes("git reset --soft &lt;commit&gt;"), "invulnamen blijven zichtbaar in commandovoorbeelden");
   assert(commandReference.includes("Wat:") && commandReference.includes("Wanneer:") && commandReference.includes("Voorbeeld:"), "elk commando toont wat het doet, wanneer je het gebruikt en een voorbeeld");
   assert((commandReference.match(/command-warning/g) || []).length === 2 && commandReference.includes("git reset --hard") && commandReference.includes("git checkout -f main"), "destructieve commando's hebben zichtbare waarschuwingen");
   const branchTerm = makeEl("details");
