@@ -12,7 +12,7 @@ Een **publiek repositorydashboard plus interactieve git-simulatie als metrokaart
 
 **Test (GitHub Pages, publiek):** https://lxdg-technologies.github.io/git-routekaart-demo/test/
 
-⚠️ **Iedere merge naar de beschermde `main`-branch deployt automatisch naar test.** Productie verandert alleen via de handmatig gestarte promotieworkflow, die exact de huidige testversie kopieert.
+⚠️ **Iedere merge naar de beschermde `main`-branch krijgt automatisch een versie en deployt naar test.** Productie verandert alleen via de handmatig gestarte promotieworkflow, die exact een gekozen, eerder op test opgeslagen versie kopieert.
 
 ## Werkwijze: main naar test, bewust promoveren naar productie
 
@@ -73,7 +73,7 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 2. Pas `index.html` aan; werk zo nodig `test/smoketest.js` mee bij.
 3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe. **Een nieuwe assert controleert gedrag of een uiteindelijk DOM-resultaat, nooit de letterlijke inhoud van het `<script>`-blok.**
 4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
-5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie.
+5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` maakt automatisch één nieuwe patchversie en vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie van een expliciet gekozen versie.
 
 ## Met meerdere mensen tegelijk werken
 
@@ -113,10 +113,19 @@ publieke repository, dus iedereen kan een pull request openen. Bij `pull_request
 fork een leestoken en faalt de publicatiestap onschuldig, in plaats van vreemde code met
 schrijfrechten uit te voeren. Draai die keuze niet om.
 
-De promotieworkflow leest de commit-SHA uit `test/environment.json` en kopieert exact die
-bestanden naar productie. Beide jobs verwijzen naar de echte GitHub Environments `test` en
-`live`, zodat deployments en doel-URL's in GitHub worden bijgehouden. `live` vereist een aparte
-menselijke goedkeuring en blokkeert zelfgoedkeuring. Zie `DEPLOYMENT.md`.
+`deploy-test.yml` bepaalt voor iedere main-commit een SemVer patch-tag. `.github/VERSION_BASE`
+legt een bewust gekozen major/minor-start vast; de commit die dat bestand wijzigt krijgt exact die
+versie en iedere volgende commit op de first-parentlijn verhoogt de patch. De workflow tagt exact
+de event-commit, maakt één GitHub Release, en bewaart de schone bestanden onveranderlijk onder
+`versions/<tag>/` op `gh-pages`. Test is een kopie van die map met een omgevingsbalk;
+`environment.json` en `version.json` noemen tag én SHA.
+
+De promotieworkflow vraagt om zo'n opgeslagen tag en een Boolean bevestiging. Zij controleert dat
+tag, archief en SHA bij elkaar horen en kopieert daarna exact die bestanden naar productie. Een
+oudere opgeslagen tag kiezen is dezelfde veilige route voor rollback; er wordt niet opnieuw
+gebouwd. Beide jobs verwijzen naar de echte GitHub Environments `test` en `live`, zodat deployments
+en doel-URL's in GitHub worden bijgehouden. `live` vereist een aparte menselijke goedkeuring en
+blokkeert zelfgoedkeuring. Zie `DEPLOYMENT.md`.
 
 ## Herkomst
 

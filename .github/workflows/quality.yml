@@ -21,3 +21,6 @@ jobs:
 
       - name: Rooktest draaien
         run: node test/smoketest.js
+
+      - name: Automatische versiebepaling testen
+        run: bash test/versioning.sh

@@ -11,9 +11,10 @@
 # De balk wordt alleen aan de gepubliceerde kopie toegevoegd, nooit aan index.html in de
 # repository. Productie krijgt hem bewust niet — daar hoort geen ruis.
 #
-# Gebruik: omgevingsbalk.sh <bestand> <omgeving> <label> <commit-sha>
+# Gebruik: omgevingsbalk.sh <bestand> <omgeving> <label> <commit-sha> [versie]
 #   omgeving : development | test
 #   label    : vrije tekst, bijv. "pull request #49" of "main"
+#   versie   : optionele SemVer-tag; zonder tag wordt de korte commit-SHA getoond
 
 set -euo pipefail
 
@@ -22,6 +23,12 @@ omgeving="$2"
 label="$3"
 sha="$4"
 kort="${sha:0:7}"
+versie="${5:-}"
+if [ -n "$versie" ]; then
+  versie_label="${versie} · commit ${kort}"
+else
+  versie_label="${kort}"
+fi
 
 case "$omgeving" in
   development) titel="Ontwikkelversie"; kleur="var(--warn)" ;;
@@ -37,7 +44,7 @@ balk=$(cat <<EOF
   padding:.55rem 1rem;
   text-align:center;
   letter-spacing:.01em;">
-  ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${kort}</code>
+  ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${versie_label}</code>
   <span style="display:block;font-weight:400;opacity:.9;">
     Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
     publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -64,4 +71,4 @@ if ! grep -q 'role="note"' "$tijdelijk"; then
 fi
 
 mv "$tijdelijk" "$bestand"
-echo "Omgevingsbalk geplaatst: ${titel} (${kort})"
+echo "Omgevingsbalk geplaatst: ${titel} (${versie_label})"

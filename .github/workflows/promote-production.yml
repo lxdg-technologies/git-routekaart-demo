@@ -1,16 +1,17 @@
-name: Promote tested version to production
+name: Promote a tested version to production
 
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: Type PROMOTE to publish the current test version to production
+      version:
+        description: Version tag to publish, for example v1.2.0
         required: true
         type: string
-      expected_test_sha:
-        description: Optional full test SHA to guard against promoting a newer version
-        required: false
-        type: string
+      confirm:
+        description: I understand that this version will replace production
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -21,6 +22,7 @@ concurrency:
 
 jobs:
   promote-production:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: live
@@ -32,44 +34,102 @@ jobs:
           ref: gh-pages
           path: site
 
-      - name: Verify conscious promotion
+      - name: Checkout main history for version comparison
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          path: source
+
+      - name: Verify conscious version selection
         shell: bash
         env:
           CONFIRM: ${{ inputs.confirm }}
-          EXPECTED_TEST_SHA: ${{ inputs.expected_test_sha }}
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          if [ "$CONFIRM" != "PROMOTE" ]; then
-            echo "::error::Confirmation must be exactly PROMOTE"
+          if [ "$CONFIRM" != "true" ]; then
+            echo "::error::The confirmation checkbox must be selected"
             exit 1
           fi
-          test -f site/test/environment.json
-          test_sha="$(python3 -c 'import json; print(json.load(open("site/test/environment.json"))["sha"])')"
-          if [ -n "$EXPECTED_TEST_SHA" ] && [ "$EXPECTED_TEST_SHA" != "$test_sha" ]; then
-            echo "::error::Test now points to $test_sha, not $EXPECTED_TEST_SHA"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like v1.2.3"
             exit 1
           fi
-          printf 'TEST_SHA=%s\n' "$test_sha" >> "$GITHUB_ENV"
 
-      - name: Copy the exact tested version to production
+          version_dir="site/versions/$VERSION"
+          test -f "$version_dir/environment.json"
+          test -f "$version_dir/index.html"
+          test -f "$version_dir/README.md"
+          test -f "$version_dir/LICENSE"
+          test -f "$version_dir/version.json"
+
+          readarray -t metadata < <(python3 - "$version_dir/environment.json" <<'PY'
+          import json
+          import sys
+
+          data = json.load(open(sys.argv[1]))
+          print(data["version"])
+          print(data["sha"])
+          PY
+          )
+          archived_version="${metadata[0]}"
+          target_sha="${metadata[1]}"
+          if [ "$archived_version" != "$VERSION" ]; then
+            echo "::error::Archive metadata says $archived_version instead of $VERSION"
+            exit 1
+          fi
+
+          git -C source fetch --force origin "refs/tags/$VERSION:refs/tags/$VERSION"
+          tag_sha="$(git -C source rev-list -n 1 "$VERSION")"
+          if [ "$tag_sha" != "$target_sha" ]; then
+            echo "::error::Tag $VERSION points to $tag_sha but the tested archive contains $target_sha"
+            exit 1
+          fi
+          if ! git -C source merge-base --is-ancestor "$target_sha" origin/main; then
+            echo "::error::$VERSION is not part of the main history"
+            exit 1
+          fi
+          for file in index.html README.md LICENSE; do
+            if ! git -C source show "$VERSION:$file" | cmp - "$version_dir/$file"; then
+              echo "::error::Stored $VERSION/$file differs from the tagged source"
+              exit 1
+            fi
+          done
+
+          commits_ahead="$(git -C source rev-list --first-parent --count "${target_sha}..origin/main")"
+          printf 'TARGET_SHA=%s\n' "$target_sha" >> "$GITHUB_ENV"
+          printf 'TARGET_VERSION=%s\n' "$VERSION" >> "$GITHUB_ENV"
+          printf 'COMMITS_AHEAD=%s\n' "$commits_ahead" >> "$GITHUB_ENV"
+
+      - name: Copy the exact stored version to production
         shell: bash
         run: |
           set -euo pipefail
-          cp site/test/index.html site/index.html
-          cp site/test/README.md site/README.md
-          cp site/test/LICENSE site/LICENSE
-          python3 - <<'PY'
+          version_dir="site/versions/$TARGET_VERSION"
+          cp "$version_dir/index.html" site/index.html
+          cp "$version_dir/README.md" site/README.md
+          cp "$version_dir/LICENSE" site/LICENSE
+          python3 - "$version_dir/environment.json" "$COMMITS_AHEAD" <<'PY'
           import json
           from pathlib import Path
+          import sys
 
-          test = json.loads(Path("site/test/environment.json").read_text())
+          archived = json.loads(Path(sys.argv[1]).read_text())
+          commits_ahead = int(sys.argv[2])
           production = {
               "environment": "production",
-              "promoted_from": "test",
-              "branch": test["branch"],
-              "sha": test["sha"],
+              "promoted_from": f"versions/{archived['version']}",
+              "branch": archived["branch"],
+              "version": archived["version"],
+              "sha": archived["sha"],
           }
           Path("site/environment.json").write_text(json.dumps(production, separators=(",", ":")) + "\n")
+          Path("site/version.json").write_text(json.dumps({
+              "version": archived["version"],
+              "commitsAhead": commits_ahead,
+              "sha": archived["sha"],
+          }, separators=(",", ":")) + "\n")
           PY
           touch site/.nojekyll
 
@@ -80,10 +140,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- index.html README.md LICENSE environment.json .nojekyll
+          git add -- index.html README.md LICENSE environment.json version.json .nojekyll
           if git diff --cached --quiet; then
-            echo "Production already contains test@$TEST_SHA"
+            echo "Production already contains $TARGET_VERSION ($TARGET_SHA)"
             exit 0
           fi
-          git commit -m "Promote test@${TEST_SHA::7} to production"
+          git commit -m "Promote $TARGET_VERSION (${TARGET_SHA::7}) to production"
           git push origin gh-pages
