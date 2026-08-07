@@ -1,5 +1,5 @@
 // Controles voor de read-only koppeling met de echte publieke GitHub-repository.
-module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fetchCalls }) {
+module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fetchCalls, stappen }) {
   await flush(); await flush(); await flush();
   assert(byIdMap["repository-link"].href === "https://github.com/lxdg-technologies/git-routekaart-demo", "repositorydashboard linkt naar de gekoppelde repository");
   assert(byIdMap["repository-status"].textContent.includes("Rechtstreeks uit GitHub") && !byIdMap["repository-status"].className.includes("error"), "repositorydashboard meldt een geslaagde publieke API-koppeling");
@@ -14,4 +14,20 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   byIdMap["repository-refresh"].onclick();
   await flush(); await flush(); await flush();
   assert(fetchCalls.length >= callsBeforeRefresh + 5 && byIdMap["repository-refresh"].disabled === false, "handmatig vernieuwen omzeilt de cache en rondt af");
+
+  const callsBeforeDevelopment = fetchCalls.length;
+  global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/dev/pr-51/" };
+  stappen.opnieuw();
+  byIdMap["repository-refresh"].onclick();
+  await flush(); await flush(); await flush();
+  assert(fetchCalls.length === callsBeforeDevelopment, "ontwikkelomgeving doet geen fetch naar GitHub of een andere databron");
+  assert(byIdMap["repository-status"].textContent.includes("Gesimuleerde GitHub-gegevens") && byIdMap["repository-status"].textContent.includes("geen verbinding met de GitHub API"), "ontwikkelomgeving benoemt de gesimuleerde databron duidelijk");
+  assert(byIdMap["repository-commits"].innerHTML.includes("voorbeeldwijziging") && byIdMap["repository-prs"].innerHTML.includes("Voorbeeld: verbeter de startpagina"), "ontwikkelomgeving rendert de vaste voorbeeldgegevens");
+  assert(byIdMap["release-history"].dataset.source === "simulated" && byIdMap["release-badge-label"].textContent.includes("voorbeeld"), "ontwikkelomgeving simuleert ook de buildinformatie");
+  byIdMap["release-history"].open = true;
+  byIdMap["release-history"].dataset.historyLoaded = "false";
+  byIdMap["release-history"].ontoggle();
+  await flush(); await flush();
+  assert(fetchCalls.length === callsBeforeDevelopment && byIdMap["release-history-list"].children.length === 2, "ontwikkelomgeving toont gesimuleerde releasehistorie zonder API-call");
+  delete global.location;
 };

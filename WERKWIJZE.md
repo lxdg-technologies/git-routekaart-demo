@@ -110,6 +110,7 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **07-08-2026** — De ontwikkelomgeving van pull requests gebruikt vaste gesimuleerde repository-, build- en releasegegevens en doet geen GitHub API-calls. Daardoor beoordeel je een wijziging tegen een voorspelbare dataset; na merge bewijst test de koppeling met de echte publieke GitHub-gegevens en live gebruikt diezelfde echte koppeling.
 - **07-08-2026** — Elke openstaande pull request krijgt een eigen ontwikkelomgeving op `/dev/pr-<nummer>/`. Daarmee heeft de repository dezelfde drie omgevingen als de kaart, en is er weer een moment om een wijziging te bekijken vóórdat hij op `main` staat — wat verdween toen de oude PR-previews vervielen. Bewust "ontwikkelomgeving" genoemd en niet "preview", zodat kaart en werkelijkheid dezelfde woorden gebruiken. Bewust één plek per pull request, omdat de kaart leert dat Ontwikkel van jou alleen is.
 - **07-08-2026** — De repository publiceert niet langer rechtstreeks naar live bij elke merge. Merge gaat naar test; live verandert alleen door een handmatige promotie van exact de geteste versie. Daarmee stopt de tegenstrijdigheid dat het leermiddel iets afraadde wat het zelf deed.
 - **07-08-2026** — Een read-only dashboard met echte publieke repositorygegevens staat boven de simulatie. Het vormt de brug van oefenen naar herkennen, verandert geen GitHub-data en voegt geen missie toe.
