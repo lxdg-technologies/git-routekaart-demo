@@ -23,7 +23,7 @@ jobs:
   promote-production:
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: live
       url: https://lxdg-technologies.github.io/git-routekaart-demo/
     steps:
       - name: Checkout deployment branch
