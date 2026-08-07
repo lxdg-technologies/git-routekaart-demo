@@ -184,6 +184,15 @@ jobs:
           }, separators=(",", ":")) + "\n")
           PY
 
+      - name: Controleer dat test weet welke versie hij draait
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash source/.github/scripts/controleer-versiebestand.sh site/test "$VERSION" "$GITHUB_SHA"
+          bash source/.github/scripts/controleer-versiebestand.sh "site/versions/$VERSION" "$VERSION" "$GITHUB_SHA"
+
       - name: Publish version and test if changed
         working-directory: site
         shell: bash

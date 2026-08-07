@@ -133,6 +133,12 @@ jobs:
           PY
           touch site/.nojekyll
 
+      - name: Controleer dat productie weet welke versie hij draait
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash source/.github/scripts/controleer-versiebestand.sh site "$TARGET_VERSION" "$TARGET_SHA"
+
       - name: Publish production if changed
         working-directory: site
         shell: bash
