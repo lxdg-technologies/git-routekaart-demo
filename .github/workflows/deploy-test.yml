@@ -38,6 +38,11 @@ jobs:
           git -C site rm -r --ignore-unmatch test
           mkdir -p site/test
           cp source/index.html site/test/index.html
+          bash source/.github/scripts/omgevingsbalk.sh \
+            site/test/index.html \
+            test \
+            main \
+            "$GITHUB_SHA"
           cp source/README.md site/test/README.md
           cp source/LICENSE site/test/LICENSE
           printf '{"environment":"test","branch":"main","sha":"%s"}\n' "$GITHUB_SHA" > site/test/environment.json
