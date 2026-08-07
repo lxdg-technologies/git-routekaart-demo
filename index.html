@@ -273,40 +273,6 @@
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
 </header>
 
-<!-- ==== SECTIE: STATE ==== -->
-<section class="card repository-dashboard" id="repository-dashboard" aria-labelledby="repository-title">
-  <div class="repository-heading">
-    <div>
-      <h2 id="repository-title">Echte repository</h2>
-      <p><a id="repository-link" href="https://github.com/lxdg-technologies/git-routekaart-demo" target="_blank" rel="noreferrer">lxdg-technologies/git-routekaart-demo ↗</a></p>
-    </div>
-    <div class="repository-actions">
-      <span id="repository-updated">Nog niet bijgewerkt</span>
-      <button type="button" class="repository-refresh" id="repository-refresh">↻ Vernieuwen</button>
-    </div>
-  </div>
-  <p class="repository-status" id="repository-status" role="status" aria-live="polite">GitHub-gegevens worden opgehaald…</p>
-  <div class="repository-summary" id="repository-summary" aria-label="Samenvatting repository"></div>
-  <div class="repository-columns">
-    <section class="repository-column" aria-labelledby="repository-commits-title">
-      <h3 id="repository-commits-title">Recente geschiedenis <a href="https://github.com/lxdg-technologies/git-routekaart-demo/commits/main" target="_blank" rel="noreferrer">alles ↗</a></h3>
-      <ul class="repository-list" id="repository-commits"><li class="repository-empty">Laden…</li></ul>
-    </section>
-    <section class="repository-column" aria-labelledby="repository-branches-title">
-      <h3 id="repository-branches-title">Branches <a href="https://github.com/lxdg-technologies/git-routekaart-demo/branches" target="_blank" rel="noreferrer">alles ↗</a></h3>
-      <ul class="repository-list" id="repository-branches"><li class="repository-empty">Laden…</li></ul>
-    </section>
-    <section class="repository-column" aria-labelledby="repository-issues-title">
-      <h3 id="repository-issues-title">Issues <a href="https://github.com/lxdg-technologies/git-routekaart-demo/issues" target="_blank" rel="noreferrer">alles ↗</a></h3>
-      <ul class="repository-list" id="repository-issues"><li class="repository-empty">Laden…</li></ul>
-    </section>
-    <section class="repository-column" aria-labelledby="repository-prs-title">
-      <h3 id="repository-prs-title">Pull requests <a href="https://github.com/lxdg-technologies/git-routekaart-demo/pulls?q=is%3Apr" target="_blank" rel="noreferrer">alles ↗</a></h3>
-      <ul class="repository-list" id="repository-prs"><li class="repository-empty">Laden…</li></ul>
-    </section>
-  </div>
-</section>
-
 <!-- ==== SECTIE: LAYOUT ==== -->
 <div class="wrap">
   <div>
@@ -452,6 +418,40 @@
   </div>
 </div>
 
+<!-- ==== SECTIE: REPOSITORY ==== -->
+<section class="card repository-dashboard" id="repository-dashboard" aria-labelledby="repository-title">
+  <div class="repository-heading">
+    <div>
+      <h2 id="repository-title">Echte repository</h2>
+      <p><a id="repository-link" href="https://github.com/lxdg-technologies/git-routekaart-demo" target="_blank" rel="noreferrer">lxdg-technologies/git-routekaart-demo ↗</a></p>
+    </div>
+    <div class="repository-actions">
+      <span id="repository-updated">Nog niet bijgewerkt</span>
+      <button type="button" class="repository-refresh" id="repository-refresh">↻ Vernieuwen</button>
+    </div>
+  </div>
+  <p class="repository-status" id="repository-status" role="status" aria-live="polite">GitHub-gegevens worden opgehaald…</p>
+  <div class="repository-summary" id="repository-summary" aria-label="Samenvatting repository"></div>
+  <div class="repository-columns">
+    <section class="repository-column" aria-labelledby="repository-commits-title">
+      <h3 id="repository-commits-title">Recente geschiedenis <a href="https://github.com/lxdg-technologies/git-routekaart-demo/commits/main" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-commits"><li class="repository-empty">Laden…</li></ul>
+    </section>
+    <section class="repository-column" aria-labelledby="repository-branches-title">
+      <h3 id="repository-branches-title">Branches <a href="https://github.com/lxdg-technologies/git-routekaart-demo/branches" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-branches"><li class="repository-empty">Laden…</li></ul>
+    </section>
+    <section class="repository-column" aria-labelledby="repository-issues-title">
+      <h3 id="repository-issues-title">Issues <a href="https://github.com/lxdg-technologies/git-routekaart-demo/issues" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-issues"><li class="repository-empty">Laden…</li></ul>
+    </section>
+    <section class="repository-column" aria-labelledby="repository-prs-title">
+      <h3 id="repository-prs-title">Pull requests <a href="https://github.com/lxdg-technologies/git-routekaart-demo/pulls?q=is%3Apr" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-prs"><li class="repository-empty">Laden…</li></ul>
+    </section>
+  </div>
+</section>
+
 <!-- ==== SECTIE: RELEASE-BADGE ==== -->
 <details class="release-badge" id="release-history" aria-live="polite">
   <summary id="release-badge-label">release: onbekend</summary>
@@ -561,11 +561,40 @@
     ]},
   ];
 
-  /* ==== SECTIE: STATE ==== */
+  /* ==== SECTIE: REPOSITORY ==== */
   const REPOSITORY_FULL_NAME = "lxdg-technologies/git-routekaart-demo";
   const REPOSITORY_API_ROOT = `https://api.github.com/repos/${REPOSITORY_FULL_NAME}`;
   const REPOSITORY_CACHE_KEY = `git-routekaart-repository-v1:${REPOSITORY_FULL_NAME}`;
   const REPOSITORY_CACHE_TTL = 5 * 60 * 1000;
+
+  function repositoryUsesSimulatedData() {
+    return typeof location !== "undefined" && /\/dev\/pr-\d+(?:\/|$)/.test(location.pathname || "");
+  }
+  function simulatedRepositorySnapshot() {
+    const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    return {
+      savedAt: Date.now(),
+      repository: { default_branch: "main" },
+      commits: [
+        { sha: "de10001aabbcc", html_url: `${repositoryUrl}/commits/main`, commit: { message: "feat: voorbeeldwijziging klaar voor review", author: { date: "2026-08-07T10:00:00Z" } } },
+        { sha: "de10000aabbcc", html_url: `${repositoryUrl}/commits/main`, commit: { message: "test: controleer het voorbeeldgedrag", author: { date: "2026-08-07T09:30:00Z" } } },
+      ],
+      branches: [
+        { name: "main", protected: true, commit: { sha: "a11ce00aabbcc" } },
+        { name: "feat/voorbeeld", protected: false, commit: { sha: "de10001aabbcc" } },
+      ],
+      issues: [
+        { number: 12, title: "Voorbeeld: maak de startpagina duidelijker", state: "open", updated_at: "2026-08-07T09:00:00Z", html_url: `${repositoryUrl}/issues` },
+      ],
+      prs: [
+        { number: 13, title: "Voorbeeld: verbeter de startpagina", state: "open", merged_at: null, updated_at: "2026-08-07T10:00:00Z", html_url: `${repositoryUrl}/pulls`, head: { ref: "feat/voorbeeld" }, base: { ref: "main" } },
+      ],
+    };
+  }
+  const SIMULATED_RELEASES = [
+    { tag_name: "v0.1.1", published_at: "2026-08-06T12:00:00Z", html_url: `https://github.com/${REPOSITORY_FULL_NAME}/releases` },
+    { tag_name: "v0.1.0", published_at: "2026-08-05T12:00:00Z", html_url: `https://github.com/${REPOSITORY_FULL_NAME}/releases` },
+  ];
 
   function escapeRepositoryHtml(value) {
     return String(value ?? "")
@@ -631,12 +660,18 @@
   function renderRepositoryDashboard(snapshot, source) {
     const { repository, commits, branches, issues, prs } = snapshot;
     const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    const simulated = source === "simulated";
+    el("repository-title").textContent = simulated ? "Gesimuleerde repository" : "Echte repository";
     const repoLink = el("repository-link");
     repoLink.href = repositoryUrl;
     repoLink.textContent = `${REPOSITORY_FULL_NAME} ↗`;
     el("repository-status").className = "repository-status";
-    el("repository-status").textContent = `Rechtstreeks uit GitHub · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
-    el("repository-updated").textContent = `Bijgewerkt ${new Date(snapshot.savedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
+    el("repository-status").textContent = simulated
+      ? "Gesimuleerde GitHub-gegevens · ontwikkelomgeving · geen verbinding met de GitHub API"
+      : `Rechtstreeks uit GitHub · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
+    el("repository-updated").textContent = simulated
+      ? "Vaste voorbeeldgegevens voor deze ontwikkelomgeving"
+      : `Bijgewerkt ${new Date(snapshot.savedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
     el("repository-summary").innerHTML = [
       [branches.length, "branches"],
       [commits.length, `commits op ${repository.default_branch || "main"} geladen`],
@@ -655,7 +690,7 @@
     renderRepositoryList("repository-branches", branches, branch => {
       const name = branch.name || "branch zonder naam";
       const sha = String(branch.commit?.sha || "").slice(0, 7);
-      const url = `${repositoryUrl}/tree/${encodeURIComponent(name)}`;
+      const url = simulated ? `${repositoryUrl}/branches` : `${repositoryUrl}/tree/${encodeURIComponent(name)}`;
       return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer">${escapeRepositoryHtml(name)}</a><span class="repository-meta"><span>${escapeRepositoryHtml(sha)}</span><span>${branch.protected ? "beschermd" : "actief"}</span></span></li>`;
     }, "Geen branches gevonden.");
 
@@ -672,14 +707,36 @@
       return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer" title="${escapeRepositoryHtml(pr.title)}">#${escapeRepositoryHtml(pr.number)} ${escapeRepositoryHtml(pr.title || "PR zonder titel")}</a><span class="repository-meta"><span class="repository-state ${state}">${stateLabel}</span><span title="${escapeRepositoryHtml(route)}">${escapeRepositoryHtml(route)}</span></span></li>`;
     }, "Geen pull requests gevonden.");
   }
+  function renderRepositoryUnavailable(preserveData = false) {
+    const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    const links = {
+      "repository-commits": `${repositoryUrl}/commits/main`,
+      "repository-branches": `${repositoryUrl}/branches`,
+      "repository-issues": `${repositoryUrl}/issues`,
+      "repository-prs": `${repositoryUrl}/pulls?q=is%3Apr`,
+    };
+    const link = `<a href="${repositoryUrl}" target="_blank" rel="noreferrer">Bekijk de repository op GitHub ↗</a>`;
+    const status = el("repository-status");
+    status.className = "repository-status";
+    status.innerHTML = `De actuele GitHub-gegevens zijn nu niet beschikbaar. ${link}`;
+    el("repository-updated").textContent = "Tijdelijk niet bijgewerkt";
+    if (!preserveData) Object.entries(links).forEach(([id, url]) => {
+      el(id).innerHTML = `<li class="repository-empty"><a href="${url}" target="_blank" rel="noreferrer">Bekijk deze lijst op GitHub ↗</a></li>`;
+    });
+  }
   async function loadRepositoryDashboard(force = false) {
     const refresh = el("repository-refresh");
     const status = el("repository-status");
     refresh.disabled = true;
     status.className = "repository-status";
     status.textContent = force ? "GitHub-gegevens worden opnieuw opgehaald…" : "GitHub-gegevens worden opgehaald…";
+    const cached = repositoryCacheRead();
+    if (repositoryUsesSimulatedData()) {
+      renderRepositoryDashboard(simulatedRepositorySnapshot(), "simulated");
+      refresh.disabled = false;
+      return;
+    }
     if (!force) {
-      const cached = repositoryCacheRead();
       if (cached) {
         renderRepositoryDashboard(cached, "cache");
         refresh.disabled = false;
@@ -706,10 +763,8 @@
       repositoryCacheWrite(snapshot);
       renderRepositoryDashboard(snapshot, "api");
     } catch (error) {
-      status.className = "repository-status error";
-      status.textContent = error?.status === 403 || error?.status === 429
-        ? "GitHub heeft de publieke API tijdelijk begrensd. Probeer het later opnieuw of open de lijsten rechtstreeks op GitHub."
-        : "De repositorygegevens konden niet worden opgehaald. De simulatie hieronder blijft gewoon werken.";
+      if (cached) renderRepositoryDashboard(cached, "cache");
+      renderRepositoryUnavailable(Boolean(cached));
     } finally {
       refresh.disabled = false;
     }
@@ -722,9 +777,9 @@
   const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
   const RELEASE_TAGS_API_URL = `${REPOSITORY_API_ROOT}/tags?per_page=1`;
   const RELEASE_ENVIRONMENT = typeof location !== "undefined"
-    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
+    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
       ? "dev"
-      : location.pathname.includes("/pr-preview/") ? "test" : "live")
+      : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
     : "dev";
 
   function setupReleaseBadge() {
@@ -781,6 +836,11 @@
   }
   async function loadReleaseHistory() {
     const badge = el("release-history");
+    if (repositoryUsesSimulatedData()) {
+      renderReleaseHistory(SIMULATED_RELEASES);
+      badge.dataset.historyLoaded = "true";
+      return;
+    }
     if (typeof fetch !== "function") {
       renderReleaseHistory([]);
       badge.dataset.historyLoaded = "true";
@@ -819,17 +879,27 @@
     }
   }
   async function loadLatestRelease() {
+    if (repositoryUsesSimulatedData()) {
+      setReleaseBuild(
+        { version: "voorbeeld", commitsAhead: 1, sha: "de10001" },
+        "simulated",
+        "Gesimuleerde buildinformatie voor de ontwikkelomgeving; test en live lezen de echte versiegegevens.",
+        `https://github.com/${REPOSITORY_FULL_NAME}/pulls`,
+      );
+      el("release-current-link").textContent = "Bekijk pull requests op GitHub ↗";
+      return;
+    }
     const stamped = await loadVersionFile();
     if (stamped.status === "ready") {
       setReleaseBuild(stamped.build, "version-file", "Deze badge is gestempeld bij de deploy en beschrijft exact de build op deze pagina.", stamped.build.version && `https://github.com/${REPOSITORY_FULL_NAME}/releases/tag/${encodeURIComponent(stamped.build.version)}`);
       return;
     }
     if (stamped.status === "invalid") {
-      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Het version.json-bestand is ongeldig; de build kan niet betrouwbaar worden geïdentificeerd.");
+      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
     if (typeof fetch !== "function") {
-      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Buildinformatie is niet beschikbaar.");
+      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
     try {
@@ -863,7 +933,7 @@
         release.html_url,
       );
     } catch (error) {
-      setReleaseBuild({ version: "versie onbekend" }, "unknown", "De buildinformatie kon niet betrouwbaar worden opgehaald.");
+      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
     }
   }
 
