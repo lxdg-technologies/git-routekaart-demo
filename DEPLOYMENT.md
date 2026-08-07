@@ -16,7 +16,9 @@ vervangt na een merge naar `main` uitsluitend de testmap. Productie blijft ongew
 De repository heeft twee echte GitHub Environments:
 
 - `test` — gebruikt door de automatische testdeployment na een merge naar `main`.
-- `production` — gebruikt door de handmatig gestarte promotieworkflow.
+- `live` — gebruikt door de handmatig gestarte promotieworkflow; vereist goedkeuring door
+  `DCS-Rob` of `vdbergkevin` en staat zelfgoedkeuring niet toe. Eén van beide goedkeuringen
+  is voldoende, zolang de reviewer de workflow niet zelf heeft gestart.
 
 Beide omgevingen accepteren alleen deployments vanaf beschermde branches. De jobs publiceren
 hun eigen omgevings-URL, zodat GitHub de deploymenthistorie en de juiste doellink toont.
