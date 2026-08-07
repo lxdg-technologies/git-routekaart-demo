@@ -47,6 +47,7 @@ const fetchCalls = [];
 const response = (payload, status = 200) => ({ ok: status >= 200 && status < 300, status, async json() { return payload; } });
 global.fetch = async url => {
   fetchCalls.push(String(url));
+  if (fetchMode === "repository-error" && String(url).startsWith("https://api.github.com/repos/lxdg-technologies/git-routekaart-demo")) return response({}, 503);
   if (String(url) === "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo") return response({
     full_name: "lxdg-technologies/git-routekaart-demo", default_branch: "main", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo",
   });

@@ -1,5 +1,5 @@
 // Controles voor de read-only koppeling met de echte publieke GitHub-repository.
-module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fetchCalls, stappen }) {
+module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fetchCalls, stappen, setFetchMode }) {
   await flush(); await flush(); await flush();
   assert(byIdMap["repository-link"].href === "https://github.com/lxdg-technologies/git-routekaart-demo", "repositorydashboard linkt naar de gekoppelde repository");
   assert(byIdMap["repository-status"].textContent.includes("Rechtstreeks uit GitHub") && !byIdMap["repository-status"].className.includes("error"), "repositorydashboard meldt een geslaagde publieke API-koppeling");
@@ -15,7 +15,15 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   await flush(); await flush(); await flush();
   assert(fetchCalls.length >= callsBeforeRefresh + 5 && byIdMap["repository-refresh"].disabled === false, "handmatig vernieuwen omzeilt de cache en rondt af");
 
+  const cachedCommit = byIdMap["repository-commits"].innerHTML;
+  setFetchMode("repository-error");
+  byIdMap["repository-refresh"].onclick();
+  await flush(); await flush(); await flush();
+  assert(!byIdMap["repository-status"].className.includes("error") && byIdMap["repository-status"].innerHTML.includes("Bekijk de repository op GitHub"), "mislukte repository-aanvraag toont een neutrale GitHub-link");
+  assert(!byIdMap["repository-commits"].innerHTML.includes("Laden…") && byIdMap["repository-commits"].innerHTML === cachedCommit, "repositorydashboard behoudt bestaande cache bij een mislukte vernieuwing");
+
   const callsBeforeDevelopment = fetchCalls.length;
+  setFetchMode("version");
   global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/dev/pr-51/" };
   stappen.opnieuw();
   byIdMap["repository-refresh"].onclick();
