@@ -42,6 +42,11 @@ balk=$(cat <<EOF
   color:#fff;
   font:600 14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;
   padding:.55rem 1rem;
+  position:sticky;
+  top:0;
+  z-index:1000;
+  box-sizing:border-box;
+  max-width:100%;
   text-align:center;
   letter-spacing:.01em;">
   ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${versie_label}</code>
