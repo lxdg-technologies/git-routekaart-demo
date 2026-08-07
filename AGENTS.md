@@ -79,9 +79,9 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 
 **Git voegt per regel samen, niet per bestand.** Twee mensen die verschillende stukken van `index.html` aanpassen, gaan vanzelf goed samen. Een conflict ontstaat alleen als jullie dezelfde regels aanraken.
 
-**Elk issue begint met een regel `Raakt: <bestand of sectie>`.** Voor `index.html` gebruik je de sectienaam uit de bannerkoppen (`/* ==== SECTIE: KAART ==== */`). Twee taken in verschillende secties mogen tegelijk lopen; in dezelfde sectie doe je ze achter elkaar. De tien secties zijn:
+**Elk issue begint met een regel `Raakt: <bestand of sectie>`.** Voor `index.html` gebruik je de sectienaam uit de bannerkoppen (`/* ==== SECTIE: KAART ==== */`). Twee taken in verschillende secties mogen tegelijk lopen; in dezelfde sectie doe je ze achter elkaar. De vaste secties zijn:
 
-`THEMA`, `LAYOUT`, `RELEASE-BADGE`, `KAART`, `OMGEVINGEN`, `ACTIES`, `MISSIES`, `LOGBOEK`, `BEGRIPPEN`, `STATE`.
+`THEMA`, `LAYOUT`, `REPOSITORY`, `RELEASE-BADGE`, `KAART`, `OMGEVINGEN`, `ACTIES`, `MISSIES`, `LOGBOEK`, `BEGRIPPEN`, `STATE`.
 
 **Vóór het openen van een PR:** haal de laatste `main` op, zet je werk daar bovenop, en draai de rooktest opnieuw. Dat vangt de meeste botsingen weg voordat iemand ze ziet.
 

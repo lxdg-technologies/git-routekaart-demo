@@ -32,4 +32,6 @@ module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCall
   byIdMap["release-history"].dataset.historyLoaded = "false";
   byIdMap["release-history"].ontoggle(); await flush(); await flush();
   assert(byIdMap["release-history-list"].children[0]._html.indexOf("Geen eerdere releases") >= 0, "releasehistorie toont een foutveilige lege toestand");
+  stappen.opnieuw(); await flush(); await flush();
+  assert(!byIdMap["release-badge-label"].textContent.includes("onbekend") && byIdMap["release-badge-label"].textContent.includes("tijdelijk niet beschikbaar"), "badge toont een begrijpelijke toestand als GitHub niet bereikbaar is");
 };
