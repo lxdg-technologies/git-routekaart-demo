@@ -48,6 +48,11 @@ jobs:
           git -C site rm -r --ignore-unmatch "dev/pr-${{ github.event.number }}"
           mkdir -p "site/dev/pr-${{ github.event.number }}"
           cp source/index.html "site/dev/pr-${{ github.event.number }}/index.html"
+          bash source/.github/scripts/omgevingsbalk.sh \
+            "site/dev/pr-${{ github.event.number }}/index.html" \
+            development \
+            "pull request #${{ github.event.number }}" \
+            "${{ github.event.pull_request.head.sha }}"
           cp source/README.md "site/dev/pr-${{ github.event.number }}/README.md"
           cp source/LICENSE "site/dev/pr-${{ github.event.number }}/LICENSE"
           printf '{"environment":"development","pull_request":%s,"branch":"%s","sha":"%s"}\n' \
