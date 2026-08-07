@@ -18,7 +18,7 @@ Zie [DEPLOYMENT.md](DEPLOYMENT.md) voor de technische inrichting en controles.
 
 ## Echte repositorygegevens
 
-De dashboardkaart boven de simulatie leest rechtstreeks uit de publieke GitHub REST API voor [`lxdg-technologies/git-routekaart-demo`](https://github.com/lxdg-technologies/git-routekaart-demo):
+Op test en live leest de dashboardkaart boven de simulatie rechtstreeks uit de publieke GitHub REST API voor [`lxdg-technologies/git-routekaart-demo`](https://github.com/lxdg-technologies/git-routekaart-demo):
 
 - maximaal 100 recente commits op de standaardbranch;
 - maximaal 100 branches;
@@ -26,6 +26,8 @@ De dashboardkaart boven de simulatie leest rechtstreeks uit de publieke GitHub R
 - maximaal 100 recent bijgewerkte pull requests.
 
 De pagina gebruikt geen token en heeft geen eigen backend. Eén snapshot wordt vijf minuten in de browsersessie bewaard om de publieke API-limiet te ontzien. Als GitHub tijdelijk niet bereikbaar is, blijft de simulatie zelfstandig werken en linken de kolommen rechtstreeks naar GitHub.
+
+De ontwikkelomgeving van een pull request (`/dev/pr-<nummer>/`) gebruikt bewust vaste gesimuleerde repository- en releasegegevens. Daardoor is een wijziging voorspelbaar te beoordelen en doet de ontwikkelpagina zelf geen verzoeken aan de GitHub API. Na merge controleert test dezelfde code met de echte publieke gegevens; live gebruikt eveneens de echte API.
 
 ## Wat je ermee oefent
 

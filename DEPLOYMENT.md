@@ -4,17 +4,22 @@ Deze repository gebruikt één beschermde bronbranch en één GitHub Pages-site.
 
 | Omgeving | Bronbranch | URL |
 |---|---|---|
+| Ontwikkel | iedere open pull request, met gesimuleerde GitHub-data | `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/` |
 | Productie | handmatige promotie van de geteste versie | `https://lxdg-technologies.github.io/git-routekaart-demo/` |
 | Test | iedere merge naar `main` | `https://lxdg-technologies.github.io/git-routekaart-demo/test/` |
 
 GitHub Pages ondersteunt één site per repository. De deploymentbranch `gh-pages` bevat daarom
-productie in de root en test in `test/`. De workflow `.github/workflows/deploy-test.yml`
-vervangt na een merge naar `main` uitsluitend de testmap. Productie blijft ongewijzigd.
+productie in de root, test in `test/` en een ontwikkelkopie per pull request in `dev/pr-<nummer>/`.
+De workflow `.github/workflows/deploy-test.yml` vervangt na een merge naar `main` uitsluitend de
+testmap. Productie blijft ongewijzigd. Ontwikkel gebruikt vaste ingebedde voorbeeldgegevens voor
+het repositorydashboard en de releasebadge; alleen test en productie verbinden met de publieke
+GitHub API.
 
 ## GitHub Environments
 
-De repository heeft twee echte GitHub Environments:
+De repository heeft drie echte GitHub Environments:
 
+- `development` — gebruikt door de tijdelijke ontwikkelkopie van iedere open pull request.
 - `test` — gebruikt door de automatische testdeployment na een merge naar `main`.
 - `live` — gebruikt door de handmatig gestarte promotieworkflow; vereist goedkeuring door
   `DCS-Rob` of `vdbergkevin` en staat zelfgoedkeuring niet toe. Eén van beide goedkeuringen
