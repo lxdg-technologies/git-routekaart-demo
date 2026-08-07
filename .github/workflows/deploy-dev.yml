@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: gh-pages-environments
@@ -83,6 +84,23 @@ jobs:
           done
           echo "::error::Publiceren naar gh-pages bleef mislukken na 5 pogingen"
           exit 1
+
+      # GitHub toont de omgeving zelf al onder "View deployment", maar dat is weggestopt en
+      # het woord zegt een niet-technische beoordelaar niets. Eén gewone regel met een
+      # klikbaar adres, alleen bij het openen van de pull request zodat het geen spam wordt.
+      - name: Zet het adres van de ontwikkelomgeving in de pull request
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr comment "${{ github.event.number }}" --repo "${{ github.repository }}" --body \
+          "🔧 **Ontwikkelomgeving van deze pull request**
+
+          https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-${{ github.event.number }}/
+
+          Hier zie je deze wijziging draaien zonder dat test of de echte site iets merkt. Het adres wordt bijgewerkt bij elke nieuwe commit en verdwijnt zodra deze pull request sluit."
 
   cleanup-dev:
     if: github.event.action == 'closed'
