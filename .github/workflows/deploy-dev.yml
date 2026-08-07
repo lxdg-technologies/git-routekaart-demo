@@ -1,0 +1,143 @@
+name: Deploy pull request to development
+
+# Elke openstaande pull request krijgt zijn eigen ontwikkelomgeving op /dev/pr-<nummer>/.
+# Dat is de echte tegenhanger van "Ontwikkel" uit de routekaart: jouw branch, jouw plek,
+# fouten raken niemand anders. Test en productie worden hier nooit aangeraakt.
+#
+# Bewust `pull_request` en niet `pull_request_target`: dit is een publieke repository, dus
+# iedereen kan een pull request openen. Bij `pull_request` krijgt een fork een leestoken,
+# waardoor de publicatiestap onschuldig faalt in plaats van vreemde code met schrijfrechten
+# uit te voeren. Deze keuze niet omdraaien.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: gh-pages-environments
+  cancel-in-progress: false
+
+jobs:
+  deploy-dev:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-${{ github.event.number }}/
+    steps:
+      - name: Checkout de pull request
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+
+      - name: Checkout deployment branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Vervang alleen de ontwikkelomgeving van deze pull request
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C site rm -r --ignore-unmatch "dev/pr-${{ github.event.number }}"
+          mkdir -p "site/dev/pr-${{ github.event.number }}"
+          cp source/index.html "site/dev/pr-${{ github.event.number }}/index.html"
+          cp source/README.md "site/dev/pr-${{ github.event.number }}/README.md"
+          cp source/LICENSE "site/dev/pr-${{ github.event.number }}/LICENSE"
+          printf '{"environment":"development","pull_request":%s,"branch":"%s","sha":"%s"}\n' \
+            "${{ github.event.number }}" \
+            "${{ github.event.pull_request.head.ref }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            > "site/dev/pr-${{ github.event.number }}/environment.json"
+
+      - name: Publiceer de ontwikkelomgeving
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- "dev/pr-${{ github.event.number }}"
+          if git diff --cached --quiet; then
+            echo "Ontwikkelomgeving is al actueel"
+            exit 0
+          fi
+          git commit -m "Deploy dev voor PR #${{ github.event.number }} (${GITHUB_SHA::7})"
+          # Opnieuw proberen als een andere omgevingsdeploy net voor was. De concurrency-groep
+          # vangt het meeste af, maar bij meerdere openstaande pull requests kan een wachtende
+          # run alsnog vervangen worden; deze lus voorkomt dat een deploy stilzwijgend verdwijnt.
+          for poging in 1 2 3 4 5; do
+            if git push origin gh-pages; then
+              echo "Gepubliceerd"
+              exit 0
+            fi
+            echo "Push afgewezen (poging $poging) — deploymentbranch is intussen bijgewerkt"
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+            sleep 3
+          done
+          echo "::error::Publiceren naar gh-pages bleef mislukken na 5 pogingen"
+          exit 1
+
+      # GitHub toont de omgeving zelf al onder "View deployment", maar dat is weggestopt en
+      # het woord zegt een niet-technische beoordelaar niets. Eén gewone regel met een
+      # klikbaar adres, alleen bij het openen van de pull request zodat het geen spam wordt.
+      - name: Zet het adres van de ontwikkelomgeving in de pull request
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr comment "${{ github.event.number }}" --repo "${{ github.repository }}" --body \
+          "🔧 **Ontwikkelomgeving van deze pull request**
+
+          https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-${{ github.event.number }}/
+
+          Hier zie je deze wijziging draaien zonder dat test of de echte site iets merkt. Het adres wordt bijgewerkt bij elke nieuwe commit en verdwijnt zodra deze pull request sluit."
+
+  cleanup-dev:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deployment branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Ruim de ontwikkelomgeving van deze pull request op
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d "dev/pr-${{ github.event.number }}" ]; then
+            echo "Niets op te ruimen"
+            exit 0
+          fi
+          git rm -r --ignore-unmatch "dev/pr-${{ github.event.number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- "dev/pr-${{ github.event.number }}"
+          if git diff --cached --quiet; then
+            echo "Niets op te ruimen"
+            exit 0
+          fi
+          git commit -m "Ruim dev op voor gesloten PR #${{ github.event.number }}"
+          for poging in 1 2 3 4 5; do
+            if git push origin gh-pages; then
+              echo "Opgeruimd"
+              exit 0
+            fi
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+            sleep 3
+          done
+          echo "::error::Opruimen van gh-pages bleef mislukken na 5 pogingen"
+          exit 1
