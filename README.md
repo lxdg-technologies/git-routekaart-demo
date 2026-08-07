@@ -11,7 +11,7 @@ Dashboard en interactieve simulatie van een moderne git-werkstroom: **issue → 
 - Wijzigingen gaan via een pull request naar `main`; een merge vernieuwt alleen de testomgeving.
 - Productie verandert pas wanneer iemand de workflow `Promote tested version to production` handmatig start en `PROMOTE` bevestigt.
 - De promotie kopieert exact de huidige geteste versie naar productie; een nieuwere merge kan zo niet ongemerkt meekomen.
-- De workflows registreren echte GitHub deployments in de omgevingen `test` en `production`; beide accepteren alleen de beschermde `main`-branch.
+- De workflows registreren echte GitHub deployments in de omgevingen `test` en `live`; beide accepteren alleen de beschermde `main`-branch en `live` vereist een aparte menselijke goedkeuring.
 - `environment.json` op beide URL's maakt zichtbaar van welke branch en commit de omgeving is gebouwd.
 
 Zie [DEPLOYMENT.md](DEPLOYMENT.md) voor de technische inrichting en controles.

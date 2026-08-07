@@ -102,7 +102,8 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 
 De promotieworkflow leest de commit-SHA uit `test/environment.json` en kopieert exact die
 bestanden naar productie. Beide jobs verwijzen naar de echte GitHub Environments `test` en
-`production`, zodat deployments en doel-URL's in GitHub worden bijgehouden. Zie `DEPLOYMENT.md`.
+`live`, zodat deployments en doel-URL's in GitHub worden bijgehouden. `live` vereist een aparte
+menselijke goedkeuring en blokkeert zelfgoedkeuring. Zie `DEPLOYMENT.md`.
 
 ## Herkomst
 
