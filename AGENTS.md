@@ -72,7 +72,7 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 1. Branch vanaf `main` (`feat/...` of `fix/...`) — nooit direct op `main` committen.
 2. Pas `index.html` aan; werk zo nodig `test/smoketest.js` mee bij.
 3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe. **Een nieuwe assert controleert gedrag of een uiteindelijk DOM-resultaat, nooit de letterlijke inhoud van het `<script>`-blok.**
-4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat lokaal te checken"-regel**, bijv. "Open `index.html`, klik X aan en kijk of Y verschijnt". Deze omgevingsroute publiceert bewust geen PR-preview op `gh-pages`, omdat alleen test en productie die deploymentbranch mogen wijzigen.
+4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
 5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie.
 
 ## Met meerdere mensen tegelijk werken
@@ -94,11 +94,19 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 
 ## Omgevingsdeployments
 
-`.github/workflows/deploy-test.yml` draait na een push naar `main` en vervangt alleen de map
-`/test/` op de deploymentbranch:
+Deze repository heeft drie echte omgevingen, met dezelfde namen en regels als op de kaart:
 
-- `main` → test op `/test/`
-- handmatige `.github/workflows/promote-production.yml` → productie op `/`
+- openstaande pull request → **ontwikkel** op `/dev/pr-<nummer>/` (`.github/workflows/deploy-dev.yml`)
+- `main` → **test** op `/test/` (`.github/workflows/deploy-test.yml`)
+- handmatige `.github/workflows/promote-production.yml` → **productie** op `/`
+
+Elke workflow raakt uitsluitend zijn eigen map aan. De ontwikkelomgeving wordt bijgewerkt bij
+elke push naar de pull request en automatisch opgeruimd zodra die sluit.
+
+`deploy-dev.yml` gebruikt bewust `pull_request` en **niet** `pull_request_target`: dit is een
+publieke repository, dus iedereen kan een pull request openen. Bij `pull_request` krijgt een
+fork een leestoken en faalt de publicatiestap onschuldig, in plaats van vreemde code met
+schrijfrechten uit te voeren. Draai die keuze niet om.
 
 De promotieworkflow leest de commit-SHA uit `test/environment.json` en kopieert exact die
 bestanden naar productie. Beide jobs verwijzen naar de echte GitHub Environments `test` en
