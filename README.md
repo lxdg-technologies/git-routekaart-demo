@@ -9,10 +9,11 @@ Dashboard en interactieve simulatie van een moderne git-werkstroom: **issue → 
 ## Branch- en deploymentmodel
 
 - Wijzigingen gaan via een pull request naar `main`; een merge vernieuwt alleen de testomgeving.
-- Productie verandert pas wanneer iemand de workflow `Promote tested version to production` handmatig start en `PROMOTE` bevestigt.
-- De promotie kopieert exact de huidige geteste versie naar productie; een nieuwere merge kan zo niet ongemerkt meekomen.
+- Iedere merge naar `main` krijgt automatisch een onveranderlijke patchversie, Git-tag en GitHub Release. Dezelfde versie wordt op test gepubliceerd en onder `versions/<tag>/` bewaard.
+- Productie verandert pas wanneer iemand de workflow `Promote a tested version to production` handmatig start, een opgeslagen versie kiest en het bevestigingsvakje aanvinkt.
+- De promotie kopieert exact de gekozen, eerder opgeslagen testversie naar productie. Een oudere versie kiezen is daardoor ook de rollbackroute; er wordt niets opnieuw gebouwd.
 - De workflows registreren echte GitHub deployments in de omgevingen `test` en `live`; beide accepteren alleen de beschermde `main`-branch en `live` vereist een aparte menselijke goedkeuring.
-- `environment.json` op beide URL's maakt zichtbaar van welke branch en commit de omgeving is gebouwd.
+- `environment.json` op beide URL's maakt zichtbaar van welke versie, branch en commit de omgeving is gebouwd.
 
 Zie [DEPLOYMENT.md](DEPLOYMENT.md) voor de technische inrichting en controles.
 
