@@ -275,7 +275,7 @@
   padding:.55rem 1rem;
   text-align:center;
   letter-spacing:.01em;">
-  Ontwikkelversie — pull request #55 · versie <code style="font:inherit;font-weight:700;">feaee34</code>
+  Ontwikkelversie — pull request #55 · versie <code style="font:inherit;font-weight:700;">8a58880</code>
   <span style="display:block;font-weight:400;opacity:.9;">
     Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
     publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -580,6 +580,35 @@
   const REPOSITORY_CACHE_KEY = `git-routekaart-repository-v1:${REPOSITORY_FULL_NAME}`;
   const REPOSITORY_CACHE_TTL = 5 * 60 * 1000;
 
+  function repositoryUsesSimulatedData() {
+    return typeof location !== "undefined" && /\/dev\/pr-\d+(?:\/|$)/.test(location.pathname || "");
+  }
+  function simulatedRepositorySnapshot() {
+    const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    return {
+      savedAt: Date.now(),
+      repository: { default_branch: "main" },
+      commits: [
+        { sha: "de10001aabbcc", html_url: `${repositoryUrl}/commits/main`, commit: { message: "feat: voorbeeldwijziging klaar voor review", author: { date: "2026-08-07T10:00:00Z" } } },
+        { sha: "de10000aabbcc", html_url: `${repositoryUrl}/commits/main`, commit: { message: "test: controleer het voorbeeldgedrag", author: { date: "2026-08-07T09:30:00Z" } } },
+      ],
+      branches: [
+        { name: "main", protected: true, commit: { sha: "a11ce00aabbcc" } },
+        { name: "feat/voorbeeld", protected: false, commit: { sha: "de10001aabbcc" } },
+      ],
+      issues: [
+        { number: 12, title: "Voorbeeld: maak de startpagina duidelijker", state: "open", updated_at: "2026-08-07T09:00:00Z", html_url: `${repositoryUrl}/issues` },
+      ],
+      prs: [
+        { number: 13, title: "Voorbeeld: verbeter de startpagina", state: "open", merged_at: null, updated_at: "2026-08-07T10:00:00Z", html_url: `${repositoryUrl}/pulls`, head: { ref: "feat/voorbeeld" }, base: { ref: "main" } },
+      ],
+    };
+  }
+  const SIMULATED_RELEASES = [
+    { tag_name: "v0.1.1", published_at: "2026-08-06T12:00:00Z", html_url: `https://github.com/${REPOSITORY_FULL_NAME}/releases` },
+    { tag_name: "v0.1.0", published_at: "2026-08-05T12:00:00Z", html_url: `https://github.com/${REPOSITORY_FULL_NAME}/releases` },
+  ];
+
   function escapeRepositoryHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -644,12 +673,17 @@
   function renderRepositoryDashboard(snapshot, source) {
     const { repository, commits, branches, issues, prs } = snapshot;
     const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    const simulated = source === "simulated";
     const repoLink = el("repository-link");
     repoLink.href = repositoryUrl;
     repoLink.textContent = `${REPOSITORY_FULL_NAME} ↗`;
     el("repository-status").className = "repository-status";
-    el("repository-status").textContent = `Rechtstreeks uit GitHub · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
-    el("repository-updated").textContent = `Bijgewerkt ${new Date(snapshot.savedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
+    el("repository-status").textContent = simulated
+      ? "Gesimuleerde GitHub-gegevens · ontwikkelomgeving · geen verbinding met de GitHub API"
+      : `Rechtstreeks uit GitHub · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
+    el("repository-updated").textContent = simulated
+      ? "Vaste voorbeeldgegevens voor deze ontwikkelomgeving"
+      : `Bijgewerkt ${new Date(snapshot.savedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
     el("repository-summary").innerHTML = [
       [branches.length, "branches"],
       [commits.length, `commits op ${repository.default_branch || "main"} geladen`],
@@ -668,7 +702,7 @@
     renderRepositoryList("repository-branches", branches, branch => {
       const name = branch.name || "branch zonder naam";
       const sha = String(branch.commit?.sha || "").slice(0, 7);
-      const url = `${repositoryUrl}/tree/${encodeURIComponent(name)}`;
+      const url = simulated ? `${repositoryUrl}/branches` : `${repositoryUrl}/tree/${encodeURIComponent(name)}`;
       return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer">${escapeRepositoryHtml(name)}</a><span class="repository-meta"><span>${escapeRepositoryHtml(sha)}</span><span>${branch.protected ? "beschermd" : "actief"}</span></span></li>`;
     }, "Geen branches gevonden.");
 
@@ -709,6 +743,11 @@
     status.className = "repository-status";
     status.textContent = force ? "GitHub-gegevens worden opnieuw opgehaald…" : "GitHub-gegevens worden opgehaald…";
     const cached = repositoryCacheRead();
+    if (repositoryUsesSimulatedData()) {
+      renderRepositoryDashboard(simulatedRepositorySnapshot(), "simulated");
+      refresh.disabled = false;
+      return;
+    }
     if (!force) {
       if (cached) {
         renderRepositoryDashboard(cached, "cache");
@@ -750,9 +789,9 @@
   const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
   const RELEASE_TAGS_API_URL = `${REPOSITORY_API_ROOT}/tags?per_page=1`;
   const RELEASE_ENVIRONMENT = typeof location !== "undefined"
-    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
+    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
       ? "dev"
-      : location.pathname.includes("/pr-preview/") ? "test" : "live")
+      : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
     : "dev";
 
   function setupReleaseBadge() {
@@ -809,6 +848,11 @@
   }
   async function loadReleaseHistory() {
     const badge = el("release-history");
+    if (repositoryUsesSimulatedData()) {
+      renderReleaseHistory(SIMULATED_RELEASES);
+      badge.dataset.historyLoaded = "true";
+      return;
+    }
     if (typeof fetch !== "function") {
       renderReleaseHistory([]);
       badge.dataset.historyLoaded = "true";
@@ -847,6 +891,15 @@
     }
   }
   async function loadLatestRelease() {
+    if (repositoryUsesSimulatedData()) {
+      setReleaseBuild(
+        { version: "voorbeeld", commitsAhead: 1, sha: "de10001" },
+        "simulated",
+        "Gesimuleerde buildinformatie voor de ontwikkelomgeving; test en live lezen de echte versiegegevens.",
+        `https://github.com/${REPOSITORY_FULL_NAME}/pulls`,
+      );
+      return;
+    }
     const stamped = await loadVersionFile();
     if (stamped.status === "ready") {
       setReleaseBuild(stamped.build, "version-file", "Deze badge is gestempeld bij de deploy en beschrijft exact de build op deze pagina.", stamped.build.version && `https://github.com/${REPOSITORY_FULL_NAME}/releases/tag/${encodeURIComponent(stamped.build.version)}`);
