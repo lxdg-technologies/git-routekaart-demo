@@ -661,6 +661,7 @@
     const { repository, commits, branches, issues, prs } = snapshot;
     const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
     const simulated = source === "simulated";
+    el("repository-title").textContent = simulated ? "Gesimuleerde repository" : "Echte repository";
     const repoLink = el("repository-link");
     repoLink.href = repositoryUrl;
     repoLink.textContent = `${REPOSITORY_FULL_NAME} ↗`;
@@ -870,6 +871,7 @@
         "Gesimuleerde buildinformatie voor de ontwikkelomgeving; test en live lezen de echte versiegegevens.",
         `https://github.com/${REPOSITORY_FULL_NAME}/pulls`,
       );
+      el("release-current-link").textContent = "Bekijk pull requests op GitHub ↗";
       return;
     }
     const stamped = await loadVersionFile();
