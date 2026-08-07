@@ -38,7 +38,7 @@ De nul-dependency `index.html` blijft de downloadbare referentiedemo. `sveltekit
 
 Alle logica zit in één IIFE onderin `index.html`. Kernstate is het object `S` (aangemaakt in `freshState()`):
 
-- `loadRepositoryDashboard()` leest read-only de publieke GitHub REST API van deze repository. Eén snapshot bestaat uit metadata, maximaal 100 commits op de standaardbranch, branches, issues en PR's; `sessionStorage` bewaart hem vijf minuten. De API-fouttoestand mag de simulatie nooit blokkeren.
+- `loadRepositoryDashboard()` gebruikt in de ontwikkelomgeving van pull requests een vaste gesimuleerde snapshot en doet daar geen GitHub API-calls. Op test en live leest hij read-only de publieke GitHub REST API van deze repository. Eén echte snapshot bestaat uit metadata, maximaal 100 commits op de standaardbranch, branches, issues en PR's; `sessionStorage` bewaart hem vijf minuten. De API-fouttoestand mag de simulatie nooit blokkeren.
 - API-inhoud wordt voor weergave altijd ge-escaped en GitHub-links worden op het verwachte HTTPS-domein gecontroleerd. Voeg nooit een token, login of private-repositoryroute aan browsercode toe.
 
 - `S.commits[]` — elke commit: `{id, branch, msg, parents[], kind, x}`. `kind` ∈ `normal | merge | squash | revert`. `x` is de horizontale positie op de kaart (globale volgorde).
@@ -99,6 +99,11 @@ Deze repository heeft drie echte omgevingen, met dezelfde namen en regels als op
 - openstaande pull request → **ontwikkel** op `/dev/pr-<nummer>/` (`.github/workflows/deploy-dev.yml`)
 - `main` → **test** op `/test/` (`.github/workflows/deploy-test.yml`)
 - handmatige `.github/workflows/promote-production.yml` → **productie** op `/`
+
+De ontwikkelpagina gebruikt ingebedde gesimuleerde repository-, build- en releasegegevens en
+maakt geen verbinding met de GitHub API. Test en productie gebruiken juist de echte publieke
+GitHub-gegevens. Zo is de pull-requestweergave deterministisch, terwijl na merge de echte
+integratie op test wordt gecontroleerd.
 
 Elke workflow raakt uitsluitend zijn eigen map aan. De ontwikkelomgeving wordt bijgewerkt bij
 elke push naar de pull request en automatisch opgeruimd zodra die sluit.
