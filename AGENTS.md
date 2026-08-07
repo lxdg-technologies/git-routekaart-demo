@@ -6,15 +6,17 @@ Lees eerst `WERKWIJZE.md` — dat legt vast wat de simulatie moet leren en waar 
 
 ## Wat is dit?
 
-Een **interactieve git-simulatie als metrokaart**: issue → branch → PR → merge → test → live. Leermiddel voor mensen zonder software-achtergrond. Eén HTML-bestand, geen dependencies, geen build, geen server.
+Een **publiek repositorydashboard plus interactieve git-simulatie als metrokaart**: issue → branch → PR → merge → test → live. Leermiddel voor mensen zonder software-achtergrond. Eén HTML-bestand, geen dependencies, geen build, geen server.
 
-**Live versie (GitHub Pages, publiek):** https://lxdg-technologies.github.io/git-routekaart-demo/
+**Productie (GitHub Pages, publiek):** https://lxdg-technologies.github.io/git-routekaart-demo/
 
-⚠️ **Pages deployt automatisch vanaf `main`.** Elke merge naar `main` staat binnen ±1 minuut live op die URL. Dit is bewust — het is zelf een demonstratie van "merge = automatische deploy". Maar besef het vóór je merget.
+**Test (GitHub Pages, publiek):** https://lxdg-technologies.github.io/git-routekaart-demo/test/
 
-## Werkwijze: deze repo is de hoofdlijn — niet continu synchroniseren
+⚠️ **Iedere merge naar de beschermde `main`-branch deployt automatisch naar test.** Productie verandert alleen via de handmatig gestarte promotieworkflow, die exact de huidige testversie kopieert.
 
-**Deze publieke repo is waar actief aan doorgebouwd wordt.** Geen doorlopende synchronisatie met een artifact of de privérepo meer — dat kostte eerder onnodig veel moeite (3 kopieën bijwerken voor één wijziging).
+## Werkwijze: main naar test, bewust promoveren naar productie
+
+**Deze publieke repo is de bron van waarheid voor de generieke Git Routekaart en demonstreert een test- en productieroute.** Nieuwe wijzigingen landen via een PR op `main` en verschijnen daarna op test. Alleen een bewuste handmatige promotie verandert productie.
 
 - De **Claude-artifact is gearchiveerd** (29-07-2026) en wordt niet meer bijgewerkt. Als je een link naar een `claude.ai/code/artifact/...`-URL tegenkomt: negeer 'm, deze repo is de bron van waarheid.
 - De **privérepo** (`lxdg-technologies/git-routekaart`, LXDG-specifieke inhoud) neemt op een bewust gekozen moment de geschiedenis van deze repo over via `git merge --allow-unrelated-histories` — geen doorlopende sync, één keer, met behoud van volledige commit-historie. Tot dat moment hoeft niemand hier iets voor de privérepo te doen.
@@ -35,6 +37,9 @@ De nul-dependency `index.html` blijft de downloadbare referentiedemo. `sveltekit
 ## Hoe de simulatie werkt (architectuur)
 
 Alle logica zit in één IIFE onderin `index.html`. Kernstate is het object `S` (aangemaakt in `freshState()`):
+
+- `loadRepositoryDashboard()` leest read-only de publieke GitHub REST API van deze repository. Eén snapshot bestaat uit metadata, maximaal 100 commits op de standaardbranch, branches, issues en PR's; `sessionStorage` bewaart hem vijf minuten. De API-fouttoestand mag de simulatie nooit blokkeren.
+- API-inhoud wordt voor weergave altijd ge-escaped en GitHub-links worden op het verwachte HTTPS-domein gecontroleerd. Voeg nooit een token, login of private-repositoryroute aan browsercode toe.
 
 - `S.commits[]` — elke commit: `{id, branch, msg, parents[], kind, x}`. `kind` ∈ `normal | merge | squash | revert`. `x` is de horizontale positie op de kaart (globale volgorde).
 - `S.branches{}` — per branch: `{name, lane, color, head, merged, deleted, issue}`. `main` heeft altijd lane 0. Zijbranches krijgen een lane uit `S.laneFree` (max 4 tegelijk, lanes worden hergebruikt na opruimen).
@@ -58,6 +63,7 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 - **Logboek legt elk begrip uit op het moment dat het gebeurt** (`log(titel, waarom)`). Nieuwe acties horen altijd een "waarom"-uitleg in gewone taal te krijgen — doelgroep is een niet-programmeur.
 - **Nederlands** is de taal van de hele UI.
 - **Eén bestand, nul dependencies** — zodat downloaden + dubbelklikken altijd werkt. Geen frameworks, geen CDN's, geen build-stap toevoegen.
+- **De echte repositoryweergave is read-only en aanvullend.** Zij laat zien wat er werkelijk op GitHub staat; de metrokaart eronder blijft de veilige oefenomgeving en voert nooit GitHub-acties uit.
 - **Licht + donker thema** via CSS-variabelen (`prefers-color-scheme` én `data-theme`-override). Nieuwe kleuren altijd als variabele in `:root` + beide donker-blokken.
 - Versienummers zijn bewust simpel (`v0.1.n`, alleen patch-bump) — semver-nuance is hier geen leerdoel.
 
@@ -67,7 +73,7 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 2. Pas `index.html` aan; werk zo nodig `test/smoketest.js` mee bij.
 3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe. **Een nieuwe assert controleert gedrag of een uiteindelijk DOM-resultaat, nooit de letterlijke inhoud van het `<script>`-blok.**
 4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken in de preview"-regel**, bijv. "Klik X aan, kijk of Y verschijnt" — de automatische preview-link (zie hieronder) toont alleen dát er iets is, niet wát. Zonder die regel is een kale link net zo onduidelijk als geen link.
-5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Onthoud: merge = binnen een minuut live op de Pages-URL.
+5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie.
 
 ## Met meerdere mensen tegelijk werken
 
@@ -86,17 +92,18 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 3. Draai de rooktest opnieuw.
 4. Zet in de PR-tekst wat je gekozen hebt en waarom — die keuze moet zichtbaar zijn voor de beoordelaar.
 
-## PR-previews
+## Omgevingsdeployments
 
-Elke PR krijgt automatisch een comment met een klikbare preview-link (`pr-preview/pr-<nummer>/`
-op de `gh-pages`-branch, via `rossjrw/pr-preview-action` in `.github/workflows/pr-preview.yml`).
-Productie deployt via een aparte workflow (`deploy-main.yml`) die bij elke push naar `main`
-de site-bestanden naar `gh-pages`-root synct — de preview-mappen blijven daarbij intact.
+`.github/workflows/deploy-test.yml` draait na een push naar `main` en vervangt alleen de map
+`/test/` op de deploymentbranch:
 
-Een PR die alleen CI/workflows/documentatie wijzigt (geen `index.html`) toont in de preview
-terecht niets anders dan de huidige site — meld dat expliciet in zo'n PR-tekst, anders lijkt
-het alsof de preview niet werkt.
+- `main` → test op `/test/`
+- handmatige `.github/workflows/promote-production.yml` → productie op `/`
+
+De promotieworkflow leest de commit-SHA uit `test/environment.json` en kopieert exact die
+bestanden naar productie. Beide jobs verwijzen naar de echte GitHub Environments `test` en
+`production`, zodat deployments en doel-URL's in GitHub worden bijgehouden. Zie `DEPLOYMENT.md`.
 
 ## Herkomst
 
-Gestart als Claude-artifact voor het LXDG-robotproject (juli 2026); de drie-omgevingen-uitbreiding (ontwikkel/test/live) kwam voort uit extern advies om dev-, test- en productieomgevingen te scheiden. Deze publieke variant is de generieke afsplitsing daarvan. Sinds 29-07-2026 is dit de enige actief onderhouden kopie (zie "Werkwijze" hierboven).
+De omgevingsroute is eerst end-to-end beproefd in `lxdg-technologies/git-routekaart-demo-environments` en daarna op de actuele `main` van deze bronrepository toegepast.

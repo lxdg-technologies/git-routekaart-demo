@@ -16,6 +16,8 @@ Ben je nieuw: lees dit hoofdstuk eerst. Daarna weet je waar elke knop in de simu
 
 De simulatie speelt de route na die een wijziging in een echt softwareproject aflegt, van "iemand bedenkt iets" tot "het draait bij de gebruiker". Elke knop hoort bij een echte handeling.
 
+Boven de simulatie staat een read-only venster op deze echte publieke repository. Daar kun je de werkelijke commits, branches, issues en pull requests vergelijken met wat je in de metrokaart oefent. Dat venster voert zelf geen GitHub-acties uit en voegt daarom geen missie toe.
+
 | Wat je in de simulatie doet | Wat er in het echt gebeurt | Waar je dat in het echt terugziet |
 |---|---|---|
 | Nieuw issue | Iemand schrijft op wát er moet gebeuren en waarom — nog geen code | Het issuebord van het project |
@@ -98,6 +100,7 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **07-08-2026** — Een read-only dashboard met echte publieke repositorygegevens staat boven de simulatie. Het vormt de brug van oefenen naar herkennen, verandert geen GitHub-data en voegt geen missie toe.
 - **05-08-2026** — Een open pull request is nu ook op de kaart te zien: een gestippelde, nog niet aangesloten lijn vanaf de kop van de branch richting main. Geen nieuwe missie; het maakt missie 4 zichtbaar.
 - **03-08-2026** — Het omgevingsfilter maakt de actieve omgeving zichtbaar met een kader en Ontwikkel toont alleen het werk-in-uitvoering plus het vertrekpunt; bordjes worden tegen de werkelijke lijnbochten geplaatst.
 - **03-08-2026** — Omgevingsfilter op de kaart toegevoegd, zodat het verschil tussen test en live zichtbaar wordt in plaats van alleen beschreven.

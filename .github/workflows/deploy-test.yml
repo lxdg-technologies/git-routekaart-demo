@@ -1,0 +1,58 @@
+name: Deploy main to test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-environments
+  cancel-in-progress: false
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+      url: https://lxdg-technologies.github.io/git-routekaart-demo/test/
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: source
+
+      - name: Checkout deployment branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Replace only the test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C site rm -r --ignore-unmatch test
+          mkdir -p site/test
+          cp source/index.html site/test/index.html
+          cp source/README.md site/test/README.md
+          cp source/LICENSE site/test/LICENSE
+          printf '{"environment":"test","branch":"main","sha":"%s"}\n' "$GITHUB_SHA" > site/test/environment.json
+
+      - name: Publish test if changed
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- test
+          if git diff --cached --quiet; then
+            echo "Test is already current"
+            exit 0
+          fi
+          git commit -m "Deploy test from main@${GITHUB_SHA::7}"
+          git push origin gh-pages

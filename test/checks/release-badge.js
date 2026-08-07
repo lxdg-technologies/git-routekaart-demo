@@ -12,6 +12,10 @@ module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCall
   assert(byIdMap["release-badge-label"].textContent === "release: v8.0.0 +4", "badge valt terug op GitHub-release plus compare-resultaat");
   assert(byIdMap["release-build-note"].textContent.includes("nieuwste GitHub-release"), "fallback-note legt uit dat main nieuwer kan zijn");
   assert(fetchCalls.some(url => url.includes("releases/latest")) && fetchCalls.some(url => url.includes("compare/")), "fallback gebruikt release- en compare-endpoint");
+  setFetchMode("tag-fallback");
+  stappen.opnieuw(); await flush(); await flush();
+  assert(byIdMap["release-badge-label"].textContent === "release: v7.0.0 +6", "badge gebruikt de nieuwste repositorytag als er geen GitHub Release bestaat");
+  assert(byIdMap["release-current-link"].href.endsWith("/tree/v7.0.0") && byIdMap["release-build-note"].textContent.includes("nieuwste GitHub-tag"), "tag-fallback linkt naar de tag en benoemt de bron correct");
   setFetchMode("version");
   stappen.opnieuw(); await flush(); await flush();
   assert(byIdMap["release-badge-label"].textContent.startsWith("release: v9.9.9"), "badge kan na fallback opnieuw een version-file gebruiken");
