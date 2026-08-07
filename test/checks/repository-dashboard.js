@@ -29,9 +29,11 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   byIdMap["repository-refresh"].onclick();
   await flush(); await flush(); await flush();
   assert(fetchCalls.length === callsBeforeDevelopment, "ontwikkelomgeving doet geen fetch naar GitHub of een andere databron");
+  assert(byIdMap["repository-title"].textContent === "Gesimuleerde repository", "ontwikkelomgeving noemt de voorbeeldrepository niet echt");
   assert(byIdMap["repository-status"].textContent.includes("Gesimuleerde GitHub-gegevens") && byIdMap["repository-status"].textContent.includes("geen verbinding met de GitHub API"), "ontwikkelomgeving benoemt de gesimuleerde databron duidelijk");
   assert(byIdMap["repository-commits"].innerHTML.includes("voorbeeldwijziging") && byIdMap["repository-prs"].innerHTML.includes("Voorbeeld: verbeter de startpagina"), "ontwikkelomgeving rendert de vaste voorbeeldgegevens");
   assert(byIdMap["release-history"].dataset.source === "simulated" && byIdMap["release-badge-label"].textContent.includes("voorbeeld"), "ontwikkelomgeving simuleert ook de buildinformatie");
+  assert(byIdMap["release-current-link"].textContent.includes("pull requests"), "gesimuleerde build linkt niet naar een niet-bestaande voorbeeldrelease");
   byIdMap["release-history"].open = true;
   byIdMap["release-history"].dataset.historyLoaded = "false";
   byIdMap["release-history"].ontoggle();

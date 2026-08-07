@@ -37,7 +37,7 @@ const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-box", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-summary",
-  "repository-commits", "repository-branches", "repository-issues", "repository-prs"];
+  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
