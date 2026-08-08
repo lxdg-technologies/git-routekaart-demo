@@ -9,6 +9,15 @@ permissions:
   pull-requests: read
 
 jobs:
+  review-guard-test:
+    name: review-guard-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Head-versietest draaien
+        run: bash test/review-guard.sh
+
   review-guard:
     name: review-guard
     runs-on: ubuntu-latest
@@ -19,6 +28,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -48,17 +58,18 @@ jobs:
                   login: .user.login,
                   state: .state,
                   id: (.id // 0),
-                  submitted_at: (.submitted_at // "")
+                  submitted_at: (.submitted_at // ""),
+                  commit_id: (.commit_id // "")
                 }
             ]
             | group_by(.login)
             | map(sort_by([.submitted_at, .id]) | last)
           ' <<< "$reviews")"
 
-          self_approvals="$(jq --arg author "$PR_AUTHOR" '
+          self_approvals="$(jq --arg author "$PR_AUTHOR" --arg head_sha "$PR_HEAD_SHA" '
             [
               .[]
-              | select(.state == "APPROVED" and .login == $author)
+              | select(.state == "APPROVED" and .login == $author and .commit_id == $head_sha)
             ]
             | length
           ' <<< "$latest_reviews")"
@@ -68,11 +79,12 @@ jobs:
             exit 1
           fi
 
-          valid_approvals="$(jq --argjson allowed "$allowed_logins" '
+          valid_approvals="$(jq --argjson allowed "$allowed_logins" --arg head_sha "$PR_HEAD_SHA" '
             [
               .[]
               | select(
                   .state == "APPROVED"
+                  and .commit_id == $head_sha
                   and (.login as $login | $allowed | index($login) != null)
                 )
               | .login
@@ -81,7 +93,22 @@ jobs:
           ' <<< "$latest_reviews")"
 
           if [ "$(jq 'length' <<< "$valid_approvals")" -eq 0 ]; then
-            echo "::error::Er is nog geen geldige goedkeuring van een toegestane reviewer."
+            old_approvals="$(jq --argjson allowed "$allowed_logins" --arg head_sha "$PR_HEAD_SHA" '
+              [
+                .[]
+                | select(
+                    .state == "APPROVED"
+                    and .commit_id != $head_sha
+                    and (.login as $login | $allowed | index($login) != null)
+                  )
+              ]
+              | length
+            ' <<< "$latest_reviews")"
+            if [ "$old_approvals" -gt 0 ]; then
+              echo "::error::Er is wel goedgekeurd, maar op een oudere versie van deze PR; de wijziging moet opnieuw bekeken en goedgekeurd worden."
+            else
+              echo "::error::Er is nog geen geldige goedkeuring van een toegestane reviewer op de actuele versie."
+            fi
             echo "Toegestane logins: $(jq -r 'join(", ")' <<< "$allowed_logins")"
             exit 1
           fi
