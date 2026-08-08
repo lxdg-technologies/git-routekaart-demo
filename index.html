@@ -1166,6 +1166,7 @@
     tick(6); render();
   }
   function promote(now = Date.now()) {
+    if (now && typeof now === "object") now = Date.now();
     if (S.env.test === S.env.live) return;
     S.env.live = S.env.test;
     S.env.liveCommit = S.env.testCommit;

@@ -128,7 +128,7 @@ const delen = [
     squashMerge: () => findBtn("Squash & merge").onclick(),
     rebaseMerge: () => findBtn("Rebase & merge").onclick(),
     verwijderBranch: () => findBtn("Verwijder branch").onclick(),
-    promote: () => byIdMap["btn-promote"].onclick(),
+    promote: () => byIdMap["btn-promote"].onclick({ type: "click" }),
     promoteAt: now => window.__promoteAt(now),
     revert: () => byIdMap["btn-revert"].onclick(),
     kiesRollback: index => { byIdMap["rollback-version"].value = String(index); byIdMap["rollback-version"].onchange(); },
