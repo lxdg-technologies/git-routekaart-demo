@@ -22,6 +22,16 @@ module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, 
   assert(window.__formatElapsedSince("2026-08-08T11:59:30Z", fixedNow) === "live sinds minder dan een minuut", "live-tijd rondt minder dan een minuut begrijpelijk af");
   assert(window.__formatElapsedSince("2026-08-08T10:00:00Z", fixedNow) === "live sinds 2 uur", "live-tijd rondt uren af met een vaste huidige tijd");
   assert(window.__formatElapsedSince("2026-08-05T12:00:00Z", fixedNow) === "live sinds 3 dagen", "live-tijd rondt dagen af met een vaste huidige tijd");
+  assert(window.__formatElapsedSince("geen geldige datum", fixedNow) === "" && window.__formatElapsedSince("2026-08-08T13:00:00Z", fixedNow) === "", "ongeldige of toekomstige promotietijd toont geen NaN of negatieve verstreken tijd");
+  state().env.livePromotedAt = "geen geldige datum";
+  window.__render();
+  assert(byIdMap["env-live-age"].textContent === "" && !/NaN|undefined|-\d/.test(byIdMap["env-live-age"].textContent), "het Live-scherm toont bij een ongeldige promotietijd geen NaN, undefined of negatieve tijd");
+  const futurePromotion = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  state().env.livePromotedAt = futurePromotion;
+  window.__render();
+  assert(byIdMap["env-live-age"].textContent === "" && !/NaN|undefined|-\d/.test(byIdMap["env-live-age"].textContent), "het Live-scherm toont bij een toekomstige promotietijd geen NaN, undefined of negatieve tijd");
+  state().env.livePromotedAt = firstPromotion;
+  window.__render();
 
   stappen.mergeRonde("squash");
   assert(byIdMap["env-test"].textContent === "v0.1.2", "squash-merge maakt v0.1.2 op test");
