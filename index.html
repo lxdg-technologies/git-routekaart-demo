@@ -178,6 +178,8 @@
   .env.dev { border-color: var(--warn); }
   .env.test { border-color: var(--accent); }
   .env.live { border-color: var(--ok); }
+  .test-live-status { margin: .7rem 0 0; padding: .55rem .65rem; border: 1px solid var(--accent); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
+  .test-live-status a { color: var(--accent); font-weight: 700; }
   .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
 
   /* ==== SECTIE: ACTIES ==== */
@@ -374,6 +376,10 @@
           <div class="env-sub">alleen na jouw akkoord</div>
         </button>
       </div>
+      <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
+        <span id="test-live-status-text"></span>
+        <a id="test-live-promote-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar promotie in GitHub Actions ↗</a>
+      </p>
       <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
       <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
       <div class="rollback-controls" id="rollback-controls">
@@ -483,6 +489,8 @@
     { term: "Commit", keywords: ["commit"], explanation: "Een vastgelegde wijziging met een korte beschrijving, zodat je later kunt zien wat er veranderde.", example: "Een commit kan de release-badge of een nieuwe uitleg toevoegen." },
     { term: "Branch", keywords: ["branch", "branches"], explanation: "Een tijdelijk zijspoor waarop je veilig aan een wijziging werkt zonder main direct te veranderen.", example: "feat/dcs-152-vaktermen is een branch voor deze woordenlijst." },
     { term: "Merge", keywords: ["merge"], explanation: "Het samenvoegen van een goedgekeurde branch met main.", example: "Na de merge komt de wijziging op main en kan GitHub Pages deployen." },
+    { term: "Rebase", keywords: ["rebase"], explanation: "De commits van een branch opnieuw boven op een andere basis plaatsen. Anders dan bij een gewone merge ontstaat daarbij een rechte geschiedenis zonder merge-commit.", example: "Werk vóór het insturen van je pull request de laatste main op je branch bij met rebase, zodat je voorstel op de nieuwste basis vertrekt." },
+    { term: "Fork", keywords: ["fork"], explanation: "Een eigen kopie van een repository onder je eigen account. Anders dan een branch is een fork een aparte repository; branches blijven binnen dezelfde repository.", example: "Maak vanuit een fork een branch voor je wijziging en stuur het werk via een pull request terug naar de oorspronkelijke repository." },
     { term: "Pull Request (PR)", keywords: ["pull request", "PR"], explanation: "Een voorstel om een branch te mergen, zodat anderen de wijziging en checks kunnen beoordelen.", example: "PR #6 stelde de release-badge voor en wachtte op menselijke beoordeling." },
     { term: "Tag", keywords: ["tag"], explanation: "Een vast label op één specifieke commit, vaak gebruikt voor een versie.", example: "Tag v1.1.0 markeert de release van de branch-van-commit-feature." },
     { term: "Release", keywords: ["release"], explanation: "Een uitgebrachte versie met een herkenbare tag en vaak release-notes. In deze kaart is een release gekoppeld aan het station waar een pakketje van die commit is gebouwd en uitgerold; niet elke commit is dus een versie.", example: "Release v1.1.0 hoort bij één release-station op main; de andere commits zijn wel geschiedenis maar geen rollback-doel." },
@@ -772,10 +780,7 @@
 
   /* ==== SECTIE: RELEASE-BADGE ==== */
   const VERSION_FILE_URL = "version.json";
-  const RELEASE_API_URL = `${REPOSITORY_API_ROOT}/releases/latest`;
-  const RELEASE_COMPARE_API_URL = `${REPOSITORY_API_ROOT}/compare/`;
   const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
-  const RELEASE_TAGS_API_URL = `${REPOSITORY_API_ROOT}/tags?per_page=1`;
   const RELEASE_ENVIRONMENT = typeof location !== "undefined"
     ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
       ? "dev"
@@ -786,9 +791,9 @@
     const badge = el("release-history");
     badge.classList.add(`release-badge`, RELEASE_ENVIRONMENT);
     badge.title = {
-      dev: "Laatste GitHub-release op ontwikkeling",
-      test: "Laatste GitHub-release op test/preview",
-      live: "Laatste GitHub-release op live",
+      dev: "Gesimuleerde buildversie op ontwikkeling",
+      test: "Eigen buildversie op test/preview",
+      live: "Eigen buildversie op live",
     }[RELEASE_ENVIRONMENT];
     badge.addEventListener("toggle", () => {
       if (badge.open && badge.dataset.historyLoaded !== "true") loadReleaseHistory();
@@ -878,6 +883,33 @@
       return { status: "unavailable" };
     }
   }
+  async function loadTestLiveStatus() {
+    const status = el("test-live-status");
+    const text = el("test-live-status-text");
+    const link = el("test-live-promote-link");
+    link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
+    status.hidden = true;
+    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
+    if (!isTestPage || typeof fetch !== "function") return;
+    try {
+      const [testVersion, liveResponse] = await Promise.all([
+        loadVersionFile(),
+        fetch("../environment.json", { cache: "no-store" }),
+      ]);
+      if (testVersion.status !== "ready" || !liveResponse.ok) return;
+      const liveData = await liveResponse.json();
+      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) return;
+      const test = testVersion.build.version;
+      const live = liveData.version.trim();
+      text.textContent = test === live
+        ? `Test ${test} staat ook live als ${live}.`
+        : `Deze versie staat nog niet live — test staat op ${test}, live op ${live}. Daarna is goedkeuring van iemand anders nodig.`;
+      link.hidden = test === live;
+      status.hidden = false;
+    } catch (error) {
+      // Ontbrekende of onleesbare live-metadata is geen fout voor de pagina.
+    }
+  }
   async function loadLatestRelease() {
     if (repositoryUsesSimulatedData()) {
       setReleaseBuild(
@@ -898,43 +930,11 @@
       setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
-    if (typeof fetch !== "function") {
-      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+    if (stamped.status === "missing") {
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Deze uitrol heeft geen eigen versiegegevens. Bekijk het releaseoverzicht op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
-    try {
-      const latestResponse = await fetch(RELEASE_API_URL, { headers: { Accept: "application/vnd.github+json" } });
-      let release;
-      let source = "github-api";
-      let sourceLabel = "GitHub-release";
-      if (latestResponse.ok) {
-        release = await latestResponse.json();
-      } else if (latestResponse.status === 404) {
-        const tagsResponse = await fetch(RELEASE_TAGS_API_URL, { headers: { Accept: "application/vnd.github+json" } });
-        if (!tagsResponse.ok) throw new Error(`GitHub Tags API: ${tagsResponse.status}`);
-        const tags = await tagsResponse.json();
-        const tag = Array.isArray(tags) ? tags[0] : null;
-        if (!tag?.name) throw new Error("GitHub-repository heeft geen release of tag");
-        release = { tag_name: tag.name, html_url: `https://github.com/${REPOSITORY_FULL_NAME}/tree/${encodeURIComponent(tag.name)}` };
-        source = "github-tag";
-        sourceLabel = "GitHub-tag";
-      } else {
-        throw new Error(`GitHub Releases API: ${latestResponse.status}`);
-      }
-      if (!release.tag_name) throw new Error("GitHub-release heeft geen tag_name");
-      const compareResponse = await fetch(`${RELEASE_COMPARE_API_URL}${encodeURIComponent(`${release.tag_name}...main`)}`, { headers: { Accept: "application/vnd.github+json" } });
-      if (!compareResponse.ok) throw new Error(`GitHub Compare API: ${compareResponse.status}`);
-      const comparison = await compareResponse.json();
-      if (!Number.isInteger(comparison.ahead_by)) throw new Error("GitHub-compare heeft geen ahead_by");
-      setReleaseBuild(
-        { version: release.tag_name, commitsAhead: comparison.ahead_by },
-        source,
-        `Dit is de nieuwste ${sourceLabel}. De pagina kan nieuwer zijn (+${comparison.ahead_by} commits op main).`,
-        release.html_url,
-      );
-    } catch (error) {
-      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
-    }
+    setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
   }
 
   /* ==== SECTIE: STATE ==== */
@@ -1015,6 +1015,7 @@
     renderCommandReference();
     setupReleaseBadge();
     loadLatestRelease();
+    loadTestLiveStatus();
     render();
   }
 
@@ -1585,6 +1586,7 @@
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
   window.focusTerm = focusTerm;
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
   init();
   loadRepositoryDashboard();
 })();
