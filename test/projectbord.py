@@ -102,6 +102,13 @@ class ProjectBoardTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "statusoptie"):
             projectbord.sync(client, project=project)
 
+    def test_workflow_filtert_review_actor_en_checkout_ref(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        self.assertIn("github.event.review.user.login == 'lxdg-dcs-coder[bot]'", workflow)
+        self.assertIn("github.event.review.user.login == 'app/lxdg-dcs-coder'", workflow)
+        self.assertNotIn("github.event.pull_request.user.login == 'app/lxdg-dcs-coder'", workflow)
+        self.assertIn("github.event.pull_request.head.sha || 'main'", workflow)
+
     def test_workflow_faalt_zonder_planner_secret(self):
         env = os.environ.copy()
         env.pop("GITHUB_TOKEN", None)
