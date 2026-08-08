@@ -36,7 +36,7 @@ class FakeGitHub:
                 {"id": "progress", "name": "In progress"}, {"id": "review", "name": "In review"},
                 {"id": "done", "name": "Done"},
             ]}]},
-            "items": {"nodes": [{"id": "item-1", "archived": False,
+            "items": {"nodes": [{"id": "item-1", "isArchived": False,
                 "content": {"number": 74, "repository": {"nameWithOwner": projectbord.REPOSITORY}},
                 "fieldValues": {"nodes": values}}]},
         }

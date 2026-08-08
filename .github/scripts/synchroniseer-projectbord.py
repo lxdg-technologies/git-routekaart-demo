@@ -90,7 +90,7 @@ class GitHub:
                     ... on ProjectV2SingleSelectField { id name options { id name } }
                   }
                   items(first:100) { nodes {
-                    id archived
+                    id isArchived
                     content { ... on Issue { number repository { nameWithOwner } } }
                     fieldValues(first:100) { nodes {
                       ... on ProjectV2ItemFieldSingleSelectValue {
@@ -126,7 +126,7 @@ class GitHub:
         self.graphql(
             """
             mutation($project:ID!, $item:ID!) {
-              archiveProjectV2Item(input:{projectId:$project,itemId:$item}) { item { id archived } }
+              archiveProjectV2Item(input:{projectId:$project,itemId:$item}) { item { id isArchived } }
             }
             """,
             {"project": project_id, "item": item_id},
@@ -183,7 +183,7 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
             continue
         desired = target_status(state)
         if desired == "ARCHIVE":
-            if not item.get("archived"):
+            if not item.get("isArchived"):
                 client.archive(project["id"], item["id"])
                 actions.append(f"issue #{number}: kaart gearchiveerd")
             continue
