@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Controleer Planner App-configuratie
+        if: github.event_name != 'pull_request' || (github.event.action == 'closed' && github.event.pull_request.merged == true)
         env:
           PLANNER_APP_ID: ${{ secrets.PLANNER_APP_ID }}
           PLANNER_PRIVATE_KEY: ${{ secrets.PLANNER_PRIVATE_KEY }}
@@ -34,6 +35,7 @@ jobs:
           fi
 
       - name: Maak token voor lxdg-dcs-planner
+        if: github.event_name != 'pull_request' || (github.event.action == 'closed' && github.event.pull_request.merged == true)
         id: planner-token
         uses: actions/create-github-app-token@v2
         with:
@@ -43,6 +45,7 @@ jobs:
           repositories: git-routekaart-demo
 
       - name: Checkout scripts
+        if: github.event_name != 'pull_request' || (github.event.action == 'closed' && github.event.pull_request.merged == true)
         uses: actions/checkout@v4
         with:
           sparse-checkout: .github/scripts/synchroniseer-projectbord.py
@@ -50,6 +53,11 @@ jobs:
           persist-credentials: false
 
       - name: Synchroniseer kaarten
+        if: github.event_name != 'pull_request' || (github.event.action == 'closed' && github.event.pull_request.merged == true)
         env:
           GITHUB_TOKEN: ${{ steps.planner-token.outputs.token }}
         run: python3 .github/scripts/synchroniseer-projectbord.py
+
+      - name: Valideer PR zonder projectmutatie
+        if: github.event_name == 'pull_request' && !(github.event.action == 'closed' && github.event.pull_request.merged == true)
+        run: 'echo "PR-validatie: projectmutaties worden pas vanaf main na merge uitgevoerd."'
