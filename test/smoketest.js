@@ -74,21 +74,13 @@ global.fetch = async url => {
     return response({}, 404);
   }
   if (["version", "test-live-behind", "test-live-equal"].includes(fetchMode) && url === "version.json") return response({ version: "v9.9.9", commitsAhead: 2, sha: "abc1234" });
+  if (fetchMode === "invalid" && url === "version.json") return response({ version: "" });
+  if (fetchMode === "missing" && url === "version.json") return response({}, 404);
   if (fetchMode === "history" && String(url).includes("releases?")) return response([
     { tag_name: "v9.9.8", published_at: "2026-08-01T12:00:00Z", html_url: "https://example.test/releases/v9.9.8" },
     { name: "untagged", created_at: "2026-07-31T12:00:00Z", html_url: "https://example.test/releases/untagged" },
   ]);
-  if (fetchMode === "fallback") {
-    if (url === "version.json") return response({}, 404);
-    if (String(url).includes("releases/latest")) return response({ tag_name: "v8.0.0", html_url: "https://example.test/releases/v8.0.0" });
-    if (String(url).includes("compare/")) return response({ ahead_by: 4 });
-  }
-  if (fetchMode === "tag-fallback") {
-    if (url === "version.json") return response({}, 404);
-    if (String(url).includes("releases/latest")) return response({}, 404);
-    if (String(url).includes("/tags?")) return response([{ name: "v7.0.0", commit: { sha: "tag1234" } }]);
-    if (String(url).includes("compare/")) return response({ ahead_by: 6 });
-  }
+
   return response({}, 503);
 };
 
