@@ -778,10 +778,7 @@
 
   /* ==== SECTIE: RELEASE-BADGE ==== */
   const VERSION_FILE_URL = "version.json";
-  const RELEASE_API_URL = `${REPOSITORY_API_ROOT}/releases/latest`;
-  const RELEASE_COMPARE_API_URL = `${REPOSITORY_API_ROOT}/compare/`;
   const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
-  const RELEASE_TAGS_API_URL = `${REPOSITORY_API_ROOT}/tags?per_page=1`;
   const RELEASE_ENVIRONMENT = typeof location !== "undefined"
     ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
       ? "dev"
@@ -792,9 +789,9 @@
     const badge = el("release-history");
     badge.classList.add(`release-badge`, RELEASE_ENVIRONMENT);
     badge.title = {
-      dev: "Laatste GitHub-release op ontwikkeling",
-      test: "Laatste GitHub-release op test/preview",
-      live: "Laatste GitHub-release op live",
+      dev: "Gesimuleerde buildversie op ontwikkeling",
+      test: "Eigen buildversie op test/preview",
+      live: "Eigen buildversie op live",
     }[RELEASE_ENVIRONMENT];
     badge.addEventListener("toggle", () => {
       if (badge.open && badge.dataset.historyLoaded !== "true") loadReleaseHistory();
@@ -931,43 +928,11 @@
       setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
-    if (typeof fetch !== "function") {
-      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+    if (stamped.status === "missing") {
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Deze uitrol heeft geen eigen versiegegevens. Bekijk het releaseoverzicht op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
-    try {
-      const latestResponse = await fetch(RELEASE_API_URL, { headers: { Accept: "application/vnd.github+json" } });
-      let release;
-      let source = "github-api";
-      let sourceLabel = "GitHub-release";
-      if (latestResponse.ok) {
-        release = await latestResponse.json();
-      } else if (latestResponse.status === 404) {
-        const tagsResponse = await fetch(RELEASE_TAGS_API_URL, { headers: { Accept: "application/vnd.github+json" } });
-        if (!tagsResponse.ok) throw new Error(`GitHub Tags API: ${tagsResponse.status}`);
-        const tags = await tagsResponse.json();
-        const tag = Array.isArray(tags) ? tags[0] : null;
-        if (!tag?.name) throw new Error("GitHub-repository heeft geen release of tag");
-        release = { tag_name: tag.name, html_url: `https://github.com/${REPOSITORY_FULL_NAME}/tree/${encodeURIComponent(tag.name)}` };
-        source = "github-tag";
-        sourceLabel = "GitHub-tag";
-      } else {
-        throw new Error(`GitHub Releases API: ${latestResponse.status}`);
-      }
-      if (!release.tag_name) throw new Error("GitHub-release heeft geen tag_name");
-      const compareResponse = await fetch(`${RELEASE_COMPARE_API_URL}${encodeURIComponent(`${release.tag_name}...main`)}`, { headers: { Accept: "application/vnd.github+json" } });
-      if (!compareResponse.ok) throw new Error(`GitHub Compare API: ${compareResponse.status}`);
-      const comparison = await compareResponse.json();
-      if (!Number.isInteger(comparison.ahead_by)) throw new Error("GitHub-compare heeft geen ahead_by");
-      setReleaseBuild(
-        { version: release.tag_name, commitsAhead: comparison.ahead_by },
-        source,
-        `Dit is de nieuwste ${sourceLabel}. De pagina kan nieuwer zijn (+${comparison.ahead_by} commits op main).`,
-        release.html_url,
-      );
-    } catch (error) {
-      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
-    }
+    setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
   }
 
   /* ==== SECTIE: STATE ==== */
