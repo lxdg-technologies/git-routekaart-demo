@@ -282,7 +282,7 @@
   max-width:100%;
   text-align:center;
   letter-spacing:.01em;">
-  Ontwikkelversie — pull request #73 · versie <code style="font:inherit;font-weight:700;">4890edb</code>
+  Ontwikkelversie — pull request #73 · versie <code style="font:inherit;font-weight:700;">2688514</code>
   <span style="display:block;font-weight:400;opacity:.9;">
     Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
     publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -975,7 +975,10 @@
 
   function formatElapsedSince(promotedAt, now) {
     if (promotedAt === null || promotedAt === undefined) return "";
-    const elapsedMs = Math.max(0, Number(now) - Number(new Date(promotedAt)));
+    const promotedMs = new Date(promotedAt).getTime();
+    const nowMs = new Date(now).getTime();
+    if (!Number.isFinite(promotedMs) || !Number.isFinite(nowMs) || nowMs < promotedMs) return "";
+    const elapsedMs = nowMs - promotedMs;
     const minute = 60 * 1000;
     const hour = 60 * minute;
     const day = 24 * hour;
@@ -1638,6 +1641,7 @@
   window.focusTerm = focusTerm;
   window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
   window.__promoteAt = promote; // alleen voor test/smoketest.js
+  window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
   init();
