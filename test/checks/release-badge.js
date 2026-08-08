@@ -1,4 +1,4 @@
-// Controles rond de release-badge: gestempelde versie, fallback op GitHub en de releasehistorie.
+// Controles rond de release-badge: gestempelde versie, onbekende versie en de releasehistorie.
 module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCalls, initialBadge, setFetchMode, stappen }) {
   await flush(); await flush();
   assert(initialBadge === "release: onbekend", "badge heeft een veilige beginwaarde vóór de fetch-response");
@@ -7,11 +7,16 @@ module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCall
   assert(byIdMap["release-current-link"].href.endsWith("/v9.9.9"), "badge-link verwijst naar de actieve release");
   assert(fetchCalls.includes("version.json"), "badge vraagt buildinformatie op via fetch");
   assert(byIdMap["release-history"].classList.contains("release-badge") && byIdMap["release-history"].classList.contains("dev"), "badge krijgt de ontwikkelstatus in de DOM");
-  setFetchMode("fallback");
+  setFetchMode("invalid");
   stappen.opnieuw(); await flush(); await flush();
-  assert(byIdMap["release-badge-label"].textContent === "release: v8.0.0 +4", "badge valt terug op GitHub-release plus compare-resultaat");
-  assert(byIdMap["release-build-note"].textContent.includes("nieuwste GitHub-release"), "fallback-note legt uit dat main nieuwer kan zijn");
-  assert(fetchCalls.some(url => url.includes("releases/latest")) && fetchCalls.some(url => url.includes("compare/")), "fallback gebruikt release- en compare-endpoint");
+  assert(byIdMap["release-badge-label"].textContent === "release: tijdelijk niet beschikbaar", "ongeldig version.json toont tijdelijk niet beschikbaar");
+  assert(byIdMap["release-current-link"].href.endsWith("/releases"), "ongeldige versie linkt naar het releaseoverzicht");
+  setFetchMode("missing");
+  const callsBeforeMissing = fetchCalls.length;
+  stappen.opnieuw(); await flush(); await flush();
+  assert(byIdMap["release-badge-label"].textContent === "release: versie onbekend", "ontbrekend version.json toont versie onbekend");
+  assert(byIdMap["release-current-link"].href.endsWith("/releases"), "onbekende versie linkt naar het releaseoverzicht");
+  assert(fetchCalls.slice(callsBeforeMissing).every(url => url === "version.json"), "ontbrekend version.json doet geen GitHub-fetch");
   setFetchMode("version");
   stappen.opnieuw(); await flush(); await flush();
   assert(byIdMap["release-badge-label"].textContent.startsWith("release: v9.9.9"), "badge kan na fallback opnieuw een version-file gebruiken");
@@ -28,4 +33,6 @@ module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCall
   byIdMap["release-history"].dataset.historyLoaded = "false";
   byIdMap["release-history"].ontoggle(); await flush(); await flush();
   assert(byIdMap["release-history-list"].children[0]._html.indexOf("Geen eerdere releases") >= 0, "releasehistorie toont een foutveilige lege toestand");
+  stappen.opnieuw(); await flush(); await flush();
+  assert(!byIdMap["release-badge-label"].textContent.includes("onbekend") && byIdMap["release-badge-label"].textContent.includes("tijdelijk niet beschikbaar"), "badge toont een begrijpelijke toestand als GitHub niet bereikbaar is");
 };

@@ -1,0 +1,177 @@
+name: Promote a tested version to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Laat leeg om de versie te nemen die nu op test staat. Vul alleen iets in om terug te rollen naar een oudere versie, bijvoorbeeld v1.2.0
+        required: false
+        default: ""
+        type: string
+      confirm:
+        description: I understand that this version will replace production
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-environments
+  cancel-in-progress: false
+
+jobs:
+  promote-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: live
+      url: https://lxdg-technologies.github.io/git-routekaart-demo/
+    steps:
+      - name: Checkout deployment branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Checkout main history for version comparison
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          path: source
+
+      - name: Verify conscious version selection
+        shell: bash
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM" != "true" ]; then
+            echo "::error::The confirmation checkbox must be selected"
+            exit 1
+          fi
+
+          # Geen versie ingevuld: neem wat er nu op test staat. Dat is de normale situatie —
+          # je promoveert wat je zojuist hebt goedgekeurd. Een versie invullen blijft mogelijk
+          # en is de manier om terug te rollen naar een oudere, al bewezen versie.
+          if [ -z "$VERSION" ]; then
+            if [ ! -s site/test/environment.json ]; then
+              echo "::error::De testomgeving heeft geen leesbare versiegegevens, dus er valt niets over te nemen. Vul handmatig een versie in."
+              exit 1
+            fi
+            VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("version",""))' site/test/environment.json)"
+            if [ -z "$VERSION" ]; then
+              echo "::error::De testomgeving noemt geen versie. Vul handmatig een versie in."
+              exit 1
+            fi
+            SELECTIE="overgenomen van test"
+          else
+            SELECTIE="handmatig opgegeven"
+          fi
+          echo "Gekozen versie: $VERSION ($SELECTIE)"
+          printf '## Promotie naar live\n\nVersie **%s** — %s.\n' "$VERSION" "$SELECTIE" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like v1.2.3"
+            exit 1
+          fi
+
+          version_dir="site/versions/$VERSION"
+          test -f "$version_dir/environment.json"
+          test -f "$version_dir/index.html"
+          test -f "$version_dir/README.md"
+          test -f "$version_dir/LICENSE"
+          test -f "$version_dir/version.json"
+
+          readarray -t metadata < <(python3 - "$version_dir/environment.json" <<'PY'
+          import json
+          import sys
+
+          data = json.load(open(sys.argv[1]))
+          print(data["version"])
+          print(data["sha"])
+          PY
+          )
+          archived_version="${metadata[0]}"
+          target_sha="${metadata[1]}"
+          if [ "$archived_version" != "$VERSION" ]; then
+            echo "::error::Archive metadata says $archived_version instead of $VERSION"
+            exit 1
+          fi
+
+          git -C source fetch --force origin "refs/tags/$VERSION:refs/tags/$VERSION"
+          tag_sha="$(git -C source rev-list -n 1 "$VERSION")"
+          if [ "$tag_sha" != "$target_sha" ]; then
+            echo "::error::Tag $VERSION points to $tag_sha but the tested archive contains $target_sha"
+            exit 1
+          fi
+          if ! git -C source merge-base --is-ancestor "$target_sha" origin/main; then
+            echo "::error::$VERSION is not part of the main history"
+            exit 1
+          fi
+          for file in index.html README.md LICENSE; do
+            if ! git -C source show "$VERSION:$file" | cmp - "$version_dir/$file"; then
+              echo "::error::Stored $VERSION/$file differs from the tagged source"
+              exit 1
+            fi
+          done
+
+          commits_ahead="$(git -C source rev-list --first-parent --count "${target_sha}..origin/main")"
+          printf 'TARGET_SHA=%s\n' "$target_sha" >> "$GITHUB_ENV"
+          printf 'TARGET_VERSION=%s\n' "$VERSION" >> "$GITHUB_ENV"
+          printf 'COMMITS_AHEAD=%s\n' "$commits_ahead" >> "$GITHUB_ENV"
+
+      - name: Copy the exact stored version to production
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_dir="site/versions/$TARGET_VERSION"
+          cp "$version_dir/index.html" site/index.html
+          cp "$version_dir/README.md" site/README.md
+          cp "$version_dir/LICENSE" site/LICENSE
+          python3 - "$version_dir/environment.json" "$COMMITS_AHEAD" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          archived = json.loads(Path(sys.argv[1]).read_text())
+          commits_ahead = int(sys.argv[2])
+          production = {
+              "environment": "production",
+              "promoted_from": f"versions/{archived['version']}",
+              "branch": archived["branch"],
+              "version": archived["version"],
+              "sha": archived["sha"],
+          }
+          Path("site/environment.json").write_text(json.dumps(production, separators=(",", ":")) + "\n")
+          Path("site/version.json").write_text(json.dumps({
+              "version": archived["version"],
+              "commitsAhead": commits_ahead,
+              "sha": archived["sha"],
+          }, separators=(",", ":")) + "\n")
+          PY
+          touch site/.nojekyll
+
+      - name: Controleer dat productie weet welke versie hij draait
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash source/.github/scripts/controleer-versiebestand.sh site "$TARGET_VERSION" "$TARGET_SHA"
+
+      - name: Publish production if changed
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- index.html README.md LICENSE environment.json version.json .nojekyll
+          if git diff --cached --quiet; then
+            echo "Production already contains $TARGET_VERSION ($TARGET_SHA)"
+            exit 0
+          fi
+          git commit -m "Promote $TARGET_VERSION (${TARGET_SHA::7}) to production"
+          git push origin gh-pages

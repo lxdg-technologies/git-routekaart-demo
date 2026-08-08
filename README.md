@@ -1,8 +1,34 @@
-# Git Routekaart
+# Git Routekaart — productie- en testomgevingen
 
-Interactieve simulatie van een moderne git-werkstroom: **issue → branch → PR → merge → test → live**, weergegeven als metrokaart. Elke lijn is een branch, elk station een commit.
+Dashboard en interactieve simulatie van een moderne git-werkstroom: **issue → branch → PR → merge → test → live**. Bovenaan staan de echte commits, branches, issues en pull requests van deze repository; daaronder kun je dezelfde route oefenen als metrokaart.
 
-**▶ [Direct spelen](https://lxdg-technologies.github.io/git-routekaart-demo/)** — geen installatie nodig.
+**▶ [Productie](https://lxdg-technologies.github.io/git-routekaart-demo/)** — alleen bijgewerkt via een bewuste handmatige promotie.
+
+**🧪 [Testomgeving](https://lxdg-technologies.github.io/git-routekaart-demo/test/)** — automatisch bijgewerkt na iedere merge naar de beschermde `main`-branch.
+
+## Branch- en deploymentmodel
+
+- Wijzigingen gaan via een pull request naar `main`; een merge vernieuwt alleen de testomgeving.
+- Iedere merge naar `main` krijgt automatisch een onveranderlijke patchversie, Git-tag en GitHub Release. Dezelfde versie wordt op test gepubliceerd en onder `versions/<tag>/` bewaard.
+- Productie verandert pas wanneer iemand de workflow `Promote a tested version to production` handmatig start, een opgeslagen versie kiest en het bevestigingsvakje aanvinkt.
+- De promotie kopieert exact de gekozen, eerder opgeslagen testversie naar productie. Een oudere versie kiezen is daardoor ook de rollbackroute; er wordt niets opnieuw gebouwd.
+- De workflows registreren echte GitHub deployments in de omgevingen `test` en `live`; beide accepteren alleen de beschermde `main`-branch en `live` vereist een aparte menselijke goedkeuring.
+- `environment.json` op beide URL's maakt zichtbaar van welke versie, branch en commit de omgeving is gebouwd.
+
+Zie [DEPLOYMENT.md](DEPLOYMENT.md) voor de technische inrichting en controles.
+
+## Echte repositorygegevens
+
+Op test en live leest de dashboardkaart boven de simulatie rechtstreeks uit de publieke GitHub REST API voor [`lxdg-technologies/git-routekaart-demo`](https://github.com/lxdg-technologies/git-routekaart-demo):
+
+- maximaal 100 recente commits op de standaardbranch;
+- maximaal 100 branches;
+- maximaal 100 recent bijgewerkte issues, zonder pull requests dubbel te tellen;
+- maximaal 100 recent bijgewerkte pull requests.
+
+De pagina gebruikt geen token en heeft geen eigen backend. Eén snapshot wordt vijf minuten in de browsersessie bewaard om de publieke API-limiet te ontzien. Als GitHub tijdelijk niet bereikbaar is, blijft de simulatie zelfstandig werken en linken de kolommen rechtstreeks naar GitHub.
+
+De ontwikkelomgeving van een pull request (`/dev/pr-<nummer>/`) gebruikt bewust vaste gesimuleerde repository- en releasegegevens. Daardoor is een wijziging voorspelbaar te beoordelen en doet de ontwikkelpagina zelf geen verzoeken aan de GitHub API. Na merge controleert test dezelfde code met de echte publieke gegevens; live gebruikt eveneens de echte API.
 
 ## Wat je ermee oefent
 

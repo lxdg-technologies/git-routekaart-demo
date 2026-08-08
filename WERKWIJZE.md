@@ -16,6 +16,8 @@ Ben je nieuw: lees dit hoofdstuk eerst. Daarna weet je waar elke knop in de simu
 
 De simulatie speelt de route na die een wijziging in een echt softwareproject aflegt, van "iemand bedenkt iets" tot "het draait bij de gebruiker". Elke knop hoort bij een echte handeling.
 
+Boven de simulatie staat een read-only venster op deze echte publieke repository. Daar kun je de werkelijke commits, branches, issues en pull requests vergelijken met wat je in de metrokaart oefent. Dat venster voert zelf geen GitHub-acties uit en voegt daarom geen missie toe.
+
 | Wat je in de simulatie doet | Wat er in het echt gebeurt | Waar je dat in het echt terugziet |
 |---|---|---|
 | Nieuw issue | Iemand schrijft op wát er moet gebeuren en waarom — nog geen code | Het issuebord van het project |
@@ -29,6 +31,16 @@ De simulatie speelt de route na die een wijziging in een echt softwareproject af
 | Revert | Een nieuwe commit draait de wijziging om; die gaat zelf ook weer eerst naar test | Op `main` |
 
 **Twee stappen zitten er in het echt tussen, maar niet in de simulatie:** de automatische controles die een pull request tegenhouden als er iets stuk is, en de beoordeling door een mens die goedkeurt of wijzigingen vraagt. Allebei bewust weggelaten — zie hoofdstuk 5.
+
+**Deze repository doet inmiddels zelf precies wat hij voordoet.** Sinds 07-08-2026 heeft hij drie echte omgevingen, met dezelfde namen en dezelfde regels als op de kaart:
+
+| Omgeving op de kaart | In deze repository | Wanneer verandert die |
+|---|---|---|
+| Ontwikkel | `/dev/pr-<nummer>/` | Zodra je een pull request opent of bijwerkt — elke pull request heeft zijn eigen plek |
+| Test | `/test/` | Automatisch bij elke merge naar `main` |
+| Live | de hoofdpagina | Alleen door een handmatig gestarte promotie van exact de geteste versie |
+
+Daarvóór stond elke merge binnen een minuut rechtstreeks live — precies wat de simulatie afraadt. Wie wil zien hoe dit in het echt werkt, hoeft dus niet verder te kijken dan deze repository zelf. De technische uitvoering staat in `DEPLOYMENT.md`.
 
 ## 3. De eindstreep
 
@@ -73,9 +85,9 @@ Dit is geen achterstand. Dit zijn keuzes, met datum. Constateer je een van deze 
 | Wat ontbreekt | Waarom bewust | Besloten |
 |---|---|---|
 | Een tweede persoon die ook mergt | v1 leert de keten, niet het samenwerken. Zonder tweede hand beweegt de hoofdlijn nooit onder je voeten — dat hoort bij v2 | 03-08-2026 |
-| Een review-poort (goedkeuren / wijzigingen vragen) | Hoort niet in een nagespeelde omgeving thuis maar in de instellingen van een echte repo, waar hij echt tegenhoudt | 03-08-2026 |
+| Een review-poort (goedkeuren / wijzigingen vragen) | Hoort niet in een nagespeelde omgeving thuis maar in de instellingen van een echte repo, waar hij echt tegenhoudt. **Sinds 07-08-2026 is dat in deze repository ook echt zo geregeld: `main` eist een pull request met goedkeuring** | 03-08-2026 |
 | Merge-conflicten | Het enige dat samenwerken spannend maakt, en juist daarom slecht na te spelen met knopjes. Kandidaat voor v2. De werkwijze eromheen staat wél vast (zie `AGENTS.md`), alleen de simulatie speelt het niet na | 03-08-2026 |
-| Een controle die een merge tegenhoudt | Zelfde reden als de review-poort: echt of niet | 03-08-2026 |
+| Een controle die een merge tegenhoudt | Zelfde reden als de review-poort: echt of niet. **Sinds 05-08-2026 houdt de verplichte controle `quality` een merge in deze repository daadwerkelijk tegen** | 03-08-2026 |
 | Een kapotte live-omgeving | Rollback kun je nu oefenen zonder ooit paniek te voelen. Kandidaat voor v2 | 03-08-2026 |
 | Semver-nuance (major/minor) | Versienummers zijn bewust simpel (`v0.1.n`); versiebeleid is hier geen leerdoel | 29-07-2026 |
 
@@ -98,6 +110,11 @@ Wat dat wél doet: voorkomen dat er ongemerkt iets binnenkomt. Wat het níet doe
 
 Nieuwste bovenaan. Eén regel per besluit, altijd met datum.
 
+- **07-08-2026** — Iedere merge naar `main` krijgt automatisch één onveranderlijke patchversie, tag en GitHub Release. Test publiceert en bewaart exact die versie; livepromotie kiest bewust één eerder opgeslagen versie. Dezelfde route maakt rollback naar een oudere versie mogelijk zonder opnieuw te bouwen. Dit verandert het leerdoel niet: major/minor-beleid blijft buiten scope, alleen de herkenbare versiestempel wordt echt toegepast.
+- **07-08-2026** — De ontwikkelomgeving van pull requests gebruikt vaste gesimuleerde repository-, build- en releasegegevens en doet geen GitHub API-calls. Daardoor beoordeel je een wijziging tegen een voorspelbare dataset; na merge bewijst test de koppeling met de echte publieke GitHub-gegevens en live gebruikt diezelfde echte koppeling.
+- **07-08-2026** — Elke openstaande pull request krijgt een eigen ontwikkelomgeving op `/dev/pr-<nummer>/`. Daarmee heeft de repository dezelfde drie omgevingen als de kaart, en is er weer een moment om een wijziging te bekijken vóórdat hij op `main` staat — wat verdween toen de oude PR-previews vervielen. Bewust "ontwikkelomgeving" genoemd en niet "preview", zodat kaart en werkelijkheid dezelfde woorden gebruiken. Bewust één plek per pull request, omdat de kaart leert dat Ontwikkel van jou alleen is.
+- **07-08-2026** — De repository publiceert niet langer rechtstreeks naar live bij elke merge. Merge gaat naar test; live verandert alleen door een handmatige promotie van exact de geteste versie. Daarmee stopt de tegenstrijdigheid dat het leermiddel iets afraadde wat het zelf deed.
+- **07-08-2026** — Een read-only dashboard met echte publieke repositorygegevens staat boven de simulatie. Het vormt de brug van oefenen naar herkennen, verandert geen GitHub-data en voegt geen missie toe.
 - **05-08-2026** — Een open pull request is nu ook op de kaart te zien: een gestippelde, nog niet aangesloten lijn vanaf de kop van de branch richting main. Geen nieuwe missie; het maakt missie 4 zichtbaar.
 - **03-08-2026** — Het omgevingsfilter maakt de actieve omgeving zichtbaar met een kader en Ontwikkel toont alleen het werk-in-uitvoering plus het vertrekpunt; bordjes worden tegen de werkelijke lijnbochten geplaatst.
 - **03-08-2026** — Omgevingsfilter op de kaart toegevoegd, zodat het verschil tussen test en live zichtbaar wordt in plaats van alleen beschreven.

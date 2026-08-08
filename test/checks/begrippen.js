@@ -1,7 +1,19 @@
 // Controles rond de begrippenlijst en de klikbare begrippen in het logboek.
-module.exports = async function begrippen({ assert, byIdMap, makeEl, glossaryResult, stappen }) {
-  assert((glossaryResult().match(/<details class="term-item"/g) || []).length === 26, "begrippenlijst rendert precies 26 termen");
+module.exports = async function begrippen({ assert, byIdMap, makeEl, glossaryResult, stappen, decorateLogTerms }) {
+  assert((glossaryResult().match(/<details class="term-item"/g) || []).length === 28, "begrippenlijst rendert precies 28 termen");
+  assert(glossaryResult().includes('id="term-rebase"') && glossaryResult().includes('id="term-fork"') && glossaryResult().includes("<summary>Rebase</summary>") && glossaryResult().includes("<summary>Fork</summary>"), "Rebase en Fork bestaan als klikbare begrippen");
+  assert(glossaryResult().includes("opnieuw boven op een andere basis") && glossaryResult().includes("rechte geschiedenis zonder merge-commit") && glossaryResult().includes("nieuwste basis"), "Rebase toont uitleg, merge-onderscheid en workflowvoorbeeld");
+  assert(glossaryResult().includes("eigen kopie van een repository onder je eigen account") && glossaryResult().includes("aparte repository") && glossaryResult().includes("via een pull request terug"), "Fork toont uitleg, branch-onderscheid en workflowvoorbeeld");
+  assert(glossaryResult().includes('id="term-rebase"') && glossaryResult().includes('id="term-fork"') && glossaryResult().match(/term-explanation/g).length === 28 && glossaryResult().match(/term-example/g).length === 28, "Rebase en Fork volgen de bestaande uitleg-/voorbeeldstructuur");
   assert(glossaryResult().includes("Voorbeeld:") && glossaryResult().includes("CI monitoring unavailable"), "elke begrippenlijst-entry bevat uitleg en voorbeeld");
+  const newTermsLog = decorateLogTerms("rebase fork");
+  assert(newTermsLog.includes("focusTerm('Rebase')") && newTermsLog.includes("focusTerm('Fork')"), "logboek-koppeling herkent de keywords rebase en fork");
+  const commandReference = byIdMap["commandoreferentie-lijst"].innerHTML;
+  assert((commandReference.match(/<details class="command-group"/g) || []).length === 6, "commandoreferentie rendert zes commandogroepen");
+  assert((commandReference.match(/class="command-item"/g) || []).length === 40, "commandoreferentie bevat alle 40 gevraagde commando's");
+  assert(commandReference.includes("git add &lt;bestand&gt;") && commandReference.includes("git branch &lt;naam&gt;") && commandReference.includes("git merge &lt;branch&gt;") && commandReference.includes("git reset --soft &lt;commit&gt;"), "invulnamen blijven zichtbaar in commandovoorbeelden");
+  assert(commandReference.includes("Wat:") && commandReference.includes("Wanneer:") && commandReference.includes("Voorbeeld:"), "elk commando toont wat het doet, wanneer je het gebruikt en een voorbeeld");
+  assert((commandReference.match(/command-warning/g) || []).length === 2 && commandReference.includes("git reset --hard") && commandReference.includes("git checkout -f main"), "destructieve commando's hebben zichtbare waarschuwingen");
   const branchTerm = makeEl("details");
   byIdMap["term-branch"] = branchTerm;
   focusTerm("Branch");

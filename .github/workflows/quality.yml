@@ -21,3 +21,9 @@ jobs:
 
       - name: Rooktest draaien
         run: node test/smoketest.js
+
+      - name: Omgevingsbalk-scrollgedrag testen
+        run: bash test/omgevingsbalk.sh
+
+      - name: Automatische versiebepaling testen
+        run: bash test/versioning.sh

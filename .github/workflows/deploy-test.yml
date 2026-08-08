@@ -1,0 +1,211 @@
+name: Version and deploy main to test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Checkout the exact main commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Determine the immutable version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(bash .github/scripts/bepaal-versie.sh "$GITHUB_SHA")"
+          printf 'value=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          printf 'VERSION=%s\n' "$version" >> "$GITHUB_ENV"
+          echo "Version for ${GITHUB_SHA}: ${version}"
+
+      - name: Tag the exact merge commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing_sha="$(git rev-list -n 1 "$VERSION" 2>/dev/null || true)"
+          if [ -n "$existing_sha" ]; then
+            if [ "$existing_sha" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $VERSION already points to $existing_sha instead of $GITHUB_SHA"
+              exit 1
+            fi
+            echo "$VERSION already points to this commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" "$GITHUB_SHA" -m "Version $VERSION"
+          if git push origin "refs/tags/$VERSION"; then
+            exit 0
+          fi
+
+          # A manual rerun can race with the original run. That is safe only when
+          # both runs resolved the same version to the same immutable commit.
+          git fetch --force origin "refs/tags/$VERSION:refs/tags/$VERSION"
+          remote_sha="$(git rev-list -n 1 "$VERSION")"
+          if [ "$remote_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::Remote tag $VERSION points to $remote_sha instead of $GITHUB_SHA"
+            exit 1
+          fi
+          echo "$VERSION was created by the parallel run and points to the expected commit"
+
+      - name: Create the GitHub release once
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists"
+            exit 0
+          fi
+          if gh release create "$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --notes "Automatisch genummerde versie van main op commit $GITHUB_SHA. Kandidaat voor onveranderlijke opslag en publicatie naar test."; then
+            exit 0
+          fi
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $VERSION was created by the parallel run"
+            exit 0
+          fi
+          echo "::error::Release $VERSION could not be created or verified"
+          exit 1
+
+  deploy-test:
+    needs: version
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages-environments
+      cancel-in-progress: false
+    environment:
+      name: test
+      url: https://lxdg-technologies.github.io/git-routekaart-demo/test/
+    steps:
+      - name: Checkout the exact versioned commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: source
+
+      - name: Checkout deployment branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Store the version and replace only test
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version: $VERSION"
+            exit 1
+          fi
+
+          version_dir="site/versions/$VERSION"
+          if [ -e "$version_dir" ]; then
+            test -f "$version_dir/environment.json"
+            archived_sha="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sha"])' "$version_dir/environment.json")"
+            if [ "$archived_sha" != "$GITHUB_SHA" ]; then
+              echo "::error::$VERSION is already stored for $archived_sha instead of $GITHUB_SHA"
+              exit 1
+            fi
+            for file in index.html README.md LICENSE; do
+              if ! cmp -s "source/$file" "$version_dir/$file"; then
+                echo "::error::Stored $VERSION/$file differs from immutable source@$GITHUB_SHA"
+                exit 1
+              fi
+            done
+          else
+            mkdir -p "$version_dir"
+            cp source/index.html "$version_dir/index.html"
+            cp source/README.md "$version_dir/README.md"
+            cp source/LICENSE "$version_dir/LICENSE"
+            python3 - "$version_dir/environment.json" "$version_dir/version.json" "$VERSION" "$GITHUB_SHA" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          environment_path, version_path, version, sha = sys.argv[1:]
+          Path(environment_path).write_text(json.dumps({
+              "environment": "version",
+              "branch": "main",
+              "version": version,
+              "sha": sha,
+          }, separators=(",", ":")) + "\n")
+          Path(version_path).write_text(json.dumps({
+              "version": version,
+              "commitsAhead": 0,
+              "sha": sha,
+          }, separators=(",", ":")) + "\n")
+          PY
+          fi
+
+          git -C site rm -r --ignore-unmatch test
+          mkdir -p site/test
+          cp "$version_dir/index.html" site/test/index.html
+          cp "$version_dir/README.md" site/test/README.md
+          cp "$version_dir/LICENSE" site/test/LICENSE
+          cp "$version_dir/version.json" site/test/version.json
+          bash source/.github/scripts/omgevingsbalk.sh \
+            site/test/index.html \
+            test \
+            main \
+            "$GITHUB_SHA" \
+            "$VERSION"
+          python3 - "site/test/environment.json" "$VERSION" "$GITHUB_SHA" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          path, version, sha = sys.argv[1:]
+          Path(path).write_text(json.dumps({
+              "environment": "test",
+              "branch": "main",
+              "version": version,
+              "sha": sha,
+          }, separators=(",", ":")) + "\n")
+          PY
+
+      - name: Controleer dat test weet welke versie hij draait
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash source/.github/scripts/controleer-versiebestand.sh site/test "$VERSION" "$GITHUB_SHA"
+          bash source/.github/scripts/controleer-versiebestand.sh "site/versions/$VERSION" "$VERSION" "$GITHUB_SHA"
+
+      - name: Publish version and test if changed
+        working-directory: site
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- test "versions/$VERSION"
+          if git diff --cached --quiet; then
+            echo "Test and $VERSION are already current"
+            exit 0
+          fi
+          git commit -m "Deploy $VERSION to test (${GITHUB_SHA::7})"
+          git push origin gh-pages
