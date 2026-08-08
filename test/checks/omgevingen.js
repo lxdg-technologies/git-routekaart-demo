@@ -3,6 +3,7 @@ module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, 
   stappen.opnieuw();
   assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
   assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
+  assert(byIdMap["env-live-age"].textContent === "alleen na jouw akkoord", "live toont vóór promotie geen verstreken live-tijd");
   assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld als test gelijk is aan live");
   assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld zonder merge-head");
   assert(state().envFilter === "all" && !mapResult().includes("data-env-frame") && byIdMap["env-filter-note"].textContent === "" && ["env-dev-box", "env-test-box", "env-live-box"].every(id => byIdMap[id].tag === "button" && typeof byIdMap[id].onclick === "function" && byIdMap[id].attributes["aria-pressed"] === "false"), "omgevingsvakjes starten als native klikbare Alles-weergave zonder kader");
@@ -13,20 +14,36 @@ module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, 
   assert(byIdMap["btn-promote"].disabled === false, "promote wordt actief zodra test vooruitloopt");
   stappen.promote();
   assert(byIdMap["env-live"].textContent === "v0.1.1", "promote zet test exact naar live");
+  assert(byIdMap["env-live-age"].textContent.startsWith("live sinds ") && state().env.livePromotedAt !== null, "promote toont een verstreken live-tijd en bewaart het promotietijdstip");
+  const firstPromotion = state().env.livePromotedAt;
   assert(byIdMap["btn-promote"].disabled === true, "promote schakelt uit zodra test gelijk is aan live");
+
+  const fixedNow = Date.parse("2026-08-08T12:00:00Z");
+  assert(window.__formatElapsedSince("2026-08-08T11:59:30Z", fixedNow) === "live sinds minder dan een minuut", "live-tijd rondt minder dan een minuut begrijpelijk af");
+  assert(window.__formatElapsedSince("2026-08-08T10:00:00Z", fixedNow) === "live sinds 2 uur", "live-tijd rondt uren af met een vaste huidige tijd");
+  assert(window.__formatElapsedSince("2026-08-05T12:00:00Z", fixedNow) === "live sinds 3 dagen", "live-tijd rondt dagen af met een vaste huidige tijd");
 
   stappen.mergeRonde("squash");
   assert(byIdMap["env-test"].textContent === "v0.1.2", "squash-merge maakt v0.1.2 op test");
+  assert(state().env.livePromotedAt === firstPromotion, "een release maakt geen nieuwe live-promotietijd");
   stappen.revert();
   assert(byIdMap["env-test"].textContent === "v0.1.3", "revert maakt een nieuwe testversie");
   assert(byIdMap["env-live"].textContent === "v0.1.1", "revert laat live ongemoeid");
+  assert(state().env.livePromotedAt === firstPromotion, "revert maakt geen nieuwe live-promotietijd");
   stappen.promote();
   assert(byIdMap["env-live"].textContent === "v0.1.3", "promote zet de gerepareerde versie op live");
+  const latestPromotion = state().env.livePromotedAt;
+  stappen.mergeRonde("merge");
+  assert(state().env.livePromotedAt === latestPromotion, "een volgende merge maakt geen nieuwe live-promotietijd");
+  const secondPromotionAt = Date.parse("2026-08-08T12:00:00Z");
+  stappen.promoteAt(secondPromotionAt);
+  assert(state().env.livePromotedAt === secondPromotionAt && state().env.livePromotedAt !== latestPromotion, "een tweede promotie start een nieuwe live-tijdmeting");
 
   stappen.kiesRollback(1);
   stappen.rollback();
-  assert(byIdMap["env-live"].textContent === "v0.1.1" && byIdMap["env-test"].textContent === "v0.1.3", "rollback zet alleen live terug");
+  assert(byIdMap["env-live"].textContent === "v0.1.1" && byIdMap["env-test"].textContent === "v0.1.4", "rollback zet alleen live terug");
   assert(state().env.liveCommit !== state().env.testCommit, "rollback houdt live en test op verschillende commits");
+  assert(state().env.livePromotedAt === secondPromotionAt, "rollback maakt geen nieuwe live-promotietijd");
 
   stappen.kiesOmgeving("live");
   const liveFaded = (mapResult().match(/data-env-faded="true"/g) || []).length;

@@ -36,7 +36,7 @@ function makeEl(tag) {
 const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
-  "env-dev", "env-test", "env-live", "env-live-box", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-summary",
+  "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-summary",
   "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-promote-link"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
@@ -129,6 +129,7 @@ const delen = [
     rebaseMerge: () => findBtn("Rebase & merge").onclick(),
     verwijderBranch: () => findBtn("Verwijder branch").onclick(),
     promote: () => byIdMap["btn-promote"].onclick(),
+    promoteAt: now => window.__promoteAt(now),
     revert: () => byIdMap["btn-revert"].onclick(),
     kiesRollback: index => { byIdMap["rollback-version"].value = String(index); byIdMap["rollback-version"].onchange(); },
     rollback: () => byIdMap["btn-rollback"].onclick(),
