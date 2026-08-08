@@ -282,7 +282,7 @@
   max-width:100%;
   text-align:center;
   letter-spacing:.01em;">
-  Ontwikkelversie — pull request #73 · versie <code style="font:inherit;font-weight:700;">2688514</code>
+  Ontwikkelversie — pull request #73 · versie <code style="font:inherit;font-weight:700;">4bbe94b</code>
   <span style="display:block;font-weight:400;opacity:.9;">
     Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
     publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -1184,6 +1184,7 @@
     tick(6); render();
   }
   function promote(now = Date.now()) {
+    if (now && typeof now === "object") now = Date.now();
     if (S.env.test === S.env.live) return;
     S.env.live = S.env.test;
     S.env.liveCommit = S.env.testCommit;
