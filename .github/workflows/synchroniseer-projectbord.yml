@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Controleer Planner App-configuratie
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && github.event.pull_request.user.login == 'app/lxdg-dcs-coder')
         env:
           PLANNER_APP_ID: ${{ secrets.PLANNER_APP_ID }}
           PLANNER_PRIVATE_KEY: ${{ secrets.PLANNER_PRIVATE_KEY }}
@@ -35,7 +35,7 @@ jobs:
           fi
 
       - name: Maak token voor lxdg-dcs-planner
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && github.event.pull_request.user.login == 'app/lxdg-dcs-coder')
         id: planner-token
         uses: actions/create-github-app-token@v2
         with:
@@ -45,15 +45,17 @@ jobs:
           repositories: git-routekaart-demo
 
       - name: Checkout scripts
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && github.event.pull_request.user.login == 'app/lxdg-dcs-coder')
         uses: actions/checkout@v4
         with:
           sparse-checkout: .github/scripts/synchroniseer-projectbord.py
-          ref: main
+          # Review-events van de vertrouwde Coder-App gebruiken de actuele PR-head;
+          # alle andere muterende events gebruiken main.
+          ref: ${{ github.event_name == 'pull_request_review' && github.event.pull_request.head.sha || 'main' }}
           persist-credentials: false
 
       - name: Synchroniseer kaarten
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && github.event.pull_request.user.login == 'app/lxdg-dcs-coder')
         env:
           GITHUB_TOKEN: ${{ steps.planner-token.outputs.token }}
         run: python3 .github/scripts/synchroniseer-projectbord.py
