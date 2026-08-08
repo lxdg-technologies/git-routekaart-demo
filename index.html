@@ -489,6 +489,8 @@
     { term: "Commit", keywords: ["commit"], explanation: "Een vastgelegde wijziging met een korte beschrijving, zodat je later kunt zien wat er veranderde.", example: "Een commit kan de release-badge of een nieuwe uitleg toevoegen." },
     { term: "Branch", keywords: ["branch", "branches"], explanation: "Een tijdelijk zijspoor waarop je veilig aan een wijziging werkt zonder main direct te veranderen.", example: "feat/dcs-152-vaktermen is een branch voor deze woordenlijst." },
     { term: "Merge", keywords: ["merge"], explanation: "Het samenvoegen van een goedgekeurde branch met main.", example: "Na de merge komt de wijziging op main en kan GitHub Pages deployen." },
+    { term: "Rebase", keywords: ["rebase"], explanation: "De commits van een branch opnieuw boven op een andere basis plaatsen. Anders dan bij een gewone merge ontstaat daarbij een rechte geschiedenis zonder merge-commit.", example: "Werk vóór het insturen van je pull request de laatste main op je branch bij met rebase, zodat je voorstel op de nieuwste basis vertrekt." },
+    { term: "Fork", keywords: ["fork"], explanation: "Een eigen kopie van een repository onder je eigen account. Anders dan een branch is een fork een aparte repository; branches blijven binnen dezelfde repository.", example: "Maak vanuit een fork een branch voor je wijziging en stuur het werk via een pull request terug naar de oorspronkelijke repository." },
     { term: "Pull Request (PR)", keywords: ["pull request", "PR"], explanation: "Een voorstel om een branch te mergen, zodat anderen de wijziging en checks kunnen beoordelen.", example: "PR #6 stelde de release-badge voor en wachtte op menselijke beoordeling." },
     { term: "Tag", keywords: ["tag"], explanation: "Een vast label op één specifieke commit, vaak gebruikt voor een versie.", example: "Tag v1.1.0 markeert de release van de branch-van-commit-feature." },
     { term: "Release", keywords: ["release"], explanation: "Een uitgebrachte versie met een herkenbare tag en vaak release-notes. In deze kaart is een release gekoppeld aan het station waar een pakketje van die commit is gebouwd en uitgerold; niet elke commit is dus een versie.", example: "Release v1.1.0 hoort bij één release-station op main; de andere commits zijn wel geschiedenis maar geen rollback-doel." },
@@ -1584,6 +1586,7 @@
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
   window.focusTerm = focusTerm;
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
   init();
   loadRepositoryDashboard();
 })();
