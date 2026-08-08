@@ -126,6 +126,7 @@ const delen = [
     openPR: () => findBtn("Open PR").onclick(),
     mergeCommit: () => findBtn("Merge commit").onclick(),
     squashMerge: () => findBtn("Squash & merge").onclick(),
+    rebaseMerge: () => findBtn("Rebase & merge").onclick(),
     verwijderBranch: () => findBtn("Verwijder branch").onclick(),
     promote: () => byIdMap["btn-promote"].onclick(),
     revert: () => byIdMap["btn-revert"].onclick(),
@@ -133,12 +134,14 @@ const delen = [
     rollback: () => byIdMap["btn-rollback"].onclick(),
     collega: () => byIdMap["btn-collega"].onclick(),
     kiesOmgeving: filter => byIdMap[`env-${filter}-box`].onclick(),
-    // issue → branch → twee commits → PR → merge; soort is "merge" of "squash"
+    // issue → branch → twee commits → PR → merge; soort is "merge", "squash" of "rebase"
     mergeRonde: soort => {
       stappen.nieuwIssue(); stappen.maakBranch();
       stappen.commit(); stappen.commit();
       stappen.openPR();
-      if (soort === "squash") stappen.squashMerge(); else stappen.mergeCommit();
+      if (soort === "squash") stappen.squashMerge();
+      else if (soort === "rebase") stappen.rebaseMerge();
+      else stappen.mergeCommit();
     },
   };
 
