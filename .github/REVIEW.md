@@ -6,7 +6,7 @@ De technische review door `lxdg-dcs-reviewer[bot]` beantwoordt drie vragen:
 2. **Dekt de test het gedrag?** De reviewer controleert of de tests het gewijzigde gedrag werkelijk afdekken. De reviewer beoordeelt dus gedrag of het uiteindelijke resultaat, niet de letterlijke brontekst van een script. De regel daarover staat ook in `AGENTS.md`.
 3. **Blijft de PR binnen scope?** De reviewer controleert of de bestanden en wijzigingen passen bij het issue en of er geen onbedoelde uitbreiding is meegesmokkeld.
 
-De technische review is geen vervanging voor de functionele controle. DCS-Rob beoordeelt via de PR-preview wat er voor een gebruiker zichtbaar en uitprobeerbaar is en is de enige goedkeurder voor de uitrol naar Environment `live`.
+De technische review is geen vervanging voor de functionele controle. DCS-Rob en vdbergkevin beoordelen via de PR-preview wat er voor een gebruiker zichtbaar en uitprobeerbaar is, en zijn samen de goedkeurders voor de uitrol naar Environment `live`.
 
 ## Niet in scope
 
