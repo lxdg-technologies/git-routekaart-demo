@@ -373,7 +373,7 @@
         <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
           <div class="env-name">Live</div>
           <div class="env-val" id="env-live">v0.1.0</div>
-          <div class="env-sub">alleen na jouw akkoord</div>
+          <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
         </button>
       </div>
       <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
@@ -946,7 +946,7 @@
       missions: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
       colleagueSeq: 0,
       mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
-      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
+      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null, livePromotedAt: null },
       selectedStart: null,
       selectedStartAuto: false,
       envFilter: "all",
@@ -954,6 +954,28 @@
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
   const el = id => document.getElementById(id);
+
+  function formatElapsedSince(promotedAt, now) {
+    if (promotedAt === null || promotedAt === undefined) return "";
+    const promotedMs = new Date(promotedAt).getTime();
+    const nowMs = new Date(now).getTime();
+    if (!Number.isFinite(promotedMs) || !Number.isFinite(nowMs) || nowMs < promotedMs) return "";
+    const elapsedMs = nowMs - promotedMs;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (elapsedMs < minute) return "live sinds minder dan een minuut";
+    if (elapsedMs < hour) {
+      const minutes = Math.floor(elapsedMs / minute);
+      return `live sinds ${minutes} ${minutes === 1 ? "minuut" : "minuten"}`;
+    }
+    if (elapsedMs < day) {
+      const hours = Math.floor(elapsedMs / hour);
+      return `live sinds ${hours} ${hours === 1 ? "uur" : "uur"}`;
+    }
+    const days = Math.floor(elapsedMs / day);
+    return `live sinds ${days} ${days === 1 ? "dag" : "dagen"}`;
+  }
 
   function addCommit(branch, msg, parents, kind) {
     const c = { id: hash(), branch, msg, parents, kind: kind || "normal", x: S.seq++ };
@@ -1143,10 +1165,12 @@
     log(`Branch <code>${name}</code> opgeruimd`, "Na de merge heeft het zijspoor geen functie meer. De commits blijven bestaan (via de merge of de PR), alleen het naambordje is weg. Opruimen houdt de kaart leesbaar.");
     tick(6); render();
   }
-  function promote() {
+  function promote(now = Date.now()) {
+    if (now && typeof now === "object") now = Date.now();
     if (S.env.test === S.env.live) return;
     S.env.live = S.env.test;
     S.env.liveCommit = S.env.testCommit;
+    S.env.livePromotedAt = now;
     log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
     tick(8); render();
   }
@@ -1308,8 +1332,10 @@
     });
     const behind = S.env.test !== S.env.live;
     el("env-live-box").classList.toggle("behind", behind);
-    const liveSub = el("env-live-box").querySelector ? el("env-live-box").querySelector(".env-sub") : null;
-    if (liveSub) liveSub.textContent = behind ? "loopt achter op test" : "alleen na jouw akkoord";
+    const liveAge = el("env-live-age");
+    liveAge.textContent = S.env.livePromotedAt === null
+      ? "alleen na jouw akkoord"
+      : formatElapsedSince(S.env.livePromotedAt, Date.now());
     el("btn-promote").disabled = !behind;
     const head = byId(S.branches.main.head);
     el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
@@ -1596,6 +1622,9 @@
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
   window.focusTerm = focusTerm;
+  window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
+  window.__promoteAt = promote; // alleen voor test/smoketest.js
+  window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
   init();
