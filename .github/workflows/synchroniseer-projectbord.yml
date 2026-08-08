@@ -1,0 +1,55 @@
+name: Synchroniseer ProjectV2-bord
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened]
+  pull_request:
+    types: [opened, reopened, synchronize, closed, review_requested, review_request_removed]
+  pull_request_review:
+    types: [submitted, dismissed]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+# Het standaard GITHUB_TOKEN heeft geen Organization Projects: write.
+# Alleen de planner-App-token mag deze workflow projectmutaties laten doen.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  synchroniseer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controleer Planner App-configuratie
+        env:
+          PLANNER_APP_ID: ${{ secrets.PLANNER_APP_ID }}
+          PLANNER_PRIVATE_KEY: ${{ secrets.PLANNER_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$PLANNER_APP_ID" || -z "$PLANNER_PRIVATE_KEY" ]]; then
+            echo "::error::Planner App-tokenvoorziening ontbreekt. Rob/Kevin moet repository secrets PLANNER_APP_ID en PLANNER_PRIVATE_KEY configureren voor lxdg-dcs-planner." >&2
+            exit 1
+          fi
+
+      - name: Maak token voor lxdg-dcs-planner
+        id: planner-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.PLANNER_APP_ID }}
+          private-key: ${{ secrets.PLANNER_PRIVATE_KEY }}
+          owner: lxdg-technologies
+          repositories: git-routekaart-demo
+
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts/synchroniseer-projectbord.py
+          ref: main
+          persist-credentials: false
+
+      - name: Synchroniseer kaarten
+        env:
+          GITHUB_TOKEN: ${{ steps.planner-token.outputs.token }}
+        run: python3 .github/scripts/synchroniseer-projectbord.py

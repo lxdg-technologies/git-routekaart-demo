@@ -27,3 +27,6 @@ jobs:
 
       - name: Automatische versiebepaling testen
         run: bash test/versioning.sh
+
+      - name: ProjectV2-synchronisatie testen
+        run: python3 test/projectbord.py
