@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Gedragstests voor de ProjectV2-synchronisatie (geen GitHub-mutaties)."""
 import importlib.util
-import os
-import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -102,19 +100,23 @@ class ProjectBoardTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "statusoptie"):
             projectbord.sync(client, project=project)
 
-    def test_workflow_filtert_review_actor_en_checkout_ref(self):
+    def test_workflow_heeft_geen_review_actor_of_pr_head_in_syncpad(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
-        self.assertIn("github.event.review.user.login == 'lxdg-dcs-coder[bot]'", workflow)
-        self.assertIn("github.event.review.user.login == 'app/lxdg-dcs-coder'", workflow)
-        self.assertNotIn("github.event.pull_request.user.login == 'app/lxdg-dcs-coder'", workflow)
-        self.assertIn("github.event.pull_request.head.sha || 'main'", workflow)
+        self.assertIn("pull_request_review:", workflow)
+        self.assertIn("if: github.event_name == 'pull_request_review'", workflow)
+        self.assertNotIn("github.event.review.user.login", workflow)
+        self.assertNotIn("github.event.pull_request.head.sha", workflow)
 
-    def test_workflow_faalt_zonder_planner_secret(self):
-        env = os.environ.copy()
-        env.pop("GITHUB_TOKEN", None)
-        result = subprocess.run([sys.executable, str(ROOT / ".github/scripts/synchroniseer-projectbord.py")], env=env, text=True, capture_output=True)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Planner App-token ontbreekt", result.stderr)
+    def test_workflow_voer_review_valideert_en_sync_alleen_veilige_events(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        self.assertIn("pull_request_review:", workflow)
+        self.assertIn("if: github.event_name == 'pull_request_review'", workflow)
+        self.assertIn("if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'", workflow)
+        self.assertIn("github.event.pull_request.merged == true", workflow)
+        self.assertEqual(workflow.count("run: python3 .github/scripts/synchroniseer-projectbord.py"), 1)
+        self.assertNotIn("github.event.review.user.login", workflow)
+        self.assertNotIn("github.event.pull_request.head.sha", workflow)
+        self.assertIn("ref: main", workflow)
 
 
 if __name__ == "__main__":

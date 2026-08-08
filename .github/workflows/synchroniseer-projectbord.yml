@@ -1,10 +1,11 @@
 name: Synchroniseer ProjectV2-bord
 
 on:
-  issues:
-    types: [opened, edited, closed, reopened]
+  # Alleen een gemergede PR kan de synchronisatie starten. Andere PR-events
+  # worden bewust niet gevolgd: PR-code krijgt nooit projectschrijfrechten.
   pull_request:
-    types: [opened, reopened, synchronize, closed, review_requested, review_request_removed]
+    types: [closed]
+  # Een review-event valideert uitsluitend; het synchronisatiescript draait hier niet.
   pull_request_review:
     types: [submitted, dismissed]
   workflow_dispatch:
@@ -19,11 +20,24 @@ permissions:
   pull-requests: read
 
 jobs:
+  valideer-review-event:
+    if: github.event_name == 'pull_request_review'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout vertrouwde validatietest
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: test/review-guard.sh
+          persist-credentials: false
+      - name: Valideer review-event zonder projectmutatie
+        run: bash test/review-guard.sh
+
   synchroniseer:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - name: Controleer Planner App-configuratie
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && (github.event.review.user.login == 'lxdg-dcs-coder[bot]' || github.event.review.user.login == 'app/lxdg-dcs-coder'))
         env:
           PLANNER_APP_ID: ${{ secrets.PLANNER_APP_ID }}
           PLANNER_PRIVATE_KEY: ${{ secrets.PLANNER_PRIVATE_KEY }}
@@ -35,7 +49,6 @@ jobs:
           fi
 
       - name: Maak token voor lxdg-dcs-planner
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && (github.event.review.user.login == 'lxdg-dcs-coder[bot]' || github.event.review.user.login == 'app/lxdg-dcs-coder'))
         id: planner-token
         uses: actions/create-github-app-token@v2
         with:
@@ -44,22 +57,15 @@ jobs:
           owner: lxdg-technologies
           repositories: git-routekaart-demo
 
-      - name: Checkout scripts
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && (github.event.review.user.login == 'lxdg-dcs-coder[bot]' || github.event.review.user.login == 'app/lxdg-dcs-coder'))
+      - name: Checkout scripts van main
         uses: actions/checkout@v4
         with:
           sparse-checkout: .github/scripts/synchroniseer-projectbord.py
-          # Review-events van de vertrouwde Coder-App gebruiken de actuele PR-head;
-          # alle andere muterende events gebruiken main.
-          ref: ${{ github.event_name == 'pull_request_review' && github.event.pull_request.head.sha || 'main' }}
+          # Ook na een merge gebruiken we uitsluitend de vertrouwde main-bron.
+          ref: main
           persist-credentials: false
 
       - name: Synchroniseer kaarten
-        if: (github.event_name != 'pull_request' && github.event_name != 'pull_request_review') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || (github.event_name == 'pull_request_review' && (github.event.review.user.login == 'lxdg-dcs-coder[bot]' || github.event.review.user.login == 'app/lxdg-dcs-coder'))
         env:
           GITHUB_TOKEN: ${{ steps.planner-token.outputs.token }}
         run: python3 .github/scripts/synchroniseer-projectbord.py
-
-      - name: Valideer PR zonder projectmutatie
-        if: github.event_name == 'pull_request' && !(github.event.action == 'closed' && github.event.pull_request.merged == true)
-        run: 'echo "PR-validatie: projectmutaties worden pas vanaf main na merge uitgevoerd."'
