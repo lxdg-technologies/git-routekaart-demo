@@ -99,11 +99,11 @@ jobs:
                 | select(
                     .state == "APPROVED"
                     and .commit_id != $head_sha
-                    and (.login as $login | $allowed | index($login) != null)
+                    and (.user.login as $login | $allowed | index($login) != null)
                   )
               ]
               | length
-            ' <<< "$latest_reviews")"
+            ' <<< "$reviews")"
             if [ "$old_approvals" -gt 0 ]; then
               echo "::error::Er is wel goedgekeurd, maar op een oudere versie van deze PR; de wijziging moet opnieuw bekeken en goedgekeurd worden."
             else
