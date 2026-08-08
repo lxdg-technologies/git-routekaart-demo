@@ -39,5 +39,18 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   byIdMap["release-history"].ontoggle();
   await flush(); await flush();
   assert(fetchCalls.length === callsBeforeDevelopment && byIdMap["release-history-list"].children.length === 2, "ontwikkelomgeving toont gesimuleerde releasehistorie zonder API-call");
+
+  global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/test/" };
+  setFetchMode("test-live-behind");
+  stappen.opnieuw(); await flush(); await flush(); await flush();
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("test staat op v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("live op v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("goedkeuring van iemand anders"), "testomgeving meldt beide versies en de vereiste goedkeuring als live achterloopt");
+  assert(!byIdMap["test-live-promote-link"].hidden && byIdMap["test-live-promote-link"].href.includes("promote-production.yml"), "achterstand verwijst rechtstreeks naar de promotieworkflow");
+  setFetchMode("test-live-equal");
+  stappen.opnieuw(); await flush(); await flush(); await flush();
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("staat ook live") && byIdMap["test-live-status-text"].textContent.includes("v9.9.9"), "testomgeving bevestigt dat gelijke versies live staan");
+  assert(byIdMap["test-live-promote-link"].hidden, "gelijke versies tonen geen overbodige promotielink");
+  setFetchMode("version");
+  stappen.opnieuw(); await flush(); await flush(); await flush();
+  assert(byIdMap["test-live-status"].hidden, "onbekende live-versie blijft rustig verborgen");
   delete global.location;
 };

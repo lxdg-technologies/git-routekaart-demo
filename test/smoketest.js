@@ -37,7 +37,7 @@ const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-box", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-summary",
-  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs"];
+  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-promote-link"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
@@ -68,7 +68,12 @@ global.fetch = async url => {
     { number: 5, title: "Open dashboard-PR", state: "open", merged_at: null, html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/5", head: { ref: "feat/dashboard" }, base: { ref: "main" } },
     { number: 1, title: "Omgevingen ingericht", state: "closed", merged_at: "2026-08-07T09:00:00Z", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/1", head: { ref: "agent/setup" }, base: { ref: "main" } },
   ]);
-  if (fetchMode === "version" && url === "version.json") return response({ version: "v9.9.9", commitsAhead: 2, sha: "abc1234" });
+  if (String(url) === "../environment.json") {
+    if (fetchMode === "test-live-behind") return response({ environment: "production", version: "v9.9.8" });
+    if (fetchMode === "test-live-equal") return response({ environment: "production", version: "v9.9.9" });
+    return response({}, 404);
+  }
+  if (["version", "test-live-behind", "test-live-equal"].includes(fetchMode) && url === "version.json") return response({ version: "v9.9.9", commitsAhead: 2, sha: "abc1234" });
   if (fetchMode === "history" && String(url).includes("releases?")) return response([
     { tag_name: "v9.9.8", published_at: "2026-08-01T12:00:00Z", html_url: "https://example.test/releases/v9.9.8" },
     { name: "untagged", created_at: "2026-07-31T12:00:00Z", html_url: "https://example.test/releases/untagged" },

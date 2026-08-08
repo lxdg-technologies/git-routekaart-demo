@@ -178,6 +178,8 @@
   .env.dev { border-color: var(--warn); }
   .env.test { border-color: var(--accent); }
   .env.live { border-color: var(--ok); }
+  .test-live-status { margin: .7rem 0 0; padding: .55rem .65rem; border: 1px solid var(--accent); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
+  .test-live-status a { color: var(--accent); font-weight: 700; }
   .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
 
   /* ==== SECTIE: ACTIES ==== */
@@ -374,6 +376,10 @@
           <div class="env-sub">alleen na jouw akkoord</div>
         </button>
       </div>
+      <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
+        <span id="test-live-status-text"></span>
+        <a id="test-live-promote-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar promotie in GitHub Actions ↗</a>
+      </p>
       <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
       <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
       <div class="rollback-controls" id="rollback-controls">
@@ -878,6 +884,33 @@
       return { status: "unavailable" };
     }
   }
+  async function loadTestLiveStatus() {
+    const status = el("test-live-status");
+    const text = el("test-live-status-text");
+    const link = el("test-live-promote-link");
+    link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
+    status.hidden = true;
+    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
+    if (!isTestPage || typeof fetch !== "function") return;
+    try {
+      const [testVersion, liveResponse] = await Promise.all([
+        loadVersionFile(),
+        fetch("../environment.json", { cache: "no-store" }),
+      ]);
+      if (testVersion.status !== "ready" || !liveResponse.ok) return;
+      const liveData = await liveResponse.json();
+      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) return;
+      const test = testVersion.build.version;
+      const live = liveData.version.trim();
+      text.textContent = test === live
+        ? `Test ${test} staat ook live als ${live}.`
+        : `Deze versie staat nog niet live — test staat op ${test}, live op ${live}. Daarna is goedkeuring van iemand anders nodig.`;
+      link.hidden = test === live;
+      status.hidden = false;
+    } catch (error) {
+      // Ontbrekende of onleesbare live-metadata is geen fout voor de pagina.
+    }
+  }
   async function loadLatestRelease() {
     if (repositoryUsesSimulatedData()) {
       setReleaseBuild(
@@ -1015,6 +1048,7 @@
     renderCommandReference();
     setupReleaseBadge();
     loadLatestRelease();
+    loadTestLiveStatus();
     render();
   }
 
