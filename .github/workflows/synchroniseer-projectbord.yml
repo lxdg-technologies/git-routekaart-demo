@@ -77,7 +77,4 @@ jobs:
           status=$?
           set -e
           printf '%s\n' "$output"
-          if [[ "$status" -ne 0 && "$output" =~ (403|Forbidden|Resource.not.accessible|project) ]]; then
-            echo "::error::De Planner-App-token heeft geen toegang tot organisatieproject 2. Laat een organisatiebeheerder lxdg-dcs-planner installeren met Organization Projects: write en de benodigde leesrechten voor deze repository."
-          fi
           exit "$status"

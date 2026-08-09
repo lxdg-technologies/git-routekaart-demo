@@ -148,7 +148,18 @@ def _http_error_message(path: str, error: HTTPError) -> str:
     except Exception:
         response_text = "(antwoord kon niet worden gelezen)"
     response_text = response_text or "(leeg antwoord)"
-    return f"GitHub-aanroep {path} mislukt: HTTP {error.code} {error.reason}; antwoord: {response_text}"
+    if path == "/graphql":
+        resource = "het organisatieproject en de bordmutaties"
+    elif path == "/installation":
+        resource = "de Planner App-installatie"
+    elif path.startswith("/repos/"):
+        resource = "de repositorygegevens"
+    else:
+        resource = f"de GitHub-bron {path}"
+    return (
+        f"GitHub-aanroep {path} voor {resource} mislukt: "
+        f"HTTP {error.code} {error.reason}; antwoord: {response_text}"
+    )
 
 
 def _format_permissions(installation: dict[str, Any]) -> str:
@@ -230,14 +241,14 @@ def main() -> int:
         return 1
     try:
         client = GitHub(token)
-        identity = client.rest("/user").get("login", "")
-        if identity != "lxdg-dcs-planner[bot]":
-            raise RuntimeError(f"Verkeerde GitHub-identiteit: {identity or 'onbekend'}; alleen lxdg-dcs-planner[bot] is toegestaan")
-        try:
-            installation = client.rest("/installation")
-            print("Rechten van de gebruikte Planner-installatie volgens GitHub: " + _format_permissions(installation))
-        except Exception as error:
-            print(f"Rechten van de gebruikte Planner-installatie konden niet worden opgevraagd: {error}", file=sys.stderr)
+        installation = client.rest("/installation")
+        app_slug = installation.get("app_slug")
+        if app_slug and app_slug != "lxdg-dcs-planner":
+            raise RuntimeError(
+                f"Verkeerde GitHub App-installatie: {app_slug}; "
+                "alleen lxdg-dcs-planner is toegestaan"
+            )
+        print("Rechten van de gebruikte Planner-installatie volgens GitHub: " + _format_permissions(installation))
         actions = sync(client)
         print("Geen projectmutaties nodig." if not actions else "\n".join(actions))
         return 0
