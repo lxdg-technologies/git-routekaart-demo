@@ -43,7 +43,7 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/test/" };
   setFetchMode("test-live-behind");
   stappen.opnieuw(); await flush(); await flush(); await flush();
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("test staat op v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("live op v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("goedkeuring van iemand anders"), "testomgeving meldt beide versies en de vereiste goedkeuring als live achterloopt");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("test staat op v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("live op v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("Promoveren naar live gaat handmatig en vraagt een bevestiging") && !byIdMap["test-live-status-text"].textContent.includes("goedkeuring van iemand anders"), "testomgeving meldt beide versies en handmatige promotie met bevestiging als live achterloopt");
   assert(!byIdMap["test-live-promote-link"].hidden && byIdMap["test-live-promote-link"].href.includes("promote-production.yml"), "achterstand verwijst rechtstreeks naar de promotieworkflow");
   setFetchMode("test-live-equal");
   stappen.opnieuw(); await flush(); await flush(); await flush();

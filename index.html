@@ -903,7 +903,7 @@
       const live = liveData.version.trim();
       text.textContent = test === live
         ? `Test ${test} staat ook live als ${live}.`
-        : `Deze versie staat nog niet live — test staat op ${test}, live op ${live}. Daarna is goedkeuring van iemand anders nodig.`;
+        : `Deze versie staat nog niet live — test staat op ${test}, live op ${live}. Promoveren naar live gaat handmatig en vraagt een bevestiging.`;
       link.hidden = test === live;
       status.hidden = false;
     } catch (error) {
