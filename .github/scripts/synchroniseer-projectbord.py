@@ -8,6 +8,7 @@ import re
 import sys
 from dataclasses import dataclass
 from typing import Any
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 REPOSITORY = "lxdg-technologies/git-routekaart-demo"
@@ -56,8 +57,11 @@ class GitHub:
             "https://api.github.com" + path,
             headers={"Authorization": f"Bearer {self.token}", "Accept": accept},
         )
-        with urlopen(request) as response:
-            return json.load(response)
+        try:
+            with urlopen(request) as response:
+                return json.load(response)
+        except HTTPError as error:
+            raise RuntimeError(_http_error_message(path, error)) from error
 
     def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         body = json.dumps({"query": query, "variables": variables or {}}).encode()
@@ -71,10 +75,14 @@ class GitHub:
                 "Content-Type": "application/json",
             },
         )
-        with urlopen(request) as response:
-            payload = json.load(response)
+        try:
+            with urlopen(request) as response:
+                payload = json.load(response)
+        except HTTPError as error:
+            raise RuntimeError(_http_error_message("/graphql", error)) from error
         if payload.get("errors"):
-            raise RuntimeError("GitHub GraphQL-fout: " + "; ".join(e.get("message", "onbekend") for e in payload["errors"]))
+            messages = "; ".join(e.get("message", "onbekend") for e in payload["errors"])
+            raise RuntimeError(f"GitHub GraphQL-foutmeldingen: {messages}")
         return payload["data"]
 
     def project(self) -> dict[str, Any]:
@@ -131,6 +139,23 @@ class GitHub:
             """,
             {"project": project_id, "item": item_id},
         )
+
+
+def _http_error_message(path: str, error: HTTPError) -> str:
+    """Keep GitHub's complete explanation, without exposing request headers."""
+    try:
+        response_text = error.read().decode("utf-8", errors="replace")
+    except Exception:
+        response_text = "(antwoord kon niet worden gelezen)"
+    response_text = response_text or "(leeg antwoord)"
+    return f"GitHub-aanroep {path} mislukt: HTTP {error.code} {error.reason}; antwoord: {response_text}"
+
+
+def _format_permissions(installation: dict[str, Any]) -> str:
+    permissions = installation.get("permissions")
+    if not isinstance(permissions, dict):
+        return "(GitHub gaf geen permissions-veld terug)"
+    return json.dumps(permissions, ensure_ascii=False, sort_keys=True)
 
 
 def _issue_states(client: GitHub) -> dict[int, IssueState]:
@@ -208,6 +233,11 @@ def main() -> int:
         identity = client.rest("/user").get("login", "")
         if identity != "lxdg-dcs-planner[bot]":
             raise RuntimeError(f"Verkeerde GitHub-identiteit: {identity or 'onbekend'}; alleen lxdg-dcs-planner[bot] is toegestaan")
+        try:
+            installation = client.rest("/installation")
+            print("Rechten van de gebruikte Planner-installatie volgens GitHub: " + _format_permissions(installation))
+        except Exception as error:
+            print(f"Rechten van de gebruikte Planner-installatie konden niet worden opgevraagd: {error}", file=sys.stderr)
         actions = sync(client)
         print("Geen projectmutaties nodig." if not actions else "\n".join(actions))
         return 0

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Gedragstests voor de ProjectV2-synchronisatie (geen GitHub-mutaties)."""
 import importlib.util
+import io
 import sys
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
@@ -57,6 +60,39 @@ class FakeGitHub:
 
 
 class ProjectBoardTests(unittest.TestCase):
+    def test_http_fout_toont_status_en_volledig_github_antwoord_zonder_token(self):
+        error = HTTPError("https://api.github.com/graphql", 403, "Forbidden", None, io.BytesIO(
+            b'{"message":"Resource not accessible by integration"}'
+        ))
+        with patch.object(projectbord, "urlopen", side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, r"HTTP 403 Forbidden.*Resource not accessible by integration") as caught:
+                projectbord.GitHub("geheim-token").rest("/installation")
+        self.assertNotIn("geheim-token", str(caught.exception))
+
+    def test_graphql_foutmeldingen_worden_volledig_getoond(self):
+        payload = {"errors": [{"message": "geen toegang"}, {"message": "project niet gevonden"}]}
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                import json
+                return json.dumps(payload).encode()
+
+        with patch.object(projectbord, "urlopen", return_value=Response()):
+            with self.assertRaisesRegex(RuntimeError, "geen toegang; project niet gevonden"):
+                projectbord.GitHub("geheim-token").graphql("query { viewer { login } }")
+
+    def test_installatierechten_worden_veilig_geformatteerd(self):
+        self.assertEqual(
+            projectbord._format_permissions({"permissions": {"organization_projects": "write", "metadata": "read"}}),
+            '{"metadata": "read", "organization_projects": "write"}',
+        )
+
     def test_statusregels_hebben_de_juiste_voorrang(self):
         cases = [
             (projectbord.IssueState(1, "open", False, False, False, False, False), None),
