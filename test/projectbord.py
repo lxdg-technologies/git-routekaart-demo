@@ -146,6 +146,7 @@ class ProjectBoardTests(unittest.TestCase):
         token_config = token_config.split("      - name: Checkout scripts van main", 1)[0]
         self.assertIn("owner: lxdg-technologies", token_config)
         self.assertNotIn("repositories:", token_config)
+        self.assertIn("permission-metadata: read", token_config)
         self.assertIn("permission-organization-projects: write", token_config)
         self.assertIn("Laat een organisatiebeheerder", workflow)
 
