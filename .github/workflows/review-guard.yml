@@ -29,6 +29,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           set -euo pipefail
@@ -106,8 +107,20 @@ jobs:
             ' <<< "$reviews")"
             if [ "$old_approvals" -gt 0 ]; then
               echo "::error::Er is wel goedgekeurd, maar op een oudere versie van deze PR; de wijziging moet opnieuw bekeken en goedgekeurd worden."
+              exit 1
+            fi
+
+            review_count="$(jq 'length' <<< "$latest_reviews")"
+            if [ "$EVENT_NAME" = "pull_request" ] && [ "$review_count" -eq 0 ]; then
+              echo "Geen inhoudelijke review ontvangen; de beoordeling moet nog beginnen."
+              echo "::notice::Review-guard overgeslagen totdat een review is ingediend."
+              exit 0
+            fi
+
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "::error::Er is geen geldige goedkeuring op de actuele versie; de laatste review vraagt om actie."
             else
-              echo "::error::Er is nog geen geldige goedkeuring van een toegestane reviewer op de actuele versie."
+              echo "::error::Er is geen geldige goedkeuring van een toegestane reviewer op de actuele versie."
             fi
             echo "Toegestane logins: $(jq -r 'join(", ")' <<< "$allowed_logins")"
             exit 1
