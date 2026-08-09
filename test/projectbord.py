@@ -113,10 +113,11 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("types: [submitted, dismissed]", workflow)
         sync_job = workflow.split("  synchroniseer:\n", 1)[1]
         sync_job = sync_job.split("\n  ", 1)[0]
-        for event in ("opened", "synchronize", "reopened", "pull_request_review"):
+        for event in ("opened", "synchronize", "reopened", "closed", "pull_request_review"):
             with self.subTest(event=event):
                 self.assertIn(event, sync_job)
-        self.assertIn("github.event.action == 'closed' && github.event.pull_request.merged == true", sync_job)
+        self.assertIn("github.event.action == 'closed'", sync_job)
+        self.assertNotIn("github.event.pull_request.merged == true", sync_job)
 
     def test_muterende_job_draait_alleen_vertrouwde_main_bron(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
@@ -132,7 +133,8 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("pull_request_review:", workflow)
         self.assertIn("if: github.event_name == 'pull_request_review'", workflow)
         self.assertIn("if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'", workflow)
-        self.assertIn("github.event.pull_request.merged == true", workflow)
+        self.assertIn("github.event.action == 'closed'", workflow)
+        self.assertNotIn("github.event.pull_request.merged == true", workflow)
         self.assertEqual(workflow.count("run: python3 .github/scripts/synchroniseer-projectbord.py"), 1)
         self.assertNotIn("github.event.review.user.login", workflow)
         self.assertNotIn("github.event.pull_request.head.sha", workflow)
