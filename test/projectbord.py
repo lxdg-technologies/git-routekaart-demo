@@ -60,6 +60,14 @@ class FakeGitHub:
 
 
 class ProjectBoardTests(unittest.TestCase):
+    def test_http_fout_benoemt_de_geweigerde_bron(self):
+        error = HTTPError("https://api.github.com/repos/example", 403, "Forbidden", None, io.BytesIO(
+            b'{"message":"geen toegang"}'
+        ))
+        with patch.object(projectbord, "urlopen", side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, r"repositorygegevens.*geen toegang"):
+                projectbord.GitHub("geheim-token").rest("/repos/example/issues")
+
     def test_http_fout_toont_status_en_volledig_github_antwoord_zonder_token(self):
         error = HTTPError("https://api.github.com/graphql", 403, "Forbidden", None, io.BytesIO(
             b'{"message":"Resource not accessible by integration"}'
@@ -185,7 +193,10 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("permission-metadata: read", token_config)
         self.assertIn("permission-issues: read", token_config)
         self.assertIn("permission-organization-projects: write", token_config)
-        self.assertIn("Laat een organisatiebeheerder", workflow)
+
+    def test_workflow_vertaalt_niet_elke_fout_naar_bordrechten(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        self.assertNotIn("De Planner-App-token heeft geen toegang tot organisatieproject 2", workflow)
 
 
 if __name__ == "__main__":
