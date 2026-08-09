@@ -1,11 +1,10 @@
 name: Synchroniseer ProjectV2-bord
 
 on:
-  # Alleen een gemergede PR kan de synchronisatie starten. Andere PR-events
-  # worden bewust niet gevolgd: PR-code krijgt nooit projectschrijfrechten.
+  # Deze events geven tijdens het werk direct aanleiding tot synchroniseren.
+  # PR-code krijgt nooit projectschrijfrechten en wordt hieronder nooit uitgevoerd.
   pull_request:
-    types: [closed]
-  # Een review-event valideert uitsluitend; het synchronisatiescript draait hier niet.
+    types: [opened, synchronize, reopened, closed]
   pull_request_review:
     types: [submitted, dismissed]
   workflow_dispatch:
@@ -34,7 +33,7 @@ jobs:
         run: bash test/review-guard.sh
 
   synchroniseer:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'pull_request_review' || (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' || (github.event.action == 'closed' && github.event.pull_request.merged == true)))
     runs-on: ubuntu-latest
     steps:
       - name: Controleer Planner App-configuratie

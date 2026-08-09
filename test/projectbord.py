@@ -107,6 +107,26 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertNotIn("github.event.review.user.login", workflow)
         self.assertNotIn("github.event.pull_request.head.sha", workflow)
 
+    def test_workflow_start_synchronisatie_bij_alle_werkrelevante_events(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        self.assertIn("types: [opened, synchronize, reopened, closed]", workflow)
+        self.assertIn("types: [submitted, dismissed]", workflow)
+        sync_job = workflow.split("  synchroniseer:\n", 1)[1]
+        sync_job = sync_job.split("\n  ", 1)[0]
+        for event in ("opened", "synchronize", "reopened", "pull_request_review"):
+            with self.subTest(event=event):
+                self.assertIn(event, sync_job)
+        self.assertIn("github.event.action == 'closed' && github.event.pull_request.merged == true", sync_job)
+
+    def test_muterende_job_draait_alleen_vertrouwde_main_bron(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        sync_job = workflow.split("  synchroniseer:\n", 1)[1]
+        self.assertNotIn("github.event.pull_request.head.sha", sync_job)
+        self.assertNotIn("github.event.pull_request.head.ref", sync_job)
+        self.assertIn("ref: main", sync_job)
+        self.assertIn("sparse-checkout: .github/scripts/synchroniseer-projectbord.py", sync_job)
+        self.assertEqual(sync_job.count("run: python3 .github/scripts/synchroniseer-projectbord.py"), 1)
+
     def test_workflow_voer_review_valideert_en_sync_alleen_veilige_events(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
         self.assertIn("pull_request_review:", workflow)
