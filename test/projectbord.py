@@ -126,7 +126,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertNotIn("github.event.pull_request.head.ref", sync_job)
         self.assertIn("ref: main", sync_job)
         self.assertIn("sparse-checkout: .github/scripts/synchroniseer-projectbord.py", sync_job)
-        self.assertEqual(sync_job.count("run: python3 .github/scripts/synchroniseer-projectbord.py"), 1)
+        self.assertEqual(sync_job.count("python3 .github/scripts/synchroniseer-projectbord.py"), 1)
 
     def test_workflow_voer_review_valideert_en_sync_alleen_veilige_events(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
@@ -135,10 +135,26 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'", workflow)
         self.assertIn("github.event.action == 'closed'", workflow)
         self.assertNotIn("github.event.pull_request.merged == true", workflow)
-        self.assertEqual(workflow.count("run: python3 .github/scripts/synchroniseer-projectbord.py"), 1)
+        self.assertEqual(workflow.count("python3 .github/scripts/synchroniseer-projectbord.py"), 1)
         self.assertNotIn("github.event.review.user.login", workflow)
         self.assertNotIn("github.event.pull_request.head.sha", workflow)
         self.assertIn("ref: main", workflow)
+
+    def test_workflowtoken_heeft_organisatieprojectbereik_en_minimale_rechten(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        token_config = workflow.split("      - name: Maak token voor lxdg-dcs-planner", 1)[1]
+        token_config = token_config.split("      - name: Checkout scripts van main", 1)[0]
+        self.assertIn("owner: lxdg-technologies", token_config)
+        self.assertNotIn("repositories:", token_config)
+        for permission in (
+            "permission-metadata: read",
+            "permission-issues: read",
+            "permission-pull-requests: read",
+            "permission-organization-projects: write",
+        ):
+            with self.subTest(permission=permission):
+                self.assertIn(permission, token_config)
+        self.assertIn("Laat een organisatiebeheerder", workflow)
 
 
 if __name__ == "__main__":

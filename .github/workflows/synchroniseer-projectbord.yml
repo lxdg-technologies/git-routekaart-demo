@@ -54,7 +54,12 @@ jobs:
           app-id: ${{ secrets.PLANNER_APP_ID }}
           private-key: ${{ secrets.PLANNER_PRIVATE_KEY }}
           owner: lxdg-technologies
-          repositories: git-routekaart-demo
+          # Het bord is een organisatieproject: laat repositories daarom weg.
+          # Vraag alleen de rechten die het vertrouwde synchronisatiescript gebruikt.
+          permission-metadata: read
+          permission-issues: read
+          permission-pull-requests: read
+          permission-organization-projects: write
 
       - name: Checkout scripts van main
         uses: actions/checkout@v4
@@ -67,4 +72,13 @@ jobs:
       - name: Synchroniseer kaarten
         env:
           GITHUB_TOKEN: ${{ steps.planner-token.outputs.token }}
-        run: python3 .github/scripts/synchroniseer-projectbord.py
+        run: |
+          set +e
+          output=$(python3 .github/scripts/synchroniseer-projectbord.py 2>&1)
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if [[ "$status" -ne 0 && "$output" =~ (403|Forbidden|Resource.not.accessible|project) ]]; then
+            echo "::error::De Planner-App-token heeft geen toegang tot organisatieproject 2. Laat een organisatiebeheerder lxdg-dcs-planner installeren met Organization Projects: write en de benodigde leesrechten voor deze repository."
+          fi
+          exit "$status"
