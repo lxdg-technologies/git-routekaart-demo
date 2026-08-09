@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Gedragstests voor de ProjectV2-synchronisatie (geen GitHub-mutaties)."""
 import importlib.util
+import io
 import sys
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
@@ -57,6 +60,39 @@ class FakeGitHub:
 
 
 class ProjectBoardTests(unittest.TestCase):
+    def test_http_fout_toont_status_en_volledig_github_antwoord_zonder_token(self):
+        error = HTTPError("https://api.github.com/graphql", 403, "Forbidden", None, io.BytesIO(
+            b'{"message":"Resource not accessible by integration"}'
+        ))
+        with patch.object(projectbord, "urlopen", side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, r"HTTP 403 Forbidden.*Resource not accessible by integration") as caught:
+                projectbord.GitHub("geheim-token").rest("/installation")
+        self.assertNotIn("geheim-token", str(caught.exception))
+
+    def test_graphql_foutmeldingen_worden_volledig_getoond(self):
+        payload = {"errors": [{"message": "geen toegang"}, {"message": "project niet gevonden"}]}
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                import json
+                return json.dumps(payload).encode()
+
+        with patch.object(projectbord, "urlopen", return_value=Response()):
+            with self.assertRaisesRegex(RuntimeError, "geen toegang; project niet gevonden"):
+                projectbord.GitHub("geheim-token").graphql("query { viewer { login } }")
+
+    def test_installatierechten_worden_veilig_geformatteerd(self):
+        self.assertEqual(
+            projectbord._format_permissions({"permissions": {"organization_projects": "write", "metadata": "read"}}),
+            '{"metadata": "read", "organization_projects": "write"}',
+        )
+
     def test_statusregels_hebben_de_juiste_voorrang(self):
         cases = [
             (projectbord.IssueState(1, "open", False, False, False, False, False), None),
@@ -107,16 +143,49 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertNotIn("github.event.review.user.login", workflow)
         self.assertNotIn("github.event.pull_request.head.sha", workflow)
 
+    def test_workflow_start_synchronisatie_bij_alle_werkrelevante_events(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        self.assertIn("types: [opened, synchronize, reopened, closed]", workflow)
+        self.assertIn("types: [submitted, dismissed]", workflow)
+        sync_job = workflow.split("  synchroniseer:\n", 1)[1]
+        sync_job = sync_job.split("\n  ", 1)[0]
+        for event in ("opened", "synchronize", "reopened", "closed", "pull_request_review"):
+            with self.subTest(event=event):
+                self.assertIn(event, sync_job)
+        self.assertIn("github.event.action == 'closed'", sync_job)
+        self.assertNotIn("github.event.pull_request.merged == true", sync_job)
+
+    def test_muterende_job_draait_alleen_vertrouwde_main_bron(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        sync_job = workflow.split("  synchroniseer:\n", 1)[1]
+        self.assertNotIn("github.event.pull_request.head.sha", sync_job)
+        self.assertNotIn("github.event.pull_request.head.ref", sync_job)
+        self.assertIn("ref: main", sync_job)
+        self.assertIn("sparse-checkout: .github/scripts/synchroniseer-projectbord.py", sync_job)
+        self.assertEqual(sync_job.count("python3 .github/scripts/synchroniseer-projectbord.py"), 1)
+
     def test_workflow_voer_review_valideert_en_sync_alleen_veilige_events(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
         self.assertIn("pull_request_review:", workflow)
         self.assertIn("if: github.event_name == 'pull_request_review'", workflow)
         self.assertIn("if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'", workflow)
-        self.assertIn("github.event.pull_request.merged == true", workflow)
-        self.assertEqual(workflow.count("run: python3 .github/scripts/synchroniseer-projectbord.py"), 1)
+        self.assertIn("github.event.action == 'closed'", workflow)
+        self.assertNotIn("github.event.pull_request.merged == true", workflow)
+        self.assertEqual(workflow.count("python3 .github/scripts/synchroniseer-projectbord.py"), 1)
         self.assertNotIn("github.event.review.user.login", workflow)
         self.assertNotIn("github.event.pull_request.head.sha", workflow)
         self.assertIn("ref: main", workflow)
+
+    def test_workflowtoken_heeft_organisatieprojectbereik_en_minimale_rechten(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        token_config = workflow.split("      - name: Maak token voor lxdg-dcs-planner", 1)[1]
+        token_config = token_config.split("      - name: Checkout scripts van main", 1)[0]
+        self.assertIn("owner: lxdg-technologies", token_config)
+        self.assertNotIn("repositories:", token_config)
+        self.assertIn("permission-metadata: read", token_config)
+        self.assertIn("permission-issues: read", token_config)
+        self.assertIn("permission-organization-projects: write", token_config)
+        self.assertIn("Laat een organisatiebeheerder", workflow)
 
 
 if __name__ == "__main__":
