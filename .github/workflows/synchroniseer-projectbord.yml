@@ -57,6 +57,7 @@ jobs:
           # Het bord is een organisatieproject: laat repositories daarom weg.
           # Vraag alleen de rechten die het vertrouwde synchronisatiescript gebruikt.
           permission-metadata: read
+          permission-issues: read
           permission-organization-projects: write
 
       - name: Checkout scripts van main

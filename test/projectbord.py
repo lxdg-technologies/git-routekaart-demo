@@ -147,6 +147,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("owner: lxdg-technologies", token_config)
         self.assertNotIn("repositories:", token_config)
         self.assertIn("permission-metadata: read", token_config)
+        self.assertIn("permission-issues: read", token_config)
         self.assertIn("permission-organization-projects: write", token_config)
         self.assertIn("Laat een organisatiebeheerder", workflow)
 
