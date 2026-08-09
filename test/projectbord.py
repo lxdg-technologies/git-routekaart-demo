@@ -74,7 +74,7 @@ class ProjectBoardTests(unittest.TestCase):
         ))
         with patch.object(projectbord, "urlopen", side_effect=error):
             with self.assertRaisesRegex(RuntimeError, r"HTTP 403 Forbidden.*Resource not accessible by integration") as caught:
-                projectbord.GitHub("geheim-token").rest("/installation")
+                projectbord.GitHub("geheim-token").rest("/repos/lxdg-technologies/git-routekaart-demo/issues")
         self.assertNotIn("geheim-token", str(caught.exception))
 
     def test_graphql_foutmeldingen_worden_volledig_getoond(self):
@@ -94,12 +94,6 @@ class ProjectBoardTests(unittest.TestCase):
         with patch.object(projectbord, "urlopen", return_value=Response()):
             with self.assertRaisesRegex(RuntimeError, "geen toegang; project niet gevonden"):
                 projectbord.GitHub("geheim-token").graphql("query { viewer { login } }")
-
-    def test_installatierechten_worden_veilig_geformatteerd(self):
-        self.assertEqual(
-            projectbord._format_permissions({"permissions": {"organization_projects": "write", "metadata": "read"}}),
-            '{"metadata": "read", "organization_projects": "write"}',
-        )
 
     def test_statusregels_hebben_de_juiste_voorrang(self):
         cases = [

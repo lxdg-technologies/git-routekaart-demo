@@ -150,8 +150,6 @@ def _http_error_message(path: str, error: HTTPError) -> str:
     response_text = response_text or "(leeg antwoord)"
     if path == "/graphql":
         resource = "het organisatieproject en de bordmutaties"
-    elif path == "/installation":
-        resource = "de Planner App-installatie"
     elif path.startswith("/repos/"):
         resource = "de repositorygegevens"
     else:
@@ -160,13 +158,6 @@ def _http_error_message(path: str, error: HTTPError) -> str:
         f"GitHub-aanroep {path} voor {resource} mislukt: "
         f"HTTP {error.code} {error.reason}; antwoord: {response_text}"
     )
-
-
-def _format_permissions(installation: dict[str, Any]) -> str:
-    permissions = installation.get("permissions")
-    if not isinstance(permissions, dict):
-        return "(GitHub gaf geen permissions-veld terug)"
-    return json.dumps(permissions, ensure_ascii=False, sort_keys=True)
 
 
 def _issue_states(client: GitHub) -> dict[int, IssueState]:
@@ -241,14 +232,6 @@ def main() -> int:
         return 1
     try:
         client = GitHub(token)
-        installation = client.rest("/installation")
-        app_slug = installation.get("app_slug")
-        if app_slug and app_slug != "lxdg-dcs-planner":
-            raise RuntimeError(
-                f"Verkeerde GitHub App-installatie: {app_slug}; "
-                "alleen lxdg-dcs-planner is toegestaan"
-            )
-        print("Rechten van de gebruikte Planner-installatie volgens GitHub: " + _format_permissions(installation))
         actions = sync(client)
         print("Geen projectmutaties nodig." if not actions else "\n".join(actions))
         return 0
