@@ -373,7 +373,7 @@
         <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
           <div class="env-name">Live</div>
           <div class="env-val" id="env-live">v0.1.0</div>
-          <div class="env-sub">alleen na jouw akkoord</div>
+          <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
         </button>
       </div>
       <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
@@ -946,7 +946,7 @@
       missions: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
       colleagueSeq: 0,
       mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
-      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null },
+      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null, livePromotedAt: null },
       selectedStart: null,
       selectedStartAuto: false,
       envFilter: "all",
@@ -954,6 +954,28 @@
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
   const el = id => document.getElementById(id);
+
+  function formatElapsedSince(promotedAt, now) {
+    if (promotedAt === null || promotedAt === undefined) return "";
+    const promotedMs = new Date(promotedAt).getTime();
+    const nowMs = new Date(now).getTime();
+    if (!Number.isFinite(promotedMs) || !Number.isFinite(nowMs) || nowMs < promotedMs) return "";
+    const elapsedMs = nowMs - promotedMs;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (elapsedMs < minute) return "live sinds minder dan een minuut";
+    if (elapsedMs < hour) {
+      const minutes = Math.floor(elapsedMs / minute);
+      return `live sinds ${minutes} ${minutes === 1 ? "minuut" : "minuten"}`;
+    }
+    if (elapsedMs < day) {
+      const hours = Math.floor(elapsedMs / hour);
+      return `live sinds ${hours} ${hours === 1 ? "uur" : "uur"}`;
+    }
+    const days = Math.floor(elapsedMs / day);
+    return `live sinds ${days} ${days === 1 ? "dag" : "dagen"}`;
+  }
 
   function addCommit(branch, msg, parents, kind) {
     const c = { id: hash(), branch, msg, parents, kind: kind || "normal", x: S.seq++ };
@@ -1095,18 +1117,27 @@
     log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt. Kijk op de kaart: er loopt nu een stippellijn van jouw zijspoor richting main die er nét niet bij komt — dat is het voorstel. Bij de merge wordt het een echte lijn.");
     tick(3); render();
   }
-  function release() {
+  function release(mergeType = "merge") {
     const v = "v0.1." + (++S.relNum);
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
     S.releases.push({ version: v, commitId: S.env.testCommit });
-    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `Deze merge-commit levert versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
+    const route = mergeType === "rebase" ? "Deze rebase-merge levert" : "Deze merge-commit levert";
+    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `${route} versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
   }
-  function doMerge(pr, squash) {
+  function doMerge(pr, squash, rebase = false) {
     const b = S.branches[pr.branch];
     const ahead = aheadOfMain(pr.branch);
-    if (squash) {
+    if (rebase) {
+      let parent = S.branches.main.head;
+      ahead.forEach(original => {
+        const rebased = addCommit("main", `${original.msg} (rebase PR #${pr.num})`, [parent], "rebase");
+        rebased.rebasedFrom = original.id;
+        parent = rebased.id;
+      });
+      log(`PR #${pr.num} — rebase &amp; merge`, `De branch is eerst boven op de actuele kop van <code>main</code> gezet. Daarna zijn ${ahead.length} nieuwe rebased commitobjecten zonder merge-commit op main gezet: de oude branchstations blijven als oorspronkelijke geschiedenis bestaan en zijn niet stilzwijgend herschreven. Kijk op de kaart: deze aansluiting is een rechte main-lijn, zonder overstapstation met twee ouders.`);
+    } else if (squash) {
       addCommit("main", `${pr.branch} (squash van ${ahead.length} commits, PR #${pr.num})`, [S.branches.main.head], "squash");
       ahead.forEach(c => c.squashed = true);
       log(`PR #${pr.num} — squash &amp; merge`, `De ${ahead.length} commits van <code>${pr.branch}</code> zijn samengeperst tot één nieuwe commit op main. Kijk op de kaart: het zijspoor is vervaagd — die stations zitten <b>niet</b> in de historie van main. Main blijft een rechte, leesbare lijn.`);
@@ -1123,7 +1154,7 @@
     if (S.active === b.name) S.active = "main";
     if (S.mergeKinds.has("merge")) tick(4);
     if (S.mergeKinds.has("merge") && S.mergeKinds.has("squash")) tick(5);
-    release();
+    release(rebase ? "rebase" : "merge");
     render();
   }
   function deleteBranch(name) {
@@ -1134,10 +1165,12 @@
     log(`Branch <code>${name}</code> opgeruimd`, "Na de merge heeft het zijspoor geen functie meer. De commits blijven bestaan (via de merge of de PR), alleen het naambordje is weg. Opruimen houdt de kaart leesbaar.");
     tick(6); render();
   }
-  function promote() {
+  function promote(now = Date.now()) {
+    if (now && typeof now === "object") now = Date.now();
     if (S.env.test === S.env.live) return;
     S.env.live = S.env.test;
     S.env.liveCommit = S.env.testCommit;
+    S.env.livePromotedAt = now;
     log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
     tick(8); render();
   }
@@ -1299,8 +1332,10 @@
     });
     const behind = S.env.test !== S.env.live;
     el("env-live-box").classList.toggle("behind", behind);
-    const liveSub = el("env-live-box").querySelector ? el("env-live-box").querySelector(".env-sub") : null;
-    if (liveSub) liveSub.textContent = behind ? "loopt achter op test" : "alleen na jouw akkoord";
+    const liveAge = el("env-live-age");
+    liveAge.textContent = S.env.livePromotedAt === null
+      ? "alleen na jouw akkoord"
+      : formatElapsedSince(S.env.livePromotedAt, Date.now());
     el("btn-promote").disabled = !behind;
     const head = byId(S.branches.main.head);
     el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
@@ -1367,8 +1402,9 @@
         const m = document.createElement("div"); m.className = "mini-btns";
         const b1 = document.createElement("button"); b1.textContent = "Merge commit"; b1.onclick = () => doMerge(pr, false);
         const b2 = document.createElement("button"); b2.textContent = "Squash & merge"; b2.onclick = () => doMerge(pr, true);
-        b1.disabled = b2.disabled = ahead === 0;
-        m.append(b1, b2); t.appendChild(m);
+        const b3 = document.createElement("button"); b3.textContent = "Rebase & merge"; b3.onclick = () => doMerge(pr, false, true);
+        b1.disabled = b2.disabled = b3.disabled = ahead === 0;
+        m.append(b1, b2, b3); t.appendChild(m);
       } else if (!S.branches[pr.branch].deleted) {
         const m = document.createElement("div"); m.className = "mini-btns";
         const b3 = document.createElement("button"); b3.textContent = "🗑️ Verwijder branch"; b3.onclick = () => deleteBranch(pr.branch);
@@ -1479,6 +1515,7 @@
       if (release) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R - 1 : R - 3}" fill="none" stroke="var(--ok)" stroke-width="2"><title>release station ${release.version}</title></circle>`;
       if (isHub) stations += `<circle cx="${x}" cy="${y}" r="3.5" fill="${b.color}"/>`;
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
+      if (c.kind === "rebase") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">↻</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
       stations += `</g>`;
       const commitLabel = c.id.slice(0, 5), commitLabelY = y + 26;
@@ -1568,7 +1605,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>R = revert-commit</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
@@ -1585,6 +1622,9 @@
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
   window.focusTerm = focusTerm;
+  window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
+  window.__promoteAt = promote; // alleen voor test/smoketest.js
+  window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
   init();
