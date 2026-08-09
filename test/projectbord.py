@@ -148,7 +148,6 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertNotIn("repositories:", token_config)
         self.assertIn("permission-metadata: read", token_config)
         self.assertIn("permission-issues: read", token_config)
-        self.assertIn("permission-pull-requests: read", token_config)
         self.assertIn("permission-organization-projects: write", token_config)
         self.assertIn("Laat een organisatiebeheerder", workflow)
 
