@@ -1,6 +1,7 @@
 // Controles rond de metrokaart en de legenda: stations, lijnen, versielabels en vlaggen.
 module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, state, stappen }) {
   stappen.opnieuw();
+  assert(byIdMap["env-filter-note"].textContent.includes("Simulatie/oefening") && byIdMap["env-filter-note"].textContent.includes("wijzigen GitHub niet"), "interactieve kaart labelt zichzelf als veilige simulatie");
   assert(mapResult().includes("🧪🚀"), "kaart toont gecombineerde test/live-vlag bij de start");
   assert(mapResult().includes("station-hit") && mapResult().includes("v0.1.0"), "kaart toont release-station en versielabel");
   assert(mapResult().includes('role="button"') && mapResult().includes("branch-line"), "kaart rendert klikbare branch-lijn en stations");

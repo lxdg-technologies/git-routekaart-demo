@@ -3,6 +3,8 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   await flush(); await flush(); await flush();
   assert(byIdMap["repository-link"].href === "https://github.com/lxdg-technologies/git-routekaart-demo", "repositorydashboard linkt naar de gekoppelde repository");
   assert(byIdMap["repository-status"].textContent.includes("Rechtstreeks uit GitHub") && !byIdMap["repository-status"].className.includes("error"), "repositorydashboard meldt een geslaagde publieke API-koppeling");
+  assert(byIdMap["repository-source-label"].textContent.includes("Echte GitHub-gegevens") && byIdMap["repository-source-label"].textContent.includes("dashboardversie"), "echt dashboard labelt de getoonde GitHub-gegevens");
+  assert(byIdMap["release-source-label"].textContent.includes("echte deploymentgegevens"), "echte releasebadge labelt deploymentgegevens als echt");
   assert(byIdMap["repository-summary"].innerHTML.includes(">2</b><span>branches") && byIdMap["repository-summary"].innerHTML.includes(">1</b><span>open issues"), "repositorydashboard toont actuele aantallen");
   assert(byIdMap["repository-commits"].innerHTML.includes("feat: live dashboard") && byIdMap["repository-commits"].innerHTML.includes("abc1234"), "repositorydashboard toont echte commitgeschiedenis");
   assert(byIdMap["repository-branches"].innerHTML.includes("main") && byIdMap["repository-branches"].innerHTML.includes("beschermd"), "repositorydashboard toont branches en bescherming");
@@ -30,6 +32,7 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   await flush(); await flush(); await flush();
   assert(fetchCalls.length === callsBeforeDevelopment, "ontwikkelomgeving doet geen fetch naar GitHub of een andere databron");
   assert(byIdMap["repository-title"].textContent === "Gesimuleerde repository", "ontwikkelomgeving noemt de voorbeeldrepository niet echt");
+  assert(byIdMap["repository-source-label"].textContent.includes("Oefengegevens") && byIdMap["repository-source-label"].textContent.includes("dashboardversie"), "gesimuleerd dashboard labelt de voorbeeldgegevens als oefengegevens");
   assert(byIdMap["repository-status"].textContent.includes("Gesimuleerde GitHub-gegevens") && byIdMap["repository-status"].textContent.includes("geen verbinding met de GitHub API"), "ontwikkelomgeving benoemt de gesimuleerde databron duidelijk");
   assert(byIdMap["repository-commits"].innerHTML.includes("voorbeeldwijziging") && byIdMap["repository-prs"].innerHTML.includes("Voorbeeld: verbeter de startpagina"), "ontwikkelomgeving rendert de vaste voorbeeldgegevens");
   assert(byIdMap["release-history"].dataset.source === "simulated" && byIdMap["release-badge-label"].textContent.includes("voorbeeld"), "ontwikkelomgeving simuleert ook de buildinformatie");
