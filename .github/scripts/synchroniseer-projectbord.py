@@ -32,6 +32,17 @@ class IssueState:
     labels: frozenset[str] = frozenset()
 
 
+@dataclass(frozen=True)
+class PullRequestState:
+    number: int
+    open_pr: bool
+    review: bool
+    merged_pr: bool
+    closed_unmerged_pr: bool
+    labels: frozenset[str] = frozenset()
+    linked_issue_labels: frozenset[str] = frozenset()
+
+
 def target_status(issue: IssueState) -> str | None:
     """Return only an automatic transition; None means leave the card alone."""
     if issue.merged_pr:
@@ -56,9 +67,32 @@ def target_environment(issue: IssueState) -> str:
     return "Geen omgeving"
 
 
+def target_pr_status(pr: PullRequestState) -> str:
+    if pr.merged_pr or pr.closed_unmerged_pr:
+        return "Done"
+    if pr.review:
+        return "In review"
+    return "In progress"
+
+
+def target_pr_environment(pr: PullRequestState) -> str:
+    labels = pr.linked_issue_labels
+    if "soort:github" in labels:
+        return "Live" if pr.merged_pr else "Geen omgeving"
+    if pr.merged_pr:
+        return "Test"
+    return "Geen omgeving" if pr.closed_unmerged_pr else ("Ontwikkel" if pr.open_pr else "Geen omgeving")
+
+
 def _references_issue(pr: dict[str, Any], number: int) -> bool:
     text = f"{pr.get('title', '')}\n{pr.get('body', '')}"
     return bool(re.search(rf"(?<!\d)(?:#|issues/)({number})(?!\d)", text, re.I))
+
+
+def _linked_issue_number(pr: dict[str, Any]) -> int | None:
+    text = f"{pr.get('title', '')}\n{pr.get('body', '')}"
+    match = re.search(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b", text, re.I)
+    return int(match.group(1)) if match else None
 
 
 class GitHub:
@@ -66,14 +100,28 @@ class GitHub:
         self.token = token
         self.repository = repository
 
-    def rest(self, path: str, *, accept: str = "application/vnd.github+json") -> Any:
+    def rest(
+        self,
+        path: str,
+        *,
+        accept: str = "application/vnd.github+json",
+        method: str = "GET",
+        data: dict[str, Any] | None = None,
+    ) -> Any:
         request = Request(
             "https://api.github.com" + path,
-            headers={"Authorization": f"Bearer {self.token}", "Accept": accept},
+            data=json.dumps(data).encode() if data is not None else None,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {self.token}",
+                "Accept": accept,
+                "Content-Type": "application/json",
+            },
         )
         try:
             with urlopen(request) as response:
-                return json.load(response)
+                body = response.read()
+                return json.loads(body) if body else None
         except HTTPError as error:
             raise RuntimeError(_http_error_message(path, error)) from error
 
@@ -114,7 +162,10 @@ class GitHub:
                   }
                   items(first:100) { nodes {
                     id isArchived
-                    content { ... on Issue { number repository { nameWithOwner } } }
+                    content {
+                      ... on Issue { __typename number repository { nameWithOwner } }
+                      ... on PullRequest { __typename number repository { nameWithOwner } }
+                    }
                     fieldValues(first:100) { nodes {
                       ... on ProjectV2ItemFieldSingleSelectValue {
                         field { ... on ProjectV2SingleSelectField { name } }
@@ -156,6 +207,19 @@ class GitHub:
             }
             """,
             {"project": project_id, "item": item_id},
+        )
+
+    def add_label(self, number: int, label: str) -> None:
+        self.rest(
+            f"/repos/{self.repository}/issues/{number}/labels",
+            method="POST",
+            data={"labels": [label]},
+        )
+
+    def remove_label(self, number: int, label: str) -> None:
+        self.rest(
+            f"/repos/{self.repository}/issues/{number}/labels/{label}",
+            method="DELETE",
         )
 
 
@@ -204,6 +268,29 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
     return states
 
 
+def _pull_request_states(client: GitHub, issue_states: dict[int, IssueState]) -> dict[int, PullRequestState]:
+    prs = client.rest(f"/repos/{REPOSITORY}/pulls?state=all&per_page=100")
+    states: dict[int, PullRequestState] = {}
+    for pr in prs:
+        open_pr = pr["state"] == "open"
+        merged = bool(pr.get("merged_at"))
+        linked_issue = _linked_issue_number(pr)
+        linked_issue_state = issue_states.get(linked_issue) if linked_issue is not None else None
+        linked_labels = linked_issue_state.labels if linked_issue_state else frozenset()
+        review = False
+        if open_pr:
+            requested = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/requested_reviewers")
+            reviews = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/reviews")
+            review = bool(requested.get("users") or requested.get("teams") or reviews)
+        labels = frozenset(label.get("name") for label in pr.get("labels", []) if label.get("name"))
+        states[pr["number"]] = PullRequestState(
+            pr["number"], open_pr, review, merged,
+            pr["state"] == "closed" and not merged,
+            labels, linked_labels,
+        )
+    return states
+
+
 def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
     project = project or client.project()
     status_field: dict[str, Any] | None = project.get("statusField")
@@ -229,12 +316,40 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
         raise RuntimeError("ProjectV2 mist omgevingsoptie(s): " + ", ".join(sorted(missing)))
 
     states = _issue_states(client)
+    pull_request_states = _pull_request_states(client, states)
     actions: list[str] = []
     for item in project["items"]["nodes"]:
         content = item.get("content") or {}
         if content.get("repository", {}).get("nameWithOwner") != REPOSITORY or not content.get("number"):
             continue
         number = content["number"]
+        if content.get("__typename") == "PullRequest":
+            pr = pull_request_states.get(number)
+            if not pr:
+                continue
+            desired = target_pr_status(pr)
+            current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
+                            if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
+            if current != desired:
+                client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
+                actions.append(f"pull request #{number}: {current or 'onbekend'} → {desired}")
+
+            environment = target_pr_environment(pr)
+            current_environment = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
+                                        if v and v.get("field", {}).get("name") == ENVIRONMENT_FIELD_NAME), None)
+            if current_environment != environment:
+                client.mutate_environment(project["id"], item["id"], environment_field["id"], environment_options[environment])
+                actions.append(f"pull request #{number}: {current_environment or 'onbekend'} → {environment}")
+
+            desired_label = next((label for label in ("soort:routekaart", "soort:github")
+                                  if label in pr.linked_issue_labels), None)
+            for label in sorted(label for label in pr.labels if label.startswith("soort:") and label != desired_label):
+                client.remove_label(number, label)
+                actions.append(f"pull request #{number}: label {label} verwijderd")
+            if desired_label and desired_label not in pr.labels:
+                client.add_label(number, desired_label)
+                actions.append(f"pull request #{number}: label {desired_label} toegevoegd")
+            continue
         state = states.get(number)
         if not state:
             continue
