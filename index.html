@@ -181,6 +181,9 @@
   .env.live { border-color: var(--ok); }
   .test-live-status { margin: .7rem 0 0; padding: .55rem .65rem; border: 1px solid var(--accent); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
   .test-live-status a { color: var(--accent); font-weight: 700; }
+  .test-live-status.is-safe { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .test-live-status.is-blocked { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+  .test-live-status button { margin-top: .55rem; }
   .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
 
   /* ==== SECTIE: ACTIES ==== */
@@ -380,7 +383,8 @@
       </div>
       <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
         <span id="test-live-status-text"></span>
-        <a id="test-live-promote-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar promotie in GitHub Actions ↗</a>
+        <br><button type="button" class="act" id="test-live-check">Controleer of Test klaar is voor live</button>
+        <a id="test-live-promote-link" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar handmatige promotie in GitHub Actions ↗</a>
       </p>
       <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
       <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
@@ -896,27 +900,70 @@
     const status = el("test-live-status");
     const text = el("test-live-status-text");
     const link = el("test-live-promote-link");
+    const checkButton = el("test-live-check");
     link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
     status.hidden = true;
+    status.classList.remove("is-safe", "is-blocked");
+    link.hidden = true;
     const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
     if (!isTestPage || typeof fetch !== "function") return;
     try {
-      const [testVersion, liveResponse] = await Promise.all([
+      const [testVersion, testEnvironmentResponse, liveResponse] = await Promise.all([
         loadVersionFile(),
+        fetch("environment.json", { cache: "no-store" }),
         fetch("../environment.json", { cache: "no-store" }),
       ]);
-      if (testVersion.status !== "ready" || !liveResponse.ok) return;
+      if (testVersion.status !== "ready" || !testEnvironmentResponse.ok || !liveResponse.ok) throw new Error("deploymentgegevens ontbreken");
+      const testEnvironment = await testEnvironmentResponse.json();
       const liveData = await liveResponse.json();
-      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) return;
+      if (!testEnvironment || typeof testEnvironment.version !== "string" || !testEnvironment.version.trim() || typeof testEnvironment.sha !== "string" || !testEnvironment.sha.trim()) throw new Error("testpublicatie is ongeldig");
+      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("liveversie is ongeldig");
       const test = testVersion.build.version;
       const live = liveData.version.trim();
       text.textContent = test === live
-        ? `Test ${test} staat ook live als ${live}.`
-        : `Deze versie staat nog niet live — test staat op ${test}, live op ${live}. Promoveren naar live gaat handmatig en vraagt een bevestiging.`;
-      link.hidden = test === live;
+        ? `Testversie: ${test}. Liveversie: ${live}. Verschil: er is niets nieuws te controleren.`
+        : `Testversie: ${test}. Liveversie: ${live}. Verschil: Test loopt voor; controleer eerst de wijzigingen sinds Live.`;
+      checkButton.disabled = test === live;
+      checkButton.onclick = () => checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData });
       status.hidden = false;
     } catch (error) {
-      // Ontbrekende of onleesbare live-metadata is geen fout voor de pagina.
+      text.textContent = "De test- of liveversie kon niet betrouwbaar worden gelezen. Veilig livegaan kan nu niet worden vastgesteld.";
+      status.classList.add("is-blocked");
+      status.hidden = false;
+      checkButton.disabled = true;
+    }
+  }
+  async function checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData }) {
+    link.hidden = true;
+    checkButton.disabled = true;
+    status.classList.remove("is-safe", "is-blocked");
+    const testSha = testVersion.build.sha;
+    const publishedSha = testEnvironment.sha.trim();
+    if (!testSha || testSha !== publishedSha || testEnvironment.version.trim() !== testVersion.build.version) {
+      text.textContent += " Controle niet groen: de testpublicatie hoort niet aantoonbaar bij de gecontroleerde versie.";
+      status.classList.add("is-blocked");
+      return;
+    }
+    try {
+      const response = await fetch(`${REPOSITORY_API_ROOT}/commits/${encodeURIComponent(testSha)}/check-runs?per_page=100`, { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) throw new Error(`GitHub-controles: ${response.status}`);
+      const data = await response.json();
+      const checks = Array.isArray(data.check_runs) ? data.check_runs : [];
+      const required = ["quality"];
+      const allGreen = required.every(name => checks.some(check => check.name === name && check.head_sha === testSha && check.status === "completed" && check.conclusion === "success"));
+      if (!allGreen) {
+        text.textContent += " Controle niet groen: een verplichte controle ontbreekt, draait nog of is mislukt.";
+        status.classList.add("is-blocked");
+        return;
+      }
+      text.textContent += " Alle verplichte controles zijn geslaagd en de testpublicatie klopt met deze versie. Veilig aanbieden voor handmatige promotie: een mens moet nog bevestigen.";
+      status.classList.add("is-safe");
+      link.hidden = testVersion.build.version === liveData.version.trim();
+    } catch (error) {
+      text.textContent += " De verplichte controles konden niet worden gelezen. Veilig livegaan kan daarom niet worden bevestigd.";
+      status.classList.add("is-blocked");
+    } finally {
+      checkButton.disabled = false;
     }
   }
   async function loadLatestRelease() {
@@ -1656,6 +1703,7 @@
   window.focusTerm = focusTerm;
   window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
   window.__promoteAt = promote; // alleen voor test/smoketest.js
+  window.__loadTestLiveStatus = loadTestLiveStatus; // alleen voor test/smoketest.js
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik

@@ -37,7 +37,7 @@ const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-source-label", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
-  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-promote-link"];
+  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-check", "test-live-promote-link"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
@@ -68,18 +68,28 @@ global.fetch = async url => {
     { number: 5, title: "Open dashboard-PR", state: "open", merged_at: null, html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/5", head: { ref: "feat/dashboard" }, base: { ref: "main" } },
     { number: 1, title: "Omgevingen ingericht", state: "closed", merged_at: "2026-08-07T09:00:00Z", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/1", head: { ref: "agent/setup" }, base: { ref: "main" } },
   ]);
+  if (String(url) === "environment.json") {
+    if (["test-live-behind", "test-live-equal", "checks-green", "checks-failed", "checks-missing"].includes(fetchMode)) return response({ environment: "test", version: "v9.9.9", sha: "abc1234" });
+    if (fetchMode === "test-live-invalid-published") return response({ environment: "test", version: "v9.9.9", sha: "wrongsha" });
+    return response({}, 404);
+  }
   if (String(url) === "../environment.json") {
-    if (fetchMode === "test-live-behind") return response({ environment: "production", version: "v9.9.8" });
+    if (["test-live-behind", "checks-green", "checks-failed", "checks-missing", "test-live-invalid-published"].includes(fetchMode)) return response({ environment: "production", version: "v9.9.8" });
     if (fetchMode === "test-live-equal") return response({ environment: "production", version: "v9.9.9" });
     return response({}, 404);
   }
-  if (["version", "test-live-behind", "test-live-equal"].includes(fetchMode) && url === "version.json") return response({ version: "v9.9.9", commitsAhead: 2, sha: "abc1234" });
+  if (["version", "test-live-behind", "test-live-equal", "checks-green", "checks-failed", "checks-missing", "test-live-invalid-published"].includes(fetchMode) && url === "version.json") return response({ version: "v9.9.9", commitsAhead: 2, sha: "abc1234" });
   if (fetchMode === "invalid" && url === "version.json") return response({ version: "" });
   if (fetchMode === "missing" && url === "version.json") return response({}, 404);
   if (fetchMode === "history" && String(url).includes("releases?")) return response([
     { tag_name: "v9.9.8", published_at: "2026-08-01T12:00:00Z", html_url: "https://example.test/releases/v9.9.8" },
     { name: "untagged", created_at: "2026-07-31T12:00:00Z", html_url: "https://example.test/releases/untagged" },
   ]);
+  if (String(url).includes("/commits/abc1234/check-runs")) {
+    if (fetchMode === "checks-green") return response({ check_runs: [{ name: "quality", head_sha: "abc1234", status: "completed", conclusion: "success" }] });
+    if (fetchMode === "checks-failed") return response({ check_runs: [{ name: "quality", head_sha: "abc1234", status: "completed", conclusion: "failure" }] });
+    if (fetchMode === "checks-missing") return response({ check_runs: [] });
+  }
 
   return response({}, 503);
 };
@@ -164,6 +174,30 @@ const delen = [
   const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, state, setFetchMode, stappen, initialBadge, decorateLogTerms: window.__decorateLogTerms };
 
   for (const [, deel] of delen) await deel(gereedschap);
+
+  // Testpagina: controleer deploymentmetadata en de verplichte publieke check.
+  global.location = { pathname: "/test/" };
+  const loadTestStatus = async mode => { setFetchMode(mode); await window.__loadTestLiveStatus(); await flush(); };
+  await loadTestStatus("test-live-behind");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("Testversie: v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("Liveversie: v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("Test loopt voor"), "testpagina toont testversie, liveversie en het verschil");
+  assert(byIdMap["test-live-promote-link"].hidden === true, "promotielink blijft verborgen vóór de veiligheidscontrole");
+  await loadTestStatus("checks-green");
+  byIdMap["test-live-check"].onclick(); await flush();
+  assert(byIdMap["test-live-status"].classList.contains("is-safe") && byIdMap["test-live-status-text"].textContent.includes("Alle verplichte controles zijn geslaagd"), "groene verplichte controle meldt dat Test veilig kan worden aangeboden");
+  assert(byIdMap["test-live-promote-link"].hidden === false && byIdMap["test-live-status-text"].textContent.includes("mens moet nog bevestigen"), "alleen groen toont de handmatige promotieworkflow en menselijke bevestiging");
+  await loadTestStatus("test-live-equal");
+  assert(byIdMap["test-live-status-text"].textContent.includes("er is niets nieuws te controleren") && byIdMap["test-live-check"].disabled === true && byIdMap["test-live-promote-link"].hidden === true, "gelijke test- en liveversie geeft geen misleidende promotie-uitnodiging");
+  await loadTestStatus("checks-failed");
+  byIdMap["test-live-check"].onclick(); await flush();
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && !byIdMap["test-live-status-text"].textContent.includes("Alle verplichte controles zijn geslaagd") && byIdMap["test-live-promote-link"].hidden === true, "mislukte verplichte controle toont geen groen resultaat of promotielink");
+  await loadTestStatus("checks-missing");
+  byIdMap["test-live-check"].onclick(); await flush();
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent.includes("ontbreekt"), "ontbrekende verplichte controle blokkeert de veiligheidsmelding");
+  await loadTestStatus("test-live-invalid-published");
+  byIdMap["test-live-check"].onclick(); await flush();
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent.includes("testpublicatie"), "niet-overeenkomende testpublicatie blokkeert de veiligheidsmelding");
+  await loadTestStatus("invalid");
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && !byIdMap["test-live-status-text"].textContent.includes("Alle verplichte controles zijn geslaagd"), "ongeldige versiegegevens leiden niet tot een onterechte groene veiligheidsmelding");
 
   // Hotfix-route: eerst staat test bewust nieuwer dan live, daarna volstaat één knop.
   stappen.opnieuw();
