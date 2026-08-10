@@ -35,7 +35,7 @@ function makeEl(tag) {
 
 const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
-  "log", "btn-issue", "btn-commit", "btn-collega", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
+  "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-summary",
   "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-promote-link"];
 for (const id of ids) byIdMap[id] = makeEl("div");
@@ -91,10 +91,22 @@ global.sessionStorage = { getItem: key => sessionValues.get(key) ?? null, setIte
 global.window = global;
 
 // De delen draaien in deze volgorde; de controles bouwen op elkaars toestand voort.
+const begrippenCheck = async ({ assert, byIdMap, glossaryResult, stappen, decorateLogTerms }) => {
+  const glossary = glossaryResult();
+  assert((glossary.match(/<details class="term-item"/g) || []).length === 29, "begrippenlijst rendert precies 29 termen");
+  assert(glossary.includes('id="term-hotfix"') && glossary.includes("<summary>Hotfix</summary>"), "Hotfix bestaat als klikbaar begrip");
+  assert(glossary.includes("noodgreep vanaf wat nu live staat") && glossary.includes("kans op een nieuwe fout") && glossary.includes("alsnog via de gewone route terug"), "Hotfix legt de start, prijs en terugkeer naar de gewone route uit");
+  assert(glossary.includes("Voorbeeld:") && glossary.includes("start een hotfix vanaf live v0.1.1") && glossary.match(/term-explanation/g).length === 29 && glossary.match(/term-example/g).length === 29, "Hotfix volgt de bestaande uitleg-/voorbeeldstructuur");
+  assert(decorateLogTerms("hotfix").includes("focusTerm('Hotfix')"), "logboek-koppeling herkent het begrip Hotfix");
+  stappen.nieuwIssue(); stappen.maakBranch();
+  assert(byIdMap["log"].children[0].innerHTML.includes("focusTerm('Branch')"), "branch-logregel bevat een klikbare Branch-term");
+  stappen.commit(); stappen.commit(); stappen.openPR(); stappen.mergeCommit();
+  assert(byIdMap["log"].children[0].innerHTML.includes("focusTerm('CI (Continuous Integration)')"), "release-logregel bevat een klikbare CI-term");
+};
 const delen = [
   ["release-badge", require("./checks/release-badge")],
   ["repository-dashboard", require("./checks/repository-dashboard")],
-  ["begrippen", require("./checks/begrippen")],
+  ["begrippen", begrippenCheck],
   ["omgevingen", require("./checks/omgevingen")],
   ["kaart", require("./checks/kaart")],
   ["acties", require("./checks/acties")],
@@ -134,6 +146,7 @@ const delen = [
     kiesRollback: index => { byIdMap["rollback-version"].value = String(index); byIdMap["rollback-version"].onchange(); },
     rollback: () => byIdMap["btn-rollback"].onclick(),
     collega: () => byIdMap["btn-collega"].onclick(),
+    hotfix: () => byIdMap["btn-hotfix"].onclick({ type: "click" }),
     kiesOmgeving: filter => byIdMap[`env-${filter}-box`].onclick(),
     // issue → branch → twee commits → PR → merge; soort is "merge", "squash" of "rebase"
     mergeRonde: soort => {
@@ -151,6 +164,25 @@ const delen = [
   const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, state, setFetchMode, stappen, initialBadge, decorateLogTerms: window.__decorateLogTerms };
 
   for (const [, deel] of delen) await deel(gereedschap);
+
+  // Hotfix-route: eerst staat test bewust nieuwer dan live, daarna volstaat één knop.
+  stappen.opnieuw();
+  stappen.mergeRonde("merge");
+  const liveBeforeHotfix = state().env.liveCommit;
+  const issuesBeforeHotfix = state().issues.length;
+  const prsBeforeHotfix = state().prs.length;
+  const commitsBeforeHotfix = state().commits.length;
+  assert(byIdMap["btn-hotfix"].disabled === false, "hotfix-knop is actief als test nieuwer is dan live");
+  stappen.hotfix();
+  const hotfixCommit = state().commits.find(c => c.kind === "hotfix");
+  const hotfixMerge = state().commits.at(-1);
+  assert(state().env.liveCommit === hotfixMerge.id && state().env.test === state().env.live, "hotfix brengt de nieuwe versie in één actie naar live");
+  assert(hotfixCommit && hotfixCommit.parents.length === 1 && hotfixCommit.parents[0] === liveBeforeHotfix, "hotfix vertrekt vanaf de actuele live-commit");
+  assert(hotfixMerge.hotfix === true && hotfixMerge.parents.length === 2 && state().commits.length === commitsBeforeHotfix + 2, "hotfix maakt een aparte route met minder tussenstappen dan de gewone route");
+  assert(state().issues.length === issuesBeforeHotfix && state().prs.length === prsBeforeHotfix, "hotfix maakt geen gewone issue- of PR-route aan");
+  assert(byIdMap["map-scroll"].innerHTML.includes("⚡") && byIdMap["legend"].innerHTML.includes("hotfix"), "kaart en legenda herkennen de hotfix-route");
+  assert([...byIdMap["log"].children].some(entry => entry.innerHTML.includes("live") && entry.innerHTML.includes("minder controle vooraf") && entry.innerHTML.includes("gewone route terug")), "logboek benoemt live-start, snelheid, prijs en terugkeer naar de gewone route");
+  assert(byIdMap["btn-hotfix"].disabled === true, "hotfix-knop schakelt uit als test en live weer gelijk zijn");
 
   if (failed) { console.error(`\n${failed} van ${total} CHECK(S) GEFAALD`); process.exit(1); }
   console.log(`\nALLE ${total} CHECKS GESLAAGD`);
