@@ -74,7 +74,7 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe. **Een nieuwe assert controleert gedrag of een uiteindelijk DOM-resultaat, nooit de letterlijke inhoud van het `<script>`-blok.**
 4. **Bouw uitsluitend de gevraagde uitkomst.** Een nuttige, technisch aantrekkelijke of voor de hand liggende verbetering die Rob niet heeft gevraagd, valt nog steeds buiten scope. Meld zo'n idee als een afzonderlijk voorstel en bouw het niet mee in deze PR. De gevallen uit PR #113 en PR #117 laten zien waarom: beide gevraagde reparaties waren goed, maar de ongevraagde aanvullingen hadden bestaand gedrag kunnen beschadigen.
 
-### Controle vóór oplevering
+### Controle van de diff vóór de pull request
 
 5. Controleer vóór het openen van de PR de volledige diff tegen de opdracht in het issue. Verwijder elke wijziging zonder grond in het issue, of breng die terug tot een los voorstel buiten de PR. Controleer daarbij ook of een verbetering die nuttig of technisch aantrekkelijk lijkt toch buiten de gevraagde scope valt.
 6. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
@@ -108,7 +108,7 @@ Een wijziging die niet is uitgeprobeerd, meld je als **niet af**. Meld dus niet 
 
 Een hotfix is alleen een kleine, dringende reparatie. Alleen Rob of Kevin bepaalt dat iets een hotfix is. Ook bij een hotfix blijven controles, beoordeling en melding verplicht. Daarna komt de wijziging terug in de gewone route.
 
-### Controle vóór oplevering
+### Controle op volledigheid van de afspraken
 
 - [ ] De tabel bevat alle zes onderwerpen en verantwoordelijken.
 - [ ] Een muurmelding noemt afzonderlijk wat ontbreekt, wie het regelt, wat kapot blijft en wat is afgemaakt.
