@@ -1,11 +1,11 @@
 // Controles rond de begrippenlijst en de klikbare begrippen in het logboek.
 module.exports = async function begrippen({ assert, byIdMap, makeEl, glossaryResult, stappen, decorateLogTerms }) {
-  assert((glossaryResult().match(/<details class="term-item"/g) || []).length === 28, "begrippenlijst rendert precies 28 termen");
+  assert((glossaryResult().match(/<details class="term-item"/g) || []).length === 29, "begrippenlijst rendert precies 29 termen");
   assert(glossaryResult().includes('id="term-rebase"') && glossaryResult().includes('id="term-fork"') && glossaryResult().includes("<summary>Rebase</summary>") && glossaryResult().includes("<summary>Fork</summary>"), "Rebase en Fork bestaan als klikbare begrippen");
   assert(glossaryResult().includes("opnieuw boven op een andere basis") && glossaryResult().includes("rechte geschiedenis zonder merge-commit") && glossaryResult().includes("nieuwste basis"), "Rebase toont uitleg, merge-onderscheid en workflowvoorbeeld");
   assert(glossaryResult().includes("eigen kopie van een repository onder je eigen account") && glossaryResult().includes("aparte repository") && glossaryResult().includes("via een pull request terug"), "Fork toont uitleg, branch-onderscheid en workflowvoorbeeld");
-  assert(glossaryResult().includes('id="term-rebase"') && glossaryResult().includes('id="term-fork"') && glossaryResult().match(/term-explanation/g).length === 28 && glossaryResult().match(/term-example/g).length === 28, "Rebase en Fork volgen de bestaande uitleg-/voorbeeldstructuur");
-  assert(glossaryResult().includes("Voorbeeld:") && glossaryResult().includes("CI monitoring unavailable"), "elke begrippenlijst-entry bevat uitleg en voorbeeld");
+  assert(glossaryResult().includes('id="term-rebase"') && glossaryResult().includes('id="term-fork"') && glossaryResult().match(/term-explanation/g).length === 29 && glossaryResult().match(/term-example/g).length === 29, "Rebase en Fork volgen de bestaande uitleg-/voorbeeldstructuur");
+  assert(glossaryResult().includes("Voorbeeld:") && glossaryResult().includes("<summary>CI-status ontbreekt</summary>") && !glossaryResult().includes("<summary>CI monitoring unavailable</summary>") && decorateLogTerms("CI monitoring unavailable").includes("focusTerm('CI-status ontbreekt')") && glossaryResult().includes("iets anders dan een rode check") && glossaryResult().includes("Actions-run"), "CI-status ontbreekt heeft een Nederlands kopje en behoudt technische uitleg en voorbeeld");
   const newTermsLog = decorateLogTerms("rebase fork");
   assert(newTermsLog.includes("focusTerm('Rebase')") && newTermsLog.includes("focusTerm('Fork')"), "logboek-koppeling herkent de keywords rebase en fork");
   const commandReference = byIdMap["commandoreferentie-lijst"].innerHTML;
