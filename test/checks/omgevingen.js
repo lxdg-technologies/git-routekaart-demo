@@ -6,7 +6,8 @@ module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, 
   assert(byIdMap["env-live-age"].textContent === "alleen na jouw akkoord", "live toont vóór promotie geen verstreken live-tijd");
   assert(byIdMap["btn-promote"].disabled === true, "promote start uitgeschakeld als test gelijk is aan live");
   assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld zonder merge-head");
-  assert(state().envFilter === "all" && !mapResult().includes("data-env-frame") && byIdMap["env-filter-note"].textContent === "" && ["env-dev-box", "env-test-box", "env-live-box"].every(id => byIdMap[id].tag === "button" && typeof byIdMap[id].onclick === "function" && byIdMap[id].attributes["aria-pressed"] === "false"), "omgevingsvakjes starten als native klikbare Alles-weergave zonder kader");
+  assert(state().envFilter === "all" && !mapResult().includes("data-env-frame") && byIdMap["env-filter-note"].textContent.includes("Simulatie/oefening") && ["env-dev-box", "env-test-box", "env-live-box"].every(id => byIdMap[id].tag === "button" && typeof byIdMap[id].onclick === "function" && byIdMap[id].attributes["aria-pressed"] === "false"), "omgevingsvakjes starten als native klikbare Alles-weergave met oefenlabel");
+  assert(byIdMap["env-source-label"].textContent.includes("kaartversies") && byIdMap["env-source-label"].textContent.includes("echte deploymentgegevens"), "omgevingen onderscheiden oefenkaartversies van echte deploymentgegevens");
 
   stappen.mergeRonde("merge");
   assert(byIdMap["env-test"].textContent === "v0.1.1", "merge zet de nieuwe release op test");
@@ -66,7 +67,7 @@ module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, 
   assert(state().envFilter === "test" && liveFaded > testFaded && testFrame.length === 1 && testFrame[0].includes('stroke="var(--accent)"') && byIdMap["env-filter-note"].textContent.includes("Test"), "Test toont meer main dan Live met één blauw kader wanneer live achterloopt");
 
   stappen.kiesOmgeving("test");
-  assert(state().envFilter === "all" && !mapResult().includes("data-env-faded=\"true\"") && !mapResult().includes("data-env-frame") && byIdMap["env-filter-note"].textContent === "" && byIdMap["env-test-box"].attributes["aria-pressed"] === "false", "nogmaals op Test zet de kaart terug naar Alles zonder grijze filterdelen of kader");
+  assert(state().envFilter === "all" && !mapResult().includes("data-env-faded=\"true\"") && !mapResult().includes("data-env-frame") && byIdMap["env-filter-note"].textContent.includes("Simulatie/oefening") && byIdMap["env-test-box"].attributes["aria-pressed"] === "false", "nogmaals op Test zet de kaart terug naar Alles zonder grijze filterdelen of kader");
 
   stappen.opnieuw();
   stappen.mergeRonde("merge");
