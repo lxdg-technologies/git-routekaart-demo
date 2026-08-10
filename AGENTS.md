@@ -75,6 +75,42 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
 5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` maakt automatisch één nieuwe patchversie en vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie van een expliciet gekozen versie.
 
+## Wie regelt wat
+
+| Onderwerp | Verantwoordelijke |
+|---|---|
+| GitHub-rechten, GitHub Apps en branchbeveiliging | Rob of Kevin |
+| Machines, scripts en agentinstellingen | Hermes IT |
+| Code en tests | Coder |
+| PR-beoordeling | Reviewer |
+| Issues, volgorde en projectbord | Planner |
+| Productbeslissingen, mergen en live | Rob |
+
+Voor de bedoeling van de simulatie en de vaste werkwijze geldt `WERKWIJZE.md` als bron. Voor de inhoud en grenzen van de technische review geldt `.github/REVIEW.md`; die tekst wordt hier niet herhaald.
+
+### Als je tegen een muur loopt
+
+Stop bij een ontbrekend recht, een ontbrekende instelling of een andere blokkade. Probeer niet opnieuw, zoek geen omweg en gebruik nooit de identiteit van een andere agent. Meld in gewone taal, elk als afzonderlijk punt:
+
+- **Ontbreekt:** welk recht of welke instelling ontbreekt;
+- **Wie regelt:** wie dit kan regelen volgens de tabel hierboven;
+- **Blijft kapot:** wat daardoor niet werkt of geblokkeerd blijft;
+- **Afgerond:** wat je wél hebt afgemaakt.
+
+Een wijziging die niet is uitgeprobeerd, meld je als **niet af**. Meld dus niet dat iets geslaagd of klaar is zonder een echt uitvoerresultaat. De regel dat je nooit de identiteit van een andere agent gebruikt, geldt ook zolang de situatie uit [issue #111](https://github.com/lxdg-technologies/git-routekaart-demo/issues/111) openstaat; die situatie is daarmee niet opgelost.
+
+### Hotfix
+
+Een hotfix is alleen een kleine, dringende reparatie. Alleen Rob of Kevin bepaalt dat iets een hotfix is. Ook bij een hotfix blijven controles, beoordeling en melding verplicht. Daarna komt de wijziging terug in de gewone route.
+
+### Controle vóór oplevering
+
+- [ ] De tabel bevat alle zes onderwerpen en verantwoordelijken.
+- [ ] Een muurmelding noemt afzonderlijk wat ontbreekt, wie het regelt, wat kapot blijft en wat is afgemaakt.
+- [ ] De muur-regel zegt: niet opnieuw proberen, geen omweg zoeken en geen andere identiteit gebruiken.
+- [ ] Een niet-uitgeprobeerde wijziging is als niet af gemeld.
+- [ ] De hotfixdefinitie noemt de kleine dringende reparatie, Rob of Kevin, verplichte controles/beoordeling/melding en de terugkeer naar de gewone route.
+
 ## Met meerdere mensen tegelijk werken
 
 **Git voegt per regel samen, niet per bestand.** Twee mensen die verschillende stukken van `index.html` aanpassen, gaan vanzelf goed samen. Een conflict ontstaat alleen als jullie dezelfde regels aanraken.
