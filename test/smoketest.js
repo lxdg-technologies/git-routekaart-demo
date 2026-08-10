@@ -37,7 +37,7 @@ const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-source-label", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
-  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-check", "test-live-promote-link"];
+  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
@@ -179,7 +179,7 @@ const delen = [
   global.location = { pathname: "/test/" };
   const loadTestStatus = async mode => { setFetchMode(mode); await window.__loadTestLiveStatus(); await flush(); };
   await loadTestStatus("test-live-behind");
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("Testversie: v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("Liveversie: v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("Test loopt voor"), "testpagina toont testversie, liveversie en het verschil");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.8" && byIdMap["test-live-status-text"].textContent.includes("Test loopt voor") && !byIdMap["test-live-status-text"].textContent.includes("v9.9.9"), "testpagina toont echte versies bovenaan en het verschil zonder dubbele versies");
   assert(byIdMap["test-live-promote-link"].hidden === true, "promotielink blijft verborgen vóór de veiligheidscontrole");
   await loadTestStatus("checks-green");
   byIdMap["test-live-check"].onclick(); await flush();

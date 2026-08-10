@@ -47,6 +47,10 @@
   header.top h1 { font-size: 1.45rem; font-weight: 700; margin: 0; letter-spacing: -.01em; }
   header.top h1 .metro { color: var(--main-line); }
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+  .deployment-versions { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .35rem .8rem; align-items: baseline; margin-top: .15rem; padding: .45rem .65rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink-soft); font-size: .78rem; }
+  .deployment-versions strong { color: var(--ink); }
+  .deployment-version { display: inline-flex; gap: .35rem; min-width: 0; align-items: baseline; }
+  .deployment-version code { color: var(--ink); font: 700 .82rem var(--mono); overflow-wrap: anywhere; }
   .repository-dashboard { max-width: 1520px; margin: 0 auto 1rem; }
   .repository-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .repository-heading h2 { margin-bottom: .2rem; }
@@ -277,6 +281,11 @@
 <header class="top">
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
+  <div class="deployment-versions" aria-label="Echte deploymentversies">
+    <strong>Echte deploymentversies:</strong>
+    <span class="deployment-version">Test <code id="real-test-version">—</code></span>
+    <span class="deployment-version">Live <code id="real-live-version">—</code></span>
+  </div>
 </header>
 
 <!-- ==== SECTIE: LAYOUT ==== -->
@@ -920,9 +929,10 @@
       if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("liveversie is ongeldig");
       const test = testVersion.build.version;
       const live = liveData.version.trim();
+      setDeploymentVersions(test, live);
       text.textContent = test === live
-        ? `Testversie: ${test}. Liveversie: ${live}. Verschil: er is niets nieuws te controleren.`
-        : `Testversie: ${test}. Liveversie: ${live}. Verschil: Test loopt voor; controleer eerst de wijzigingen sinds Live.`;
+        ? "Test en Live lopen gelijk. Verschil: er is niets nieuws te controleren."
+        : "Verschil: Test loopt voor; controleer eerst de wijzigingen sinds Live.";
       checkButton.disabled = test === live;
       checkButton.onclick = () => checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData });
       status.hidden = false;
@@ -964,6 +974,32 @@
       status.classList.add("is-blocked");
     } finally {
       checkButton.disabled = false;
+    }
+  }
+  function deploymentUrl(path) {
+    const pathname = typeof location !== "undefined" && typeof location.pathname === "string" ? location.pathname : "/";
+    const marker = "/git-routekaart-demo/";
+    const markerIndex = pathname.indexOf(marker);
+    const base = markerIndex >= 0 ? pathname.slice(0, markerIndex + marker.length) : "/";
+    return `${base}${path}`;
+  }
+  function setDeploymentVersions(test, live) {
+    el("real-test-version").textContent = test;
+    el("real-live-version").textContent = live;
+  }
+  async function loadDeploymentVersions() {
+    if (typeof fetch !== "function" || repositoryUsesSimulatedData()) return;
+    try {
+      const [testResponse, liveResponse] = await Promise.all([
+        fetch(deploymentUrl("test/environment.json"), { cache: "no-store" }),
+        fetch(deploymentUrl("environment.json"), { cache: "no-store" }),
+      ]);
+      if (!testResponse.ok || !liveResponse.ok) throw new Error("deploymentgegevens ontbreken");
+      const [testData, liveData] = await Promise.all([testResponse.json(), liveResponse.json()]);
+      if (!testData || typeof testData.version !== "string" || !testData.version.trim() || !liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("deploymentversies zijn ongeldig");
+      setDeploymentVersions(testData.version.trim(), liveData.version.trim());
+    } catch (error) {
+      setDeploymentVersions("niet beschikbaar", "niet beschikbaar");
     }
   }
   async function loadLatestRelease() {
@@ -1096,6 +1132,7 @@
     renderCommandReference();
     setupReleaseBadge();
     loadLatestRelease();
+    if (typeof location !== "undefined") loadDeploymentVersions();
     loadTestLiveStatus();
     render();
   }
@@ -1704,6 +1741,7 @@
   window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
   window.__promoteAt = promote; // alleen voor test/smoketest.js
   window.__loadTestLiveStatus = loadTestLiveStatus; // alleen voor test/smoketest.js
+  window.__loadDeploymentVersions = loadDeploymentVersions; // alleen voor test/smoketest.js
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
