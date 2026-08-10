@@ -69,6 +69,35 @@ class FakeGitHub:
     def archive(self, project, item):
         self.mutations.append(("archive", item))
 
+    def add_label(self, number, label):
+        self.mutations.append(("add-label", number, label))
+
+    def remove_label(self, number, label):
+        self.mutations.append(("remove-label", number, label))
+
+
+class FakePullRequestGitHub(FakeGitHub):
+    def project_data(self):
+        project = super().project_data()
+        project["items"]["nodes"][0]["content"] = {
+            "__typename": "PullRequest",
+            "number": 83,
+            "repository": {"nameWithOwner": projectbord.REPOSITORY},
+        }
+        return project
+
+    def rest(self, path, **kwargs):
+        if "/issues?" in path:
+            return [{"number": 74, "state": "closed", "labels": [{"name": "soort:github"}]}]
+        if "/pulls?" in path:
+            return [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
+                     "title": "Werk", "body": "Fixes #74", "labels": []}]
+        if "/branches?" in path:
+            return []
+        if "/pulls/" in path:
+            return []
+        raise AssertionError(f"onverwachte API-call: {path}")
+
 
 class ProjectBoardTests(unittest.TestCase):
     def test_http_fout_benoemt_de_geweigerde_bron(self):
@@ -130,6 +159,30 @@ class ProjectBoardTests(unittest.TestCase):
         routekaart = projectbord.IssueState(87, "closed", False, False, False, True, False, frozenset({"soort:routekaart"}))
         self.assertEqual(projectbord.target_environment(github), "Live")
         self.assertEqual(projectbord.target_environment(routekaart), "Test")
+
+    def test_pull_request_volgt_soort_omgeving_en_status(self):
+        github = projectbord.PullRequestState(83, False, False, True, False, frozenset(), frozenset({"soort:github"}))
+        routekaart = projectbord.PullRequestState(88, False, False, True, False, frozenset(), frozenset({"soort:routekaart"}))
+        self.assertEqual(projectbord.target_pr_status(github), "Done")
+        self.assertEqual(projectbord.target_pr_environment(github), "Live")
+        self.assertEqual(projectbord.target_pr_environment(routekaart), "Test")
+
+    def test_pull_request_zonder_beoordeling_is_in_progress_en_met_beoordeling_in_review(self):
+        self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, False, False, False)), "In progress")
+        self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, True, False, False)), "In review")
+        self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, False, False, False, True)), "Done")
+
+    def test_pull_request_krijgt_label_van_gekoppeld_issue_en_logt_omgeving(self):
+        client = FakePullRequestGitHub(None)
+        actions = projectbord.sync(client, project=client.project_data())
+        self.assertIn(("environment", "live"), client.mutations)
+        self.assertIn(("add-label", 83, "soort:github"), client.mutations)
+        self.assertIn("pull request #83: Geen omgeving → Live", actions)
+        self.assertIn("pull request #83: label soort:github toegevoegd", actions)
+
+    def test_koppeling_volgt_sluitwoord_in_pr_tekst(self):
+        self.assertEqual(projectbord._linked_issue_number({"title": "Werk", "body": "Fixes #96"}), 96)
+        self.assertIsNone(projectbord._linked_issue_number({"title": "Werk", "body": "Zie #96"}))
 
     def test_ontbrekend_soortlabel_is_geen_fout(self):
         issue = projectbord.IssueState(1, "open", True, False, False, False, False)
@@ -212,7 +265,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("owner: lxdg-technologies", token_config)
         self.assertNotIn("repositories:", token_config)
         self.assertIn("permission-metadata: read", token_config)
-        self.assertIn("permission-issues: read", token_config)
+        self.assertIn("permission-issues: write", token_config)
         self.assertIn("permission-organization-projects: write", token_config)
 
     def test_workflow_vertaalt_niet_elke_fout_naar_bordrechten(self):
