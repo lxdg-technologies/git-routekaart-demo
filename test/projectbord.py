@@ -175,6 +175,12 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(projectbord.target_pr_environment(github), "Live")
         self.assertEqual(projectbord.target_pr_environment(routekaart), "Test")
 
+    def test_pull_request_met_andere_issue_labels_gebruikt_eigen_soortlabel_voor_live(self):
+        pull_request = projectbord.PullRequestState(99, False, False, True, False,
+                                                    frozenset({"soort:github"}),
+                                                    frozenset({"documentatie"}))
+        self.assertEqual(projectbord.target_pr_environment(pull_request), "Live")
+
     def test_pull_request_zonder_beoordeling_is_in_progress_en_met_beoordeling_in_review(self):
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, False, False, False)), "In progress")
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, True, False, False)), "In review")

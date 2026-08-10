@@ -75,11 +75,15 @@ def target_pr_status(pr: PullRequestState) -> str:
     return "In progress"
 
 
+def _soort_labels(labels: frozenset[str]) -> frozenset[str]:
+    return frozenset(label for label in labels if label in ("soort:routekaart", "soort:github"))
+
+
 def target_pr_environment(pr: PullRequestState) -> str:
     # A manually assigned PR label is a valid source for the environment when
     # there is no usable kind label on the linked issue.  The linked issue
     # remains the only source for changing PR kind labels below.
-    labels = pr.linked_issue_labels or pr.labels
+    labels = _soort_labels(pr.linked_issue_labels) or _soort_labels(pr.labels)
     if "soort:github" in labels:
         return "Live" if pr.merged_pr else "Geen omgeving"
     if pr.merged_pr:
