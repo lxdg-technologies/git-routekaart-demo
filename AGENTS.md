@@ -72,8 +72,13 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 1. Branch vanaf `main` (`feat/...` of `fix/...`) — nooit direct op `main` committen.
 2. Pas `index.html` aan; werk zo nodig `test/smoketest.js` mee bij.
 3. **Draai `node test/smoketest.js` — moet 100% groen zijn** vóór je de PR als klaar beschouwt. Voeg voor nieuw gedrag nieuwe asserts toe. **Een nieuwe assert controleert gedrag of een uiteindelijk DOM-resultaat, nooit de letterlijke inhoud van het `<script>`-blok.**
-4. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
-5. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` maakt automatisch één nieuwe patchversie en vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie van een expliciet gekozen versie.
+4. **Bouw uitsluitend de gevraagde uitkomst.** Een nuttige, technisch aantrekkelijke of voor de hand liggende verbetering die Rob niet heeft gevraagd, valt nog steeds buiten scope. Meld zo'n idee als een afzonderlijk voorstel en bouw het niet mee in deze PR. De gevallen uit PR #113 en PR #117 laten zien waarom: beide gevraagde reparaties waren goed, maar de ongevraagde aanvullingen hadden bestaand gedrag kunnen beschadigen.
+
+### Controle vóór oplevering
+
+5. Controleer vóór het openen van de PR de volledige diff tegen de opdracht in het issue. Verwijder elke wijziging zonder grond in het issue, of breng die terug tot een los voorstel buiten de PR. Controleer daarbij ook of een verbetering die nuttig of technisch aantrekkelijk lijkt toch buiten de gevraagde scope valt.
+6. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
+7. **Mergen doet een mens** (repo-eigenaar beslist) — een agent merget nooit zelf. Een merge naar `main` maakt automatisch één nieuwe patchversie en vernieuwt test; productie vereist daarna nog een afzonderlijke handmatige promotie van een expliciet gekozen versie.
 
 ## Wie regelt wat
 
