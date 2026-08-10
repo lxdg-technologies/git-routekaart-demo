@@ -920,12 +920,12 @@
     const link = el("test-live-promote-link");
     const checkButton = el("test-live-check");
     link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
-    status.hidden = false;
+    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
+    status.hidden = !isTestPage;
     status.classList.remove("is-safe", "is-blocked");
     conditions.hidden = true;
     text.textContent = "Nog niet gecontroleerd";
     link.hidden = true;
-    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
     if (!isTestPage || typeof fetch !== "function") return;
     try {
       const [testVersion, testEnvironmentResponse, liveResponse] = await Promise.all([

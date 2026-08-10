@@ -198,6 +198,9 @@ const delen = [
   assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-condition-published"].textContent.includes("klopt niet"), "niet-overeenkomende testpublicatie blokkeert de veiligheidsmelding");
   await loadTestStatus("invalid");
   assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent === "! Nog niet veilig", "ongeldige versiegegevens leiden niet tot een onterechte groene veiligheidsmelding");
+  global.location = { pathname: "/" };
+  await loadTestStatus("checks-green");
+  assert(byIdMap["test-live-status"].hidden === true, "veiligheidsblok blijft buiten de testpagina verborgen");
 
   // Hotfix-route: eerst staat test bewust nieuwer dan live, daarna volstaat één knop.
   stappen.opnieuw();
