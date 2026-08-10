@@ -160,6 +160,27 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(projectbord.target_environment(github), "Live")
         self.assertEqual(projectbord.target_environment(routekaart), "Test")
 
+    def test_pull_request_routekaart_kan_live_zijn_op_basis_van_merge_commit(self):
+        routekaart = projectbord.PullRequestState(88, False, False, True, False, frozenset(),
+                                                  frozenset({"soort:routekaart"}), "merge-sha")
+        self.assertEqual(projectbord.target_pr_environment(routekaart, live_commit_sha="live-sha", compare_status="identical"), "Live")
+        self.assertEqual(projectbord.target_pr_environment(routekaart, live_commit_sha="live-sha", compare_status="behind"), "Test")
+
+    def test_onbekende_liveversie_kan_nooit_live_worden(self):
+        routekaart_issue = projectbord.IssueState(88, "closed", False, False, False, True, False,
+                                                  frozenset({"soort:routekaart"}), "merge-sha")
+        routekaart_pr = projectbord.PullRequestState(89, False, False, True, False, frozenset(),
+                                                     frozenset({"soort:routekaart"}), "merge-sha")
+        self.assertEqual(projectbord.target_environment(routekaart_issue, live_commit_sha=None, compare_status="identical"), "Test")
+        self.assertEqual(projectbord.target_pr_environment(routekaart_pr, live_commit_sha="", compare_status="ahead"), "Test")
+
+    def test_liveversiefout_laat_synchronisatie_doorgaan(self):
+        client = FakeGitHub(None)
+        with patch.object(projectbord, "_live_commit_sha", wraps=projectbord._live_commit_sha) as read_live:
+            projectbord.sync(client, project=client.project_data())
+        read_live.assert_called_once_with(client)
+        self.assertEqual(client.mutations, [])
+
     def test_pull_request_volgt_soort_omgeving_en_status(self):
         github = projectbord.PullRequestState(83, False, False, True, False, frozenset(), frozenset({"soort:github"}))
         routekaart = projectbord.PullRequestState(88, False, False, True, False, frozenset(), frozenset({"soort:routekaart"}))
