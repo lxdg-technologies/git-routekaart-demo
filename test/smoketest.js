@@ -37,7 +37,7 @@ const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-source-label", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
-  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version"];
+  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
@@ -179,25 +179,28 @@ const delen = [
   global.location = { pathname: "/test/" };
   const loadTestStatus = async mode => { setFetchMode(mode); await window.__loadTestLiveStatus(); await flush(); };
   await loadTestStatus("test-live-behind");
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.8" && byIdMap["test-live-status-text"].textContent.includes("Test loopt voor") && !byIdMap["test-live-status-text"].textContent.includes("v9.9.9"), "testpagina toont echte versies bovenaan en het verschil zonder dubbele versies");
-  assert(byIdMap["test-live-promote-link"].hidden === true, "promotielink blijft verborgen vóór de veiligheidscontrole");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent === "Nog niet gecontroleerd" && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.8", "beginstand toont alleen Nog niet gecontroleerd en echte versies staan bovenaan");
+  assert(byIdMap["test-live-promote-link"].hidden === true && byIdMap["test-live-conditions"].hidden === true, "promotie en voorwaarden blijven verborgen vóór de veiligheidscontrole");
   await loadTestStatus("checks-green");
   byIdMap["test-live-check"].onclick(); await flush();
-  assert(byIdMap["test-live-status"].classList.contains("is-safe") && byIdMap["test-live-status-text"].textContent.includes("Alle verplichte controles zijn geslaagd"), "groene verplichte controle meldt dat Test veilig kan worden aangeboden");
-  assert(byIdMap["test-live-promote-link"].hidden === false && byIdMap["test-live-status-text"].textContent.includes("mens moet nog bevestigen"), "alleen groen toont de handmatige promotieworkflow en menselijke bevestiging");
+  assert(byIdMap["test-live-status"].classList.contains("is-safe") && byIdMap["test-live-status-text"].textContent === "✓ Veilig om live te zetten" && byIdMap["test-live-condition-checks"].textContent.includes("Alle verplichte controles zijn geslaagd"), "groene controle toont in één regel dat Test veilig live kan");
+  assert(byIdMap["test-live-promote-link"].hidden === false && byIdMap["test-live-condition-human"].textContent.includes("mens"), "alleen groen toont de knop voor handmatige promotie en menselijke bevestiging");
   await loadTestStatus("test-live-equal");
-  assert(byIdMap["test-live-status-text"].textContent.includes("er is niets nieuws te controleren") && byIdMap["test-live-check"].disabled === true && byIdMap["test-live-promote-link"].hidden === true, "gelijke test- en liveversie geeft geen misleidende promotie-uitnodiging");
+  assert(byIdMap["test-live-status-text"].textContent === "! Nog niet veilig" && byIdMap["test-live-check"].disabled === true && byIdMap["test-live-promote-link"].hidden === true, "gelijke test- en liveversie toont geen veilige promotie-uitkomst");
   await loadTestStatus("checks-failed");
   byIdMap["test-live-check"].onclick(); await flush();
-  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && !byIdMap["test-live-status-text"].textContent.includes("Alle verplichte controles zijn geslaagd") && byIdMap["test-live-promote-link"].hidden === true, "mislukte verplichte controle toont geen groen resultaat of promotielink");
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent === "! Nog niet veilig" && byIdMap["test-live-promote-link"].hidden === true, "mislukte verplichte controle toont geen groen resultaat of promotieknop");
   await loadTestStatus("checks-missing");
   byIdMap["test-live-check"].onclick(); await flush();
-  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent.includes("ontbreekt"), "ontbrekende verplichte controle blokkeert de veiligheidsmelding");
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-condition-checks"].textContent.includes("ontbreekt"), "ontbrekende verplichte controle blokkeert de veiligheidsmelding");
   await loadTestStatus("test-live-invalid-published");
   byIdMap["test-live-check"].onclick(); await flush();
-  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent.includes("testpublicatie"), "niet-overeenkomende testpublicatie blokkeert de veiligheidsmelding");
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-condition-published"].textContent.includes("klopt niet"), "niet-overeenkomende testpublicatie blokkeert de veiligheidsmelding");
   await loadTestStatus("invalid");
-  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && !byIdMap["test-live-status-text"].textContent.includes("Alle verplichte controles zijn geslaagd"), "ongeldige versiegegevens leiden niet tot een onterechte groene veiligheidsmelding");
+  assert(byIdMap["test-live-status"].classList.contains("is-blocked") && byIdMap["test-live-status-text"].textContent === "! Nog niet veilig", "ongeldige versiegegevens leiden niet tot een onterechte groene veiligheidsmelding");
+  global.location = { pathname: "/" };
+  await loadTestStatus("checks-green");
+  assert(byIdMap["test-live-status"].hidden === true, "veiligheidsblok blijft buiten de testpagina verborgen");
 
   // Hotfix-route: eerst staat test bewust nieuwer dan live, daarna volstaat één knop.
   stappen.opnieuw();
