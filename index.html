@@ -412,6 +412,7 @@
       <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
       <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
       <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small>iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
+      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small>stop een storing snel, met minder controle vooraf</small></button>
       <div id="tickets"></div>
       <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
     </div>
@@ -507,6 +508,7 @@
     { term: "Semver (major / minor / patch)", keywords: ["semver", "major", "minor", "patch"], explanation: "Semver is versionering volgens major.minor.patch: major voor brekende wijzigingen, minor voor nieuwe compatibele functionaliteit en patch voor compatibele fixes.", example: "Een bugfix kan v1.2.3 naar v1.2.4 brengen; nieuwe compatibele functionaliteit naar v1.3.0." },
     { term: "Pre-release (alpha / beta / rc)", keywords: ["pre-release", "alpha", "beta", "rc"], explanation: "Een pre-release is een versie vóór de stabiele release. Alpha is vroeg, beta is breder testbaar en rc (release candidate) is bijna definitief.", example: "v1.2.0-beta.1 is testbaar, maar nog geen stabiele v1.2.0." },
     { term: "Rollback versus revert", keywords: ["rollback", "revert"], explanation: "Een rollback zet een eerder gebouwd en bewezen pakket direct terug; een revert maakt een nieuwe commit die een wijziging omkeert en opnieuw gebouwd en getest moet worden.", example: "Zet live terug naar v0.1.1 met rollback; gebruik revert om een merge structureel uit main terug te draaien." },
+    { term: "Hotfix", keywords: ["hotfix"], explanation: "Een hotfix is een noodgreep vanaf wat nu live staat om een storing snel te stoppen. Je slaat controles vooraf over, dus de kans op een nieuwe fout is groter; daarna breng je de wijziging alsnog via de gewone route terug.", example: "Staat test op v0.1.2 en live nog op v0.1.1, dan start een hotfix vanaf live v0.1.1 en zet hij de storing snel recht." },
     { term: "HEAD", keywords: ["HEAD"], explanation: "HEAD is de huidige kop: de commit waar een branch of checkout op staat.", example: "main ◀ HEAD betekent dat deze commit nu de kop van main is." },
     { term: "Squash & merge versus merge commit", keywords: ["Squash & merge", "merge commit"], explanation: "Squash & merge maakt één nieuwe commit van alle branch-commits; een merge commit voegt de branch samen en bewaart alle tussenstations met twee ouders.", example: "Kies squash voor een rustige main-lijn of merge commit als je de volledige branchhistorie wilt bewaren." },
     { term: "Merge conflict", keywords: ["merge conflict"], explanation: "Een merge conflict ontstaat als twee wijzigingen niet automatisch samen te voegen zijn en iemand handmatig moet kiezen welke code blijft.", example: "Los de conflictmarkeringen op, test de uitkomst en maak daarna de merge af." },
@@ -1122,7 +1124,7 @@
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
     S.releases.push({ version: v, commitId: S.env.testCommit });
-    const route = mergeType === "rebase" ? "Deze rebase-merge levert" : "Deze merge-commit levert";
+    const route = mergeType === "rebase" ? "Deze rebase-merge levert" : mergeType === "hotfix" ? "Deze hotfix levert" : "Deze merge-commit levert";
     log(`CI bouwt ${v} en zet hem op <b>test</b>`, `${route} versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
   }
@@ -1173,6 +1175,23 @@
     S.env.livePromotedAt = now;
     log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
     tick(8); render();
+  }
+  function hotfix() {
+    if (S.env.test === S.env.live || !S.env.liveCommit) return;
+    const liveCommit = byId(S.env.liveCommit), mainHead = S.branches.main.head;
+    if (!liveCommit || !mainHead) return;
+    const lane = S.laneFree.length ? S.laneFree.shift() : 1;
+    const name = `hotfix/${S.relNum + 1}`;
+    S.branches[name] = { name, lane, color: "#c43b3b", head: liveCommit.id, merged: false, hotfix: true };
+    const fix = addCommit(name, "hotfix: storing gestopt", [liveCommit.id], "hotfix");
+    const merge = addCommit("main", `hotfix vanaf ${S.env.live}`, [mainHead, fix.id], "merge");
+    merge.hotfix = true;
+    S.branches[name].merged = true;
+    S.active = "main";
+    log(`Hotfix vanaf live ${S.env.live} uitgevoerd`, "Deze noodgreep vertrok vanaf wat nu live stond en sloeg issue, branch, PR en de gewone controles vooraf over. Daardoor ging hij met minder tussenstappen sneller naar live, maar met minder controle vooraf is de kans op een nieuwe fout groter. Breng deze wijziging daarna alsnog via de gewone route terug, zodat de normale controle en historie weer kloppen.");
+    release("hotfix");
+    promote();
+    render();
   }
   function rollback() {
     const targetIndex = Number(el("rollback-version").value);
@@ -1337,6 +1356,7 @@
       ? "alleen na jouw akkoord"
       : formatElapsedSince(S.env.livePromotedAt, Date.now());
     el("btn-promote").disabled = !behind;
+    el("btn-hotfix").disabled = !behind;
     const head = byId(S.branches.main.head);
     el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
     const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
@@ -1517,6 +1537,7 @@
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
       if (c.kind === "rebase") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">↻</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
+      if (c.kind === "hotfix" || c.hotfix) stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">⚡</text>`;
       stations += `</g>`;
       const commitLabel = c.id.slice(0, 5), commitLabelY = y + 26;
       labels += `<text x="${x}" y="${commitLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${commitLabel}</text>`;
@@ -1605,12 +1626,13 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
   el("btn-commit").onclick = commit;
   el("btn-collega").onclick = colleagueMerge;
+  el("btn-hotfix").onclick = hotfix;
   el("env-dev-box").onclick = () => setEnvFilter("dev");
   el("env-test-box").onclick = () => setEnvFilter("test");
   el("env-live-box").onclick = () => setEnvFilter("live");
