@@ -285,9 +285,10 @@ class ProjectBoardTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
         self.assertIn("types: [opened, synchronize, reopened, closed]", workflow)
         self.assertIn("types: [submitted, dismissed]", workflow)
+        self.assertIn("types: [opened, edited, labeled, unlabeled, closed, reopened]", workflow)
         sync_job = workflow.split("  synchroniseer:\n", 1)[1]
         sync_job = sync_job.split("\n  ", 1)[0]
-        for event in ("opened", "synchronize", "reopened", "closed", "pull_request_review"):
+        for event in ("opened", "synchronize", "reopened", "closed", "pull_request_review", "issues"):
             with self.subTest(event=event):
                 self.assertIn(event, sync_job)
         self.assertIn("github.event.action == 'closed'", sync_job)
