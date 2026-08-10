@@ -1,6 +1,14 @@
 // Controles rond de acties zelf: commit, PR, merge-vormen, startpunt kiezen en de missievoortgang.
 module.exports = async function acties({ assert, byIdMap, state, stappen }) {
   stappen.opnieuw();
+  assert(byIdMap["btn-promote"].disabled === true && byIdMap["promote-sub"].textContent.includes("niets te promoveren"), "promoveerknop toont in de beginstand waarom hij uitstaat");
+  assert(byIdMap["btn-revert"].disabled === true && byIdMap["revert-sub"].textContent.includes("geen merge"), "revertknop toont in de beginstand waarom hij uitstaat");
+  assert(byIdMap["btn-rollback"].disabled === true && byIdMap["rollback-sub"].textContent.includes("geen eerdere live-versie"), "rollbackknop toont in de beginstand waarom hij uitstaat");
+  assert(byIdMap["btn-collega"].disabled === true && byIdMap["collega-sub"].textContent.includes("eigen branch"), "collega-knop toont op main wat er eerst nodig is");
+  assert(byIdMap["btn-hotfix"].disabled === false && byIdMap["hotfix-sub"].textContent.includes("stop een storing"), "hotfixknop is in de beginstand actief en toont zijn gewone belofte");
+  stappen.hotfix();
+  assert(state().commits.some(c => c.kind === "hotfix"), "hotfix werkt direct vanaf de live-stand");
+  stappen.opnieuw();
   stappen.nieuwIssue();
   stappen.maakBranch();
   stappen.commit();

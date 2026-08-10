@@ -403,12 +403,12 @@
         <button type="button" class="act" id="test-live-check">Controleer of Test klaar is voor live</button>
         <a class="act" id="test-live-promote-link" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer" role="button">Naar handmatige promotie in GitHub Actions ↗</a>
       </div>
-      <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
-      <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
+      <button class="act" id="btn-promote">🚀 Promoveer test → live<small id="promote-sub">zet de geteste versie op het echte systeem</small></button>
+      <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small id="revert-sub">draait de wijziging terug met een nieuwe commit</small></button>
       <div class="rollback-controls" id="rollback-controls">
         <label for="rollback-version">Terugrollen naar eerdere live-versie</label>
         <select id="rollback-version" aria-label="Kies eerdere live-versie"></select>
-        <button class="act" id="btn-rollback">↶ Rollback live<small>zet een eerder bewezen versie direct terug</small></button>
+        <button class="act" id="btn-rollback">↶ Rollback live<small id="rollback-sub">zet een eerder bewezen versie direct terug</small></button>
       </div>
     </div>
 
@@ -434,8 +434,8 @@
       <div class="chips" id="branch-chips"></div>
       <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
       <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
-      <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small>iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
-      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small>stop een storing snel, met minder controle vooraf</small></button>
+      <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small id="collega-sub">iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
+      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small id="hotfix-sub">stop een storing snel, met minder controle vooraf</small></button>
       <div id="tickets"></div>
       <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
     </div>
@@ -1068,6 +1068,7 @@
       active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
       missions: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
       colleagueSeq: 0,
+      hotfixAvailable: true,
       mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null, livePromotedAt: null },
       selectedStart: null,
@@ -1249,6 +1250,7 @@
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
     S.releases.push({ version: v, commitId: S.env.testCommit });
+    if (mergeType !== "hotfix") S.hotfixAvailable = true;
     const route = mergeType === "rebase" ? "Deze rebase-merge levert" : mergeType === "hotfix" ? "Deze hotfix levert" : "Deze merge-commit levert";
     log(`CI bouwt ${v} en zet hem op <b>test</b>`, `${route} versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
@@ -1302,7 +1304,7 @@
     tick(8); render();
   }
   function hotfix() {
-    if (S.env.test === S.env.live || !S.env.liveCommit) return;
+    if (!S.env.liveCommit || !S.hotfixAvailable) return;
     const liveCommit = byId(S.env.liveCommit), mainHead = S.branches.main.head;
     if (!liveCommit || !mainHead) return;
     const lane = S.laneFree.length ? S.laneFree.shift() : 1;
@@ -1313,6 +1315,7 @@
     merge.hotfix = true;
     S.branches[name].merged = true;
     S.active = "main";
+    S.hotfixAvailable = false;
     log(`Hotfix vanaf live ${S.env.live} uitgevoerd`, "Deze noodgreep vertrok vanaf wat nu live stond en sloeg issue, branch, PR en de gewone controles vooraf over. Daardoor ging hij met minder tussenstappen sneller naar live, maar met minder controle vooraf is de kans op een nieuwe fout groter. Breng deze wijziging daarna alsnog via de gewone route terug, zodat de normale controle en historie weer kloppen.");
     release("hotfix");
     promote();
@@ -1480,10 +1483,17 @@
     liveAge.textContent = S.env.livePromotedAt === null
       ? "alleen na jouw akkoord"
       : formatElapsedSince(S.env.livePromotedAt, Date.now());
-    el("btn-promote").disabled = !behind;
-    el("btn-hotfix").disabled = !behind;
+    const promoteButton = el("btn-promote");
+    promoteButton.disabled = !behind;
+    el("promote-sub").textContent = behind
+      ? "zet de geteste versie op het echte systeem"
+      : "Test loopt niet voor op live — er is niets te promoveren";
     const head = byId(S.branches.main.head);
-    el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
+    const canRevert = Boolean(head && (head.kind === "merge" || head.kind === "squash"));
+    el("btn-revert").disabled = !canRevert;
+    el("revert-sub").textContent = canRevert
+      ? "draait de wijziging terug met een nieuwe commit"
+      : "Op main staat nog geen merge om terug te draaien";
     const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
     const rollbackCandidates = liveIndex > 0 ? S.releases.slice(0, liveIndex) : [];
     const rollbackSelect = el("rollback-version");
@@ -1497,7 +1507,24 @@
       S.rollbackPreviewCommit = target ? target.commitId : null;
       render();
     };
-    el("btn-rollback").disabled = rollbackCandidates.length === 0;
+    const canRollback = rollbackCandidates.length > 0;
+    el("btn-rollback").disabled = !canRollback;
+    el("rollback-sub").textContent = canRollback
+      ? "zet een eerder bewezen versie direct terug"
+      : "Er is nog geen eerdere live-versie om naar terug te rollen";
+    const canHotfix = Boolean(S.env.liveCommit && S.hotfixAvailable);
+    el("btn-hotfix").disabled = !canHotfix;
+    el("hotfix-sub").textContent = canHotfix
+      ? "stop een storing snel, met minder controle vooraf"
+      : S.env.liveCommit
+        ? "Er is al een hotfix uitgevoerd — wacht op een nieuwe aanleiding"
+        : "Er is nog geen live-versie om vanaf te starten";
+    const active = S.branches[S.active];
+    const canColleagueMerge = Boolean(active && active.name !== "main" && !active.merged);
+    el("btn-collega").disabled = !canColleagueMerge;
+    el("collega-sub").textContent = canColleagueMerge
+      ? "iemand anders werkt ook — kijk wat er met main gebeurt"
+      : "Je staat op main — maak eerst een eigen branch";
   }
 
   function renderChips() {
