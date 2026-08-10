@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import base64
 import os
 import re
 import sys
@@ -30,6 +31,7 @@ class IssueState:
     merged_pr: bool
     closed_unmerged_pr: bool
     labels: frozenset[str] = frozenset()
+    merge_commit_sha: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,7 @@ class PullRequestState:
     closed_unmerged_pr: bool
     labels: frozenset[str] = frozenset()
     linked_issue_labels: frozenset[str] = frozenset()
+    merge_commit_sha: str | None = None
 
 
 def target_status(issue: IssueState) -> str | None:
@@ -56,12 +59,13 @@ def target_status(issue: IssueState) -> str | None:
     return None
 
 
-def target_environment(issue: IssueState) -> str:
+def target_environment(issue: IssueState, *, live_commit_sha: str | None = None,
+                       compare_status: str | None = None) -> str:
     """Return the environment for the issue's kind of work."""
     if "soort:github" in issue.labels:
         return "Live" if issue.merged_pr else "Geen omgeving"
     if issue.merged_pr:
-        return "Test"
+        return "Live" if live_commit_sha and compare_status in {"ahead", "identical"} else "Test"
     if issue.branch or issue.open_pr:
         return "Ontwikkel"
     return "Geen omgeving"
@@ -79,7 +83,8 @@ def _soort_labels(labels: frozenset[str]) -> frozenset[str]:
     return frozenset(label for label in labels if label in ("soort:routekaart", "soort:github"))
 
 
-def target_pr_environment(pr: PullRequestState) -> str:
+def target_pr_environment(pr: PullRequestState, *, live_commit_sha: str | None = None,
+                          compare_status: str | None = None) -> str:
     # A manually assigned PR label is a valid source for the environment when
     # there is no usable kind label on the linked issue.  The linked issue
     # remains the only source for changing PR kind labels below.
@@ -87,7 +92,7 @@ def target_pr_environment(pr: PullRequestState) -> str:
     if "soort:github" in labels:
         return "Live" if pr.merged_pr else "Geen omgeving"
     if pr.merged_pr:
-        return "Test"
+        return "Live" if live_commit_sha and compare_status in {"ahead", "identical"} else "Test"
     return "Geen omgeving" if pr.closed_unmerged_pr else ("Ontwikkel" if pr.open_pr else "Geen omgeving")
 
 
@@ -230,6 +235,26 @@ class GitHub:
         )
 
 
+def _live_commit_sha(client: Any) -> str | None:
+    """Read the live commit once; malformed or unavailable metadata is safe."""
+    try:
+        payload = client.rest(f"/repos/{REPOSITORY}/contents/version.json?ref=gh-pages")
+        content = base64.b64decode(payload["content"].replace("\n", "")).decode("utf-8")
+        sha = json.loads(content).get("sha")
+        return sha if isinstance(sha, str) and sha else None
+    except Exception:
+        return None
+
+
+def _compare_status(client: Any, merge_commit_sha: str | None, live_commit_sha: str | None) -> str | None:
+    if not merge_commit_sha or not live_commit_sha:
+        return None
+    try:
+        return client.rest(f"/repos/{REPOSITORY}/compare/{merge_commit_sha}...{live_commit_sha}").get("status")
+    except Exception:
+        return None
+
+
 def _http_error_message(path: str, error: HTTPError) -> str:
     """Keep GitHub's complete explanation, without exposing request headers."""
     try:
@@ -261,7 +286,8 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
         # relation available before a PR exists; do not invent a relation otherwise.
         branch = any(re.search(rf"(?:^|[-_/])#?{number}(?:$|[-_/])", b["name"]) for b in branches if b["name"] != "main")
         open_prs = [pr for pr in related if pr["state"] == "open"]
-        merged = any(pr.get("merged_at") for pr in related)
+        merged_pr = next((pr for pr in related if pr.get("merged_at")), None)
+        merged = merged_pr is not None
         closed_unmerged = any(pr["state"] == "closed" and not pr.get("merged_at") for pr in related)
         review = False
         for pr in open_prs:
@@ -271,7 +297,8 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
                 review = True
                 break
         labels = frozenset(label.get("name") for label in issue.get("labels", []) if label.get("name"))
-        states[number] = IssueState(number, issue["state"], branch, bool(open_prs), review, merged, closed_unmerged, labels)
+        states[number] = IssueState(number, issue["state"], branch, bool(open_prs), review, merged, closed_unmerged,
+                                     labels, merged_pr.get("merge_commit_sha") if merged_pr else None)
     return states
 
 
@@ -293,7 +320,7 @@ def _pull_request_states(client: GitHub, issue_states: dict[int, IssueState]) ->
         states[pr["number"]] = PullRequestState(
             pr["number"], open_pr, review, merged,
             pr["state"] == "closed" and not merged,
-            labels, linked_labels,
+            labels, linked_labels, pr.get("merge_commit_sha"),
         )
     return states
 
@@ -324,6 +351,7 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
 
     states = _issue_states(client)
     pull_request_states = _pull_request_states(client, states)
+    live_commit_sha = _live_commit_sha(client)
     actions: list[str] = []
     for item in project["items"]["nodes"]:
         content = item.get("content") or {}
@@ -341,7 +369,11 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
                 client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
                 actions.append(f"pull request #{number}: {current or 'onbekend'} → {desired}")
 
-            environment = target_pr_environment(pr)
+            environment = target_pr_environment(
+                pr,
+                live_commit_sha=live_commit_sha,
+                compare_status=_compare_status(client, pr.merge_commit_sha, live_commit_sha),
+            )
             current_environment = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
                                         if v and v.get("field", {}).get("name") == ENVIRONMENT_FIELD_NAME), None)
             if current_environment != environment:
@@ -377,7 +409,11 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
                 client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
                 status_action = f"issue #{number}: {current or 'onbekend'} → {desired}"
 
-        environment = target_environment(state)
+        environment = target_environment(
+            state,
+            live_commit_sha=live_commit_sha,
+            compare_status=_compare_status(client, state.merge_commit_sha, live_commit_sha),
+        )
         current_environment = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
                                     if v and v.get("field", {}).get("name") == ENVIRONMENT_FIELD_NAME), None)
         preserve_manual_live = (
