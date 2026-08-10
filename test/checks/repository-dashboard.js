@@ -46,11 +46,11 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/test/" };
   setFetchMode("test-live-behind");
   stappen.opnieuw(); await flush(); await flush(); await flush();
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.8" && byIdMap["test-live-status-text"].textContent.includes("Test loopt voor") && !byIdMap["test-live-status-text"].textContent.includes("v9.9.9"), "testomgeving toont echte versies bovenaan en het verschil zonder dubbele versies");
-  assert(byIdMap["test-live-promote-link"].hidden && byIdMap["test-live-check"].disabled === false, "achterstand vraagt eerst om een veiligheidscontrole");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent === "Nog niet gecontroleerd" && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.8", "testomgeving toont echte versies bovenaan en begint met Nog niet gecontroleerd");
+  assert(byIdMap["test-live-promote-link"].hidden && byIdMap["test-live-conditions"].hidden && byIdMap["test-live-check"].disabled === false, "achterstand vraagt eerst om een veiligheidscontrole");
   setFetchMode("test-live-equal");
   stappen.opnieuw(); await flush(); await flush(); await flush();
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("er is niets nieuws te controleren") && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.9", "testomgeving meldt dat gelijke versies niets nieuws te controleren geven");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent === "! Nog niet veilig" && byIdMap["real-test-version"].textContent === "v9.9.9" && byIdMap["real-live-version"].textContent === "v9.9.9", "testomgeving markeert gelijke versies niet als veilig");
   assert(byIdMap["test-live-promote-link"].hidden, "gelijke versies tonen geen overbodige promotielink");
   setFetchMode("version");
   stappen.opnieuw(); await flush(); await flush(); await flush();
