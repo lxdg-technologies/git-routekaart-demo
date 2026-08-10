@@ -76,7 +76,10 @@ def target_pr_status(pr: PullRequestState) -> str:
 
 
 def target_pr_environment(pr: PullRequestState) -> str:
-    labels = pr.linked_issue_labels
+    # A manually assigned PR label is a valid source for the environment when
+    # there is no usable kind label on the linked issue.  The linked issue
+    # remains the only source for changing PR kind labels below.
+    labels = pr.linked_issue_labels or pr.labels
     if "soort:github" in labels:
         return "Live" if pr.merged_pr else "Geen omgeving"
     if pr.merged_pr:
@@ -343,12 +346,13 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
 
             desired_label = next((label for label in ("soort:routekaart", "soort:github")
                                   if label in pr.linked_issue_labels), None)
-            for label in sorted(label for label in pr.labels if label.startswith("soort:") and label != desired_label):
-                client.remove_label(number, label)
-                actions.append(f"pull request #{number}: label {label} verwijderd")
-            if desired_label and desired_label not in pr.labels:
-                client.add_label(number, desired_label)
-                actions.append(f"pull request #{number}: label {desired_label} toegevoegd")
+            if desired_label:
+                for label in sorted(label for label in pr.labels if label.startswith("soort:") and label != desired_label):
+                    client.remove_label(number, label)
+                    actions.append(f"pull request #{number}: label {label} verwijderd")
+                if desired_label not in pr.labels:
+                    client.add_label(number, desired_label)
+                    actions.append(f"pull request #{number}: label {desired_label} toegevoegd")
             continue
         state = states.get(number)
         if not state:
