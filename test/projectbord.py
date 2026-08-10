@@ -167,6 +167,20 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(projectbord.target_pr_environment(github), "Live")
         self.assertEqual(projectbord.target_pr_environment(routekaart), "Test")
 
+    def test_pull_request_kan_bestaand_handmatig_soortlabel_gebruiken_voor_omgeving(self):
+        github = projectbord.PullRequestState(29, False, False, True, False,
+                                              frozenset({"soort:github"}), frozenset())
+        routekaart = projectbord.PullRequestState(47, False, False, True, False,
+                                                  frozenset({"soort:routekaart"}), frozenset())
+        self.assertEqual(projectbord.target_pr_environment(github), "Live")
+        self.assertEqual(projectbord.target_pr_environment(routekaart), "Test")
+
+    def test_pull_request_met_andere_issue_labels_gebruikt_eigen_soortlabel_voor_live(self):
+        pull_request = projectbord.PullRequestState(99, False, False, True, False,
+                                                    frozenset({"soort:github"}),
+                                                    frozenset({"documentatie"}))
+        self.assertEqual(projectbord.target_pr_environment(pull_request), "Live")
+
     def test_pull_request_zonder_beoordeling_is_in_progress_en_met_beoordeling_in_review(self):
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, False, False, False)), "In progress")
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, True, False, False)), "In review")
@@ -179,6 +193,27 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn(("add-label", 83, "soort:github"), client.mutations)
         self.assertIn("pull request #83: Geen omgeving → Live", actions)
         self.assertIn("pull request #83: label soort:github toegevoegd", actions)
+
+    def test_pull_request_zonder_bron_verwijdert_geen_bestaand_soortlabel(self):
+        for body in ("Geen koppeling", "Fixes #74"):
+            with self.subTest(body=body):
+                client = FakePullRequestGitHub(None)
+                client.rest = lambda path, body=body, **kwargs: (
+                    [{"number": 74, "state": "open"}] if "/issues?" in path else
+                    [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
+                      "title": "Werk", "body": body, "labels": [{"name": "soort:github"}]}]
+                    if "/pulls?" in path else []
+                )
+                if body == "Fixes #74":
+                    client.rest = lambda path, **kwargs: (
+                        [{"number": 74, "state": "open", "labels": []}] if "/issues?" in path else
+                        [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
+                          "title": "Werk", "body": body, "labels": [{"name": "soort:github"}]}]
+                        if "/pulls?" in path else []
+                    )
+                actions = projectbord.sync(client, project=client.project_data())
+                self.assertNotIn(("remove-label", 83, "soort:github"), client.mutations)
+                self.assertFalse(any("label soort:github verwijderd" in action for action in actions))
 
     def test_koppeling_volgt_sluitwoord_in_pr_tekst(self):
         self.assertEqual(projectbord._linked_issue_number({"title": "Werk", "body": "Fixes #96"}), 96)
@@ -266,6 +301,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertNotIn("repositories:", token_config)
         self.assertIn("permission-metadata: read", token_config)
         self.assertIn("permission-issues: write", token_config)
+        self.assertIn("permission-pull-requests: write", token_config)
         self.assertIn("permission-organization-projects: write", token_config)
 
     def test_workflow_vertaalt_niet_elke_fout_naar_bordrechten(self):

@@ -58,6 +58,7 @@ jobs:
           # Vraag alleen de rechten die het vertrouwde synchronisatiescript gebruikt.
           permission-metadata: read
           permission-issues: write
+          permission-pull-requests: write
           permission-organization-projects: write
 
       - name: Checkout scripts van main
