@@ -21,6 +21,7 @@ class FakeGitHub:
     def __init__(self, issue_states, current="Backlog"):
         self.issue_states = issue_states
         self.current = current
+        self.environment = "Geen omgeving"
         self.mutations = []
 
     def project(self):
@@ -29,14 +30,18 @@ class FakeGitHub:
     def project_data(self):
         values = [{"field": {"name": "Status"}, "name": self.current}]
         # Dit veld staat opzettelijk naast Status: synchronisatie mag het nooit raken.
-        values.append({"field": {"name": "Omgeving"}, "name": "test"})
+        values.append({"field": {"name": "Omgeving"}, "name": self.environment})
         return {
             "id": "project-1",
-            "fields": {"nodes": [{"id": "status-field", "name": "Status", "options": [
+            "statusField": {"id": "status-field", "name": "Status", "options": [
                 {"id": "backlog", "name": "Backlog"}, {"id": "ready", "name": "Ready"},
                 {"id": "progress", "name": "In progress"}, {"id": "review", "name": "In review"},
                 {"id": "done", "name": "Done"},
-            ]}]},
+            ]},
+            "environmentField": {"id": "environment-field", "name": "Omgeving", "options": [
+                {"id": "none", "name": "Geen omgeving"}, {"id": "dev", "name": "Ontwikkel"},
+                {"id": "test", "name": "Test"}, {"id": "live", "name": "Live"},
+            ]},
             "items": {"nodes": [{"id": "item-1", "isArchived": False,
                 "content": {"number": 74, "repository": {"nameWithOwner": projectbord.REPOSITORY}},
                 "fieldValues": {"nodes": values}}]},
@@ -54,6 +59,12 @@ class FakeGitHub:
     def mutate_status(self, project, item, field, option):
         self.mutations.append(("status", option))
         self.current = {"progress": "In progress", "review": "In review", "done": "Done"}[option]
+
+    def mutate_environment(self, project, item, field, option):
+        self.mutations.append(("environment", option))
+        self.environment = {
+            "none": "Geen omgeving", "dev": "Ontwikkel", "test": "Test", "live": "Live"
+        }[option]
 
     def archive(self, project, item):
         self.mutations.append(("archive", item))
@@ -114,6 +125,22 @@ class ProjectBoardTests(unittest.TestCase):
         projectbord.sync(client, project=client.project_data())
         self.assertEqual(client.mutations, [])
 
+    def test_github_werk_is_live_na_merge_en_routekaart_blijft_test(self):
+        github = projectbord.IssueState(89, "closed", False, False, False, True, False, frozenset({"soort:github"}))
+        routekaart = projectbord.IssueState(87, "closed", False, False, False, True, False, frozenset({"soort:routekaart"}))
+        self.assertEqual(projectbord.target_environment(github), "Live")
+        self.assertEqual(projectbord.target_environment(routekaart), "Test")
+
+    def test_ontbrekend_soortlabel_is_geen_fout(self):
+        issue = projectbord.IssueState(1, "open", True, False, False, False, False)
+        self.assertEqual(projectbord.target_environment(issue), "Ontwikkel")
+
+    def test_bestaande_livepromotie_van_routekaart_blijft_staan(self):
+        client = FakeGitHub(None)
+        client.environment = "Live"
+        projectbord.sync(client, project=client.project_data())
+        self.assertEqual(client.mutations, [])
+
     def test_open_pr_met_review_gaat_idempotent_naar_in_review(self):
         client = FakeGitHub(None)
         client.issue_states = None
@@ -125,7 +152,7 @@ class ProjectBoardTests(unittest.TestCase):
         )
         projectbord.sync(client, project=client.project_data())
         projectbord.sync(client, project=client.project_data())
-        self.assertEqual(client.mutations, [("status", "review")])
+        self.assertEqual(client.mutations, [("status", "review"), ("environment", "dev")])
 
     def test_gemerged_pr_is_done_en_gesloten_pr_wordt_gearchiveerd(self):
         self.assertEqual(projectbord.target_status(projectbord.IssueState(74, "closed", False, False, False, True, False)), "Done")
@@ -134,7 +161,7 @@ class ProjectBoardTests(unittest.TestCase):
     def test_ontbrekende_statusoptie_is_duidelijke_fout(self):
         client = FakeGitHub(None)
         project = client.project_data()
-        project["fields"]["nodes"][0]["options"] = [{"id": "backlog", "name": "Backlog"}]
+        project["statusField"]["options"] = [{"id": "backlog", "name": "Backlog"}]
         with self.assertRaisesRegex(RuntimeError, "statusoptie"):
             projectbord.sync(client, project=project)
 

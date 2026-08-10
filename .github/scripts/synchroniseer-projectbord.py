@@ -16,6 +16,8 @@ ORGANIZATION = "lxdg-technologies"
 PROJECT_NUMBER = 2
 STATUS_FIELD_NAME = "Status"
 STATUSES = {"In progress", "In review", "Done"}
+ENVIRONMENT_FIELD_NAME = "Omgeving"
+ENVIRONMENTS = {"Geen omgeving", "Ontwikkel", "Test", "Live"}
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,7 @@ class IssueState:
     review: bool
     merged_pr: bool
     closed_unmerged_pr: bool
+    labels: frozenset[str] = frozenset()
 
 
 def target_status(issue: IssueState) -> str | None:
@@ -40,6 +43,17 @@ def target_status(issue: IssueState) -> str | None:
     if issue.branch or issue.open_pr:
         return "In progress"
     return None
+
+
+def target_environment(issue: IssueState) -> str:
+    """Return the environment for the issue's kind of work."""
+    if "soort:github" in issue.labels:
+        return "Live" if issue.merged_pr else "Geen omgeving"
+    if issue.merged_pr:
+        return "Test"
+    if issue.branch or issue.open_pr:
+        return "Ontwikkel"
+    return "Geen omgeving"
 
 
 def _references_issue(pr: dict[str, Any], number: int) -> bool:
@@ -86,8 +100,6 @@ class GitHub:
         return payload["data"]
 
     def project(self) -> dict[str, Any]:
-        # Vraag bewust uitsluitend het statusveld op. Het automatische veld Omgeving
-        # komt nergens in deze query voor en kan dus niet door deze workflow wijzigen.
         data = self.graphql(
             """
             query($org:String!, $number:Int!) {
@@ -95,6 +107,9 @@ class GitHub:
                 projectV2(number:$number) {
                   id
                   statusField: field(name:"Status") {
+                    ... on ProjectV2SingleSelectField { id name options { id name } }
+                  }
+                  environmentField: field(name:"Omgeving") {
                     ... on ProjectV2SingleSelectField { id name options { id name } }
                   }
                   items(first:100) { nodes {
@@ -129,6 +144,9 @@ class GitHub:
             """,
             {"project": project_id, "item": item_id, "field": field_id, "option": option_id},
         )
+
+    def mutate_environment(self, project_id: str, item_id: str, field_id: str, option_id: str) -> None:
+        self.mutate_status(project_id, item_id, field_id, option_id)
 
     def archive(self, project_id: str, item_id: str) -> None:
         self.graphql(
@@ -181,7 +199,8 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
             if requested.get("users") or requested.get("teams") or reviews:
                 review = True
                 break
-        states[number] = IssueState(number, issue["state"], branch, bool(open_prs), review, merged, closed_unmerged)
+        labels = frozenset(label.get("name") for label in issue.get("labels", []) if label.get("name"))
+        states[number] = IssueState(number, issue["state"], branch, bool(open_prs), review, merged, closed_unmerged, labels)
     return states
 
 
@@ -197,6 +216,17 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
     missing = STATUSES - options.keys()
     if missing:
         raise RuntimeError("ProjectV2 mist statusoptie(s): " + ", ".join(sorted(missing)))
+
+    environment_field: dict[str, Any] | None = project.get("environmentField")
+    if environment_field is None:
+        fields = [f for f in project.get("fields", {}).get("nodes", []) if f and f.get("name") == ENVIRONMENT_FIELD_NAME]
+        environment_field = fields[0] if len(fields) == 1 else None
+    if not isinstance(environment_field, dict):
+        raise RuntimeError("ProjectV2 heeft niet precies één veld Omgeving")
+    environment_options = {o["name"]: o["id"] for o in environment_field.get("options", [])}
+    missing = ENVIRONMENTS - environment_options.keys()
+    if missing:
+        raise RuntimeError("ProjectV2 mist omgevingsoptie(s): " + ", ".join(sorted(missing)))
 
     states = _issue_states(client)
     actions: list[str] = []
@@ -215,13 +245,28 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
                 actions.append(f"issue #{number}: kaart gearchiveerd")
             continue
         if desired is None:
-            continue
-        current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
-                        if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
-        if current == desired:
-            continue
-        client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
-        actions.append(f"issue #{number}: {current or 'onbekend'} → {desired}")
+            status_action = None
+        else:
+            current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
+                            if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
+            status_action = None
+            if current != desired:
+                client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
+                status_action = f"issue #{number}: {current or 'onbekend'} → {desired}"
+
+        environment = target_environment(state)
+        current_environment = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
+                                    if v and v.get("field", {}).get("name") == ENVIRONMENT_FIELD_NAME), None)
+        preserve_manual_live = (
+            environment != "Live"
+            and current_environment == "Live"
+            and "soort:github" not in state.labels
+        )
+        if current_environment != environment and not preserve_manual_live:
+            client.mutate_environment(project["id"], item["id"], environment_field["id"], environment_options[environment])
+            actions.append(f"issue #{number}: {current_environment or 'onbekend'} → {environment}")
+        if status_action:
+            actions.append(status_action)
     return actions
 
 
