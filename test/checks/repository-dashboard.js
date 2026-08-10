@@ -46,14 +46,14 @@ module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fe
   global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/test/" };
   setFetchMode("test-live-behind");
   stappen.opnieuw(); await flush(); await flush(); await flush();
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("test staat op v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("live op v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("Promoveren naar live gaat handmatig en vraagt een bevestiging") && !byIdMap["test-live-status-text"].textContent.includes("goedkeuring van iemand anders"), "testomgeving meldt beide versies en handmatige promotie met bevestiging als live achterloopt");
-  assert(!byIdMap["test-live-promote-link"].hidden && byIdMap["test-live-promote-link"].href.includes("promote-production.yml"), "achterstand verwijst rechtstreeks naar de promotieworkflow");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("Testversie: v9.9.9") && byIdMap["test-live-status-text"].textContent.includes("Liveversie: v9.9.8") && byIdMap["test-live-status-text"].textContent.includes("Test loopt voor"), "testomgeving meldt beide versies en het verschil als live achterloopt");
+  assert(byIdMap["test-live-promote-link"].hidden && byIdMap["test-live-check"].disabled === false, "achterstand vraagt eerst om een veiligheidscontrole");
   setFetchMode("test-live-equal");
   stappen.opnieuw(); await flush(); await flush(); await flush();
-  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("staat ook live") && byIdMap["test-live-status-text"].textContent.includes("v9.9.9"), "testomgeving bevestigt dat gelijke versies live staan");
+  assert(!byIdMap["test-live-status"].hidden && byIdMap["test-live-status-text"].textContent.includes("er is niets nieuws te controleren") && byIdMap["test-live-status-text"].textContent.includes("v9.9.9"), "testomgeving meldt dat gelijke versies niets nieuws te controleren geven");
   assert(byIdMap["test-live-promote-link"].hidden, "gelijke versies tonen geen overbodige promotielink");
   setFetchMode("version");
   stappen.opnieuw(); await flush(); await flush(); await flush();
-  assert(byIdMap["test-live-status"].hidden, "onbekende live-versie blijft rustig verborgen");
+  assert(byIdMap["test-live-status"].hidden || byIdMap["test-live-status"].classList.contains("is-blocked"), "onbekende live-versie blijft zonder groene veiligheidsmelding");
   delete global.location;
 };
