@@ -108,6 +108,7 @@
   #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
   #map-scroll svg { display: block; }
   .env-filter-note { min-height: 1.35em; margin: 0 .25rem .35rem; color: var(--ink-soft); font-size: .82rem; }
+  .source-label { margin: .35rem 0 .7rem; color: var(--ink-soft); font-size: .82rem; }
   .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
   .branch-line:hover, .branch-line:focus-visible { stroke-width: 8px; filter: drop-shadow(0 0 3px currentColor); }
   .pr-preview { cursor: pointer; transition: filter .15s; }
@@ -180,6 +181,9 @@
   .env.live { border-color: var(--ok); }
   .test-live-status { margin: .7rem 0 0; padding: .55rem .65rem; border: 1px solid var(--accent); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
   .test-live-status a { color: var(--accent); font-weight: 700; }
+  .test-live-status.is-safe { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .test-live-status.is-blocked { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+  .test-live-status button { margin-top: .55rem; }
   .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
 
   /* ==== SECTIE: ACTIES ==== */
@@ -280,7 +284,7 @@
   <div>
     <!-- ==== SECTIE: KAART ==== -->
     <div class="card" id="map-card">
-      <p id="env-filter-note" class="env-filter-note" aria-live="polite"></p>
+      <p id="env-filter-note" class="env-filter-note" aria-live="polite">Simulatie/oefening: acties op deze kaart wijzigen GitHub niet.</p>
       <div id="map-scroll"></div>
       <div class="legend" id="legend"></div>
     </div>
@@ -357,6 +361,7 @@
     <!-- ==== SECTIE: OMGEVINGEN ==== -->
     <div class="card" id="omgevingen">
       <h2>Omgevingen</h2>
+      <p id="env-source-label" class="source-label"></p>
       <div class="envs" aria-label="Kies omgevingsweergave">
         <button type="button" class="env dev" id="env-dev-box" aria-pressed="false" aria-label="Toon Ontwikkel-weergave">
           <div class="env-name">Ontwikkel</div>
@@ -378,7 +383,8 @@
       </div>
       <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
         <span id="test-live-status-text"></span>
-        <a id="test-live-promote-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar promotie in GitHub Actions ↗</a>
+        <br><button type="button" class="act" id="test-live-check">Controleer of Test klaar is voor live</button>
+        <a id="test-live-promote-link" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar handmatige promotie in GitHub Actions ↗</a>
       </p>
       <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
       <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
@@ -412,6 +418,7 @@
       <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
       <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
       <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small>iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
+      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small>stop een storing snel, met minder controle vooraf</small></button>
       <div id="tickets"></div>
       <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
     </div>
@@ -437,6 +444,7 @@
     </div>
   </div>
   <p class="repository-status" id="repository-status" role="status" aria-live="polite">GitHub-gegevens worden opgehaald…</p>
+  <p class="source-label" id="repository-source-label"></p>
   <div class="repository-summary" id="repository-summary" aria-label="Samenvatting repository"></div>
   <div class="repository-columns">
     <section class="repository-column" aria-labelledby="repository-commits-title">
@@ -462,7 +470,7 @@
 <details class="release-badge" id="release-history" aria-live="polite">
   <summary id="release-badge-label">release: onbekend</summary>
   <div class="release-history-panel">
-    <h3>Releasegeschiedenis</h3>
+    <h3>Releasegeschiedenis <span id="release-source-label"></span></h3>
     <a class="release-current-link" id="release-current-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/releases" target="_blank" rel="noreferrer">Bekijk release op GitHub ↗</a>
     <p class="release-build-note" id="release-build-note"></p>
     <ul class="release-history-list" id="release-history-list">
@@ -507,6 +515,7 @@
     { term: "Semver (major / minor / patch)", keywords: ["semver", "major", "minor", "patch"], explanation: "Semver is versionering volgens major.minor.patch: major voor brekende wijzigingen, minor voor nieuwe compatibele functionaliteit en patch voor compatibele fixes.", example: "Een bugfix kan v1.2.3 naar v1.2.4 brengen; nieuwe compatibele functionaliteit naar v1.3.0." },
     { term: "Pre-release (alpha / beta / rc)", keywords: ["pre-release", "alpha", "beta", "rc"], explanation: "Een pre-release is een versie vóór de stabiele release. Alpha is vroeg, beta is breder testbaar en rc (release candidate) is bijna definitief.", example: "v1.2.0-beta.1 is testbaar, maar nog geen stabiele v1.2.0." },
     { term: "Rollback versus revert", keywords: ["rollback", "revert"], explanation: "Een rollback zet een eerder gebouwd en bewezen pakket direct terug; een revert maakt een nieuwe commit die een wijziging omkeert en opnieuw gebouwd en getest moet worden.", example: "Zet live terug naar v0.1.1 met rollback; gebruik revert om een merge structureel uit main terug te draaien." },
+    { term: "Hotfix", keywords: ["hotfix"], explanation: "Een hotfix is een noodgreep vanaf wat nu live staat om een storing snel te stoppen. Je slaat controles vooraf over, dus de kans op een nieuwe fout is groter; daarna breng je de wijziging alsnog via de gewone route terug.", example: "Staat test op v0.1.2 en live nog op v0.1.1, dan start een hotfix vanaf live v0.1.1 en zet hij de storing snel recht." },
     { term: "HEAD", keywords: ["HEAD"], explanation: "HEAD is de huidige kop: de commit waar een branch of checkout op staat.", example: "main ◀ HEAD betekent dat deze commit nu de kop van main is." },
     { term: "Squash & merge versus merge commit", keywords: ["Squash & merge", "merge commit"], explanation: "Squash & merge maakt één nieuwe commit van alle branch-commits; een merge commit voegt de branch samen en bewaart alle tussenstations met twee ouders.", example: "Kies squash voor een rustige main-lijn of merge commit als je de volledige branchhistorie wilt bewaren." },
     { term: "Merge conflict", keywords: ["merge conflict"], explanation: "Een merge conflict ontstaat als twee wijzigingen niet automatisch samen te voegen zijn en iemand handmatig moet kiezen welke code blijft.", example: "Los de conflictmarkeringen op, test de uitkomst en maak daarna de merge af." },
@@ -677,6 +686,9 @@
     el("repository-status").textContent = simulated
       ? "Gesimuleerde GitHub-gegevens · ontwikkelomgeving · geen verbinding met de GitHub API"
       : `Rechtstreeks uit GitHub · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
+    el("repository-source-label").textContent = simulated
+      ? "Oefengegevens: branches, commits, issues, pull requests en dashboardversie zijn voorbeelden."
+      : "Echte GitHub-gegevens: branches, commits, issues, pull requests en dashboardversie.";
     el("repository-updated").textContent = simulated
       ? "Vaste voorbeeldgegevens voor deze ontwikkelomgeving"
       : `Bijgewerkt ${new Date(snapshot.savedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
@@ -815,6 +827,7 @@
     const note = el("release-build-note");
     if (note) note.textContent = noteText;
     el("release-history").dataset.source = source;
+    el("release-source-label").textContent = source === "simulated" ? "· oefengegevens" : "· echte deploymentgegevens";
   }
   function renderReleaseHistory(releases) {
     const list = el("release-history-list");
@@ -887,27 +900,70 @@
     const status = el("test-live-status");
     const text = el("test-live-status-text");
     const link = el("test-live-promote-link");
+    const checkButton = el("test-live-check");
     link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
     status.hidden = true;
+    status.classList.remove("is-safe", "is-blocked");
+    link.hidden = true;
     const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
     if (!isTestPage || typeof fetch !== "function") return;
     try {
-      const [testVersion, liveResponse] = await Promise.all([
+      const [testVersion, testEnvironmentResponse, liveResponse] = await Promise.all([
         loadVersionFile(),
+        fetch("environment.json", { cache: "no-store" }),
         fetch("../environment.json", { cache: "no-store" }),
       ]);
-      if (testVersion.status !== "ready" || !liveResponse.ok) return;
+      if (testVersion.status !== "ready" || !testEnvironmentResponse.ok || !liveResponse.ok) throw new Error("deploymentgegevens ontbreken");
+      const testEnvironment = await testEnvironmentResponse.json();
       const liveData = await liveResponse.json();
-      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) return;
+      if (!testEnvironment || typeof testEnvironment.version !== "string" || !testEnvironment.version.trim() || typeof testEnvironment.sha !== "string" || !testEnvironment.sha.trim()) throw new Error("testpublicatie is ongeldig");
+      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("liveversie is ongeldig");
       const test = testVersion.build.version;
       const live = liveData.version.trim();
       text.textContent = test === live
-        ? `Test ${test} staat ook live als ${live}.`
-        : `Deze versie staat nog niet live — test staat op ${test}, live op ${live}. Daarna is goedkeuring van iemand anders nodig.`;
-      link.hidden = test === live;
+        ? `Testversie: ${test}. Liveversie: ${live}. Verschil: er is niets nieuws te controleren.`
+        : `Testversie: ${test}. Liveversie: ${live}. Verschil: Test loopt voor; controleer eerst de wijzigingen sinds Live.`;
+      checkButton.disabled = test === live;
+      checkButton.onclick = () => checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData });
       status.hidden = false;
     } catch (error) {
-      // Ontbrekende of onleesbare live-metadata is geen fout voor de pagina.
+      text.textContent = "De test- of liveversie kon niet betrouwbaar worden gelezen. Veilig livegaan kan nu niet worden vastgesteld.";
+      status.classList.add("is-blocked");
+      status.hidden = false;
+      checkButton.disabled = true;
+    }
+  }
+  async function checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData }) {
+    link.hidden = true;
+    checkButton.disabled = true;
+    status.classList.remove("is-safe", "is-blocked");
+    const testSha = testVersion.build.sha;
+    const publishedSha = testEnvironment.sha.trim();
+    if (!testSha || testSha !== publishedSha || testEnvironment.version.trim() !== testVersion.build.version) {
+      text.textContent += " Controle niet groen: de testpublicatie hoort niet aantoonbaar bij de gecontroleerde versie.";
+      status.classList.add("is-blocked");
+      return;
+    }
+    try {
+      const response = await fetch(`${REPOSITORY_API_ROOT}/commits/${encodeURIComponent(testSha)}/check-runs?per_page=100`, { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) throw new Error(`GitHub-controles: ${response.status}`);
+      const data = await response.json();
+      const checks = Array.isArray(data.check_runs) ? data.check_runs : [];
+      const required = ["quality"];
+      const allGreen = required.every(name => checks.some(check => check.name === name && check.head_sha === testSha && check.status === "completed" && check.conclusion === "success"));
+      if (!allGreen) {
+        text.textContent += " Controle niet groen: een verplichte controle ontbreekt, draait nog of is mislukt.";
+        status.classList.add("is-blocked");
+        return;
+      }
+      text.textContent += " Alle verplichte controles zijn geslaagd en de testpublicatie klopt met deze versie. Veilig aanbieden voor handmatige promotie: een mens moet nog bevestigen.";
+      status.classList.add("is-safe");
+      link.hidden = testVersion.build.version === liveData.version.trim();
+    } catch (error) {
+      text.textContent += " De verplichte controles konden niet worden gelezen. Veilig livegaan kan daarom niet worden bevestigd.";
+      status.classList.add("is-blocked");
+    } finally {
+      checkButton.disabled = false;
     }
   }
   async function loadLatestRelease() {
@@ -915,7 +971,7 @@
       setReleaseBuild(
         { version: "voorbeeld", commitsAhead: 1, sha: "de10001" },
         "simulated",
-        "Gesimuleerde buildinformatie voor de ontwikkelomgeving; test en live lezen de echte versiegegevens.",
+        "Oefengegevens: gesimuleerde build voor deze ontwikkelomgeving; geen echte GitHub-release.",
         `https://github.com/${REPOSITORY_FULL_NAME}/pulls`,
       );
       el("release-current-link").textContent = "Bekijk pull requests op GitHub ↗";
@@ -923,18 +979,18 @@
     }
     const stamped = await loadVersionFile();
     if (stamped.status === "ready") {
-      setReleaseBuild(stamped.build, "version-file", "Deze badge is gestempeld bij de deploy en beschrijft exact de build op deze pagina.", stamped.build.version && `https://github.com/${REPOSITORY_FULL_NAME}/releases/tag/${encodeURIComponent(stamped.build.version)}`);
+      setReleaseBuild(stamped.build, "version-file", "Echte deploymentgegevens: deze badge is gestempeld bij de deploy en beschrijft exact de build op deze pagina.", stamped.build.version && `https://github.com/${REPOSITORY_FULL_NAME}/releases/tag/${encodeURIComponent(stamped.build.version)}`);
       return;
     }
     if (stamped.status === "invalid") {
-      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "Echte deploymentgegevens zijn nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
     if (stamped.status === "missing") {
-      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Deze uitrol heeft geen eigen versiegegevens. Bekijk het releaseoverzicht op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Echte deploymentgegevens ontbreken voor deze uitrol. Bekijk het releaseoverzicht op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
       return;
     }
-    setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "De versie is nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+    setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "Echte deploymentgegevens zijn nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
   }
 
   /* ==== SECTIE: STATE ==== */
@@ -1026,6 +1082,9 @@
   }
   function init() {
     S = freshState();
+    el("env-source-label").textContent = repositoryUsesSimulatedData()
+      ? "Oefengegevens: ook repository- en releasegegevens zijn voorbeelden voor deze ontwikkelomgeving."
+      : "De kaartversies Test en Live zijn oefenversies; status en releasebadge tonen echte deploymentgegevens.";
     S.branches.main = { name: "main", lane: 0, color: getComputedStyle(document.documentElement).getPropertyValue("--main-line").trim() || "#1e5aa8", head: null, merged: false };
     addCommit("main", "initiële versie", [], "normal");
     const rel0 = addCommit("main", "release v0.1.0", [S.branches.main.head], "normal");
@@ -1122,7 +1181,7 @@
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
     S.releases.push({ version: v, commitId: S.env.testCommit });
-    const route = mergeType === "rebase" ? "Deze rebase-merge levert" : "Deze merge-commit levert";
+    const route = mergeType === "rebase" ? "Deze rebase-merge levert" : mergeType === "hotfix" ? "Deze hotfix levert" : "Deze merge-commit levert";
     log(`CI bouwt ${v} en zet hem op <b>test</b>`, `${route} versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
   }
@@ -1173,6 +1232,23 @@
     S.env.livePromotedAt = now;
     log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
     tick(8); render();
+  }
+  function hotfix() {
+    if (S.env.test === S.env.live || !S.env.liveCommit) return;
+    const liveCommit = byId(S.env.liveCommit), mainHead = S.branches.main.head;
+    if (!liveCommit || !mainHead) return;
+    const lane = S.laneFree.length ? S.laneFree.shift() : 1;
+    const name = `hotfix/${S.relNum + 1}`;
+    S.branches[name] = { name, lane, color: "#c43b3b", head: liveCommit.id, merged: false, hotfix: true };
+    const fix = addCommit(name, "hotfix: storing gestopt", [liveCommit.id], "hotfix");
+    const merge = addCommit("main", `hotfix vanaf ${S.env.live}`, [mainHead, fix.id], "merge");
+    merge.hotfix = true;
+    S.branches[name].merged = true;
+    S.active = "main";
+    log(`Hotfix vanaf live ${S.env.live} uitgevoerd`, "Deze noodgreep vertrok vanaf wat nu live stond en sloeg issue, branch, PR en de gewone controles vooraf over. Daardoor ging hij met minder tussenstappen sneller naar live, maar met minder controle vooraf is de kans op een nieuwe fout groter. Breng deze wijziging daarna alsnog via de gewone route terug, zodat de normale controle en historie weer kloppen.");
+    release("hotfix");
+    promote();
+    render();
   }
   function rollback() {
     const targetIndex = Number(el("rollback-version").value);
@@ -1323,7 +1399,7 @@
     el("env-dev").textContent = S.active === "main" ? "—" : S.active;
     el("env-test").textContent = S.env.test;
     el("env-live").textContent = S.env.live;
-    const filterLabels = { all: "", dev: "Weergave: Ontwikkel — je ziet waar nu gewerkt wordt en vanaf welk punt dat vertrok; de rest van de geschiedenis is grijs.", test: "Weergave: Test — main tot en met test is vol; alles daarna en alle zijsporen zijn grijs.", live: "Weergave: Live — grijs is gebouwd en getest, maar nog niet bij gebruikers." };
+    const filterLabels = { all: "Simulatie/oefening: acties op deze kaart wijzigen GitHub niet.", dev: "Simulatie/oefening — Ontwikkel: je ziet waar nu gewerkt wordt en vanaf welk punt dat vertrok; de rest van de geschiedenis is grijs.", test: "Simulatie/oefening — Test: main tot en met test is vol; alles daarna en alle zijsporen zijn grijs.", live: "Simulatie/oefening — Live: grijs is gebouwd en getest, maar nog niet bij gebruikers." };
     el("env-filter-note").textContent = filterLabels[S.envFilter];
     ["dev", "test", "live"].forEach(filter => {
       const box = el(`env-${filter}-box`);
@@ -1337,6 +1413,7 @@
       ? "alleen na jouw akkoord"
       : formatElapsedSince(S.env.livePromotedAt, Date.now());
     el("btn-promote").disabled = !behind;
+    el("btn-hotfix").disabled = !behind;
     const head = byId(S.branches.main.head);
     el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
     const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
@@ -1517,6 +1594,7 @@
       if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
       if (c.kind === "rebase") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">↻</text>`;
       if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
+      if (c.kind === "hotfix" || c.hotfix) stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">⚡</text>`;
       stations += `</g>`;
       const commitLabel = c.id.slice(0, 5), commitLabelY = y + 26;
       labels += `<text x="${x}" y="${commitLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${commitLabel}</text>`;
@@ -1605,12 +1683,13 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
   el("btn-commit").onclick = commit;
   el("btn-collega").onclick = colleagueMerge;
+  el("btn-hotfix").onclick = hotfix;
   el("env-dev-box").onclick = () => setEnvFilter("dev");
   el("env-test-box").onclick = () => setEnvFilter("test");
   el("env-live-box").onclick = () => setEnvFilter("live");
@@ -1624,6 +1703,7 @@
   window.focusTerm = focusTerm;
   window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
   window.__promoteAt = promote; // alleen voor test/smoketest.js
+  window.__loadTestLiveStatus = loadTestLiveStatus; // alleen voor test/smoketest.js
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
