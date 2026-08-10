@@ -27,7 +27,7 @@ class IssueState:
     state: str
     branch: bool
     open_pr: bool
-    review: bool
+    review: str | bool
     merged_pr: bool
     closed_unmerged_pr: bool
     labels: frozenset[str] = frozenset()
@@ -38,7 +38,7 @@ class IssueState:
 class PullRequestState:
     number: int
     open_pr: bool
-    review: bool
+    review: str | bool
     merged_pr: bool
     closed_unmerged_pr: bool
     labels: frozenset[str] = frozenset()
@@ -52,8 +52,11 @@ def target_status(issue: IssueState) -> str | None:
         return "Done"
     if issue.closed_unmerged_pr and not issue.open_pr:
         return "ARCHIVE"
-    if issue.open_pr and issue.review:
-        return "In review"
+    if issue.open_pr:
+        if issue.review == "CHANGES_REQUESTED":
+            return "In progress"
+        if issue.review:
+            return "In review"
     if issue.branch or issue.open_pr:
         return "In progress"
     return None
@@ -74,6 +77,8 @@ def target_environment(issue: IssueState, *, live_commit_sha: str | None = None,
 def target_pr_status(pr: PullRequestState) -> str:
     if pr.merged_pr or pr.closed_unmerged_pr:
         return "Done"
+    if pr.review == "CHANGES_REQUESTED":
+        return "In progress"
     if pr.review:
         return "In review"
     return "In progress"
@@ -105,6 +110,28 @@ def _linked_issue_number(pr: dict[str, Any]) -> int | None:
     text = f"{pr.get('title', '')}\n{pr.get('body', '')}"
     match = re.search(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b", text, re.I)
     return int(match.group(1)) if match else None
+
+
+def _latest_review_status(client: Any, number: int, *, requested: bool) -> str | bool:
+    """Return the effective review state, with a request as the fallback.
+
+    GitHub returns reviews in review history order.  Use the submitted timestamp
+    when present and keep the response order as the tie-breaker, so an older
+    review cannot overwrite a newer review.
+    """
+    reviews = client.rest(f"/repos/{REPOSITORY}/pulls/{number}/reviews")
+    submitted = [
+        (index, review)
+        for index, review in enumerate(reviews or [])
+        if review.get("state") and review.get("state") != "PENDING"
+    ]
+    if not submitted:
+        return True if requested else False
+    _, latest = max(
+        submitted,
+        key=lambda pair: (pair[1].get("submitted_at") or "", pair[0]),
+    )
+    return latest["state"]
 
 
 class GitHub:
@@ -292,9 +319,12 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
         review = False
         for pr in open_prs:
             requested = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/requested_reviewers")
-            reviews = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/reviews")
-            if requested.get("users") or requested.get("teams") or reviews:
-                review = True
+            review = _latest_review_status(
+                client,
+                pr["number"],
+                requested=bool(requested.get("users") or requested.get("teams")),
+            )
+            if review:
                 break
         labels = frozenset(label.get("name") for label in issue.get("labels", []) if label.get("name"))
         states[number] = IssueState(number, issue["state"], branch, bool(open_prs), review, merged, closed_unmerged,
@@ -314,8 +344,11 @@ def _pull_request_states(client: GitHub, issue_states: dict[int, IssueState]) ->
         review = False
         if open_pr:
             requested = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/requested_reviewers")
-            reviews = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/reviews")
-            review = bool(requested.get("users") or requested.get("teams") or reviews)
+            review = _latest_review_status(
+                client,
+                pr["number"],
+                requested=bool(requested.get("users") or requested.get("teams")),
+            )
         labels = frozenset(label.get("name") for label in pr.get("labels", []) if label.get("name"))
         states[pr["number"]] = PullRequestState(
             pr["number"], open_pr, review, merged,

@@ -202,6 +202,22 @@ class ProjectBoardTests(unittest.TestCase):
                                                     frozenset({"documentatie"}))
         self.assertEqual(projectbord.target_pr_environment(pull_request), "Live")
 
+    def test_reviewstatussen_bepalen_de_status_van_openstaand_werk(self):
+        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, "CHANGES_REQUESTED", False, False)), "In progress")
+        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, "APPROVED", False, False)), "In review")
+        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, True, False, False)), "In review")
+        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, False, False, False)), "In progress")
+
+    def test_laatste_review_overschrijft_oudere_afkeuring(self):
+        class ReviewsClient:
+            def rest(self, path, **kwargs):
+                return [
+                    {"state": "CHANGES_REQUESTED", "submitted_at": "2026-08-10T10:00:00Z", "commit_id": "old"},
+                    {"state": "APPROVED", "submitted_at": "2026-08-10T11:00:00Z", "commit_id": "new"},
+                ]
+
+        self.assertEqual(projectbord._latest_review_status(ReviewsClient(), 82, requested=False), "APPROVED")
+
     def test_pull_request_zonder_beoordeling_is_in_progress_en_met_beoordeling_in_review(self):
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, False, False, False)), "In progress")
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, True, False, False)), "In review")
@@ -239,6 +255,8 @@ class ProjectBoardTests(unittest.TestCase):
     def test_koppeling_volgt_sluitwoord_in_pr_tekst(self):
         self.assertEqual(projectbord._linked_issue_number({"title": "Werk", "body": "Fixes #96"}), 96)
         self.assertIsNone(projectbord._linked_issue_number({"title": "Werk", "body": "Zie #96"}))
+        self.assertTrue(projectbord._references_issue({"title": "Werk", "body": "Fixes #96"}, 96))
+        self.assertTrue(projectbord._references_issue({"title": "Werk", "body": "Zie #96"}, 96))
 
     def test_ontbrekend_soortlabel_is_geen_fout(self):
         issue = projectbord.IssueState(1, "open", True, False, False, False, False)
