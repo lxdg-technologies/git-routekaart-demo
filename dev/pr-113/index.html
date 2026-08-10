@@ -293,7 +293,7 @@
   max-width:100%;
   text-align:center;
   letter-spacing:.01em;">
-  Ontwikkelversie — pull request #113 · versie <code style="font:inherit;font-weight:700;">ba3f655</code>
+  Ontwikkelversie — pull request #113 · versie <code style="font:inherit;font-weight:700;">bdee1d6</code>
   <span style="display:block;font-weight:400;opacity:.9;">
     Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
     publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -938,12 +938,12 @@
     const link = el("test-live-promote-link");
     const checkButton = el("test-live-check");
     link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
-    status.hidden = false;
+    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
+    status.hidden = !isTestPage;
     status.classList.remove("is-safe", "is-blocked");
     conditions.hidden = true;
     text.textContent = "Nog niet gecontroleerd";
     link.hidden = true;
-    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
     if (!isTestPage || typeof fetch !== "function") return;
     try {
       const [testVersion, testEnvironmentResponse, liveResponse] = await Promise.all([
