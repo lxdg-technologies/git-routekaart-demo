@@ -256,7 +256,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(projectbord._linked_issue_number({"title": "Werk", "body": "Fixes #96"}), 96)
         self.assertIsNone(projectbord._linked_issue_number({"title": "Werk", "body": "Zie #96"}))
         self.assertTrue(projectbord._references_issue({"title": "Werk", "body": "Fixes #96"}, 96))
-        self.assertFalse(projectbord._references_issue({"title": "Werk", "body": "Zie #96"}, 96))
+        self.assertTrue(projectbord._references_issue({"title": "Werk", "body": "Zie #96"}, 96))
 
     def test_ontbrekend_soortlabel_is_geen_fout(self):
         issue = projectbord.IssueState(1, "open", True, False, False, False, False)
@@ -273,7 +273,7 @@ class ProjectBoardTests(unittest.TestCase):
         client.issue_states = None
         client.rest = lambda path, **kwargs: (
             [{"number": 74, "state": "open"}] if "/issues?" in path else
-            [{"number": 10, "state": "open", "merged_at": None, "title": "Werk", "body": "Fixes #74"}] if "/pulls?" in path else
+            [{"number": 10, "state": "open", "merged_at": None, "title": "Werk #74", "body": ""}] if "/pulls?" in path else
             [] if "/branches?" in path else
             ({"users": [{"login": "reviewer"}], "teams": []} if "requested_reviewers" in path else [])
         )

@@ -102,7 +102,8 @@ def target_pr_environment(pr: PullRequestState, *, live_commit_sha: str | None =
 
 
 def _references_issue(pr: dict[str, Any], number: int) -> bool:
-    return _linked_issue_number(pr) == number
+    text = f"{pr.get('title', '')}\n{pr.get('body', '')}"
+    return bool(re.search(rf"(?<!\d)(?:#|issues/)({number})(?!\d)", text, re.I))
 
 
 def _linked_issue_number(pr: dict[str, Any]) -> int | None:
