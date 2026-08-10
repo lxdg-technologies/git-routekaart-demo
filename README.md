@@ -1,4 +1,6 @@
 # Git Routekaart — productie- en testomgevingen
+<!-- poort-test 10-08-2026: deze regel wordt na de test weer verwijderd -->
+
 
 Dashboard en interactieve simulatie van een moderne git-werkstroom: **issue → branch → PR → merge → test → live**. Bovenaan staan de echte commits, branches, issues en pull requests van deze repository; daaronder kun je dezelfde route oefenen als metrokaart.
 
