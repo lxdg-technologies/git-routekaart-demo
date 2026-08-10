@@ -1,5 +1,6 @@
 // Controles voor de read-only koppeling met de echte publieke GitHub-repository.
-module.exports = async function repositoryDashboard({ assert, flush, byIdMap, fetchCalls, stappen, setFetchMode }) {
+module.exports = async function repositoryDashboard({ assert, byIdMap, fetchCalls, setFetchMode, stappen, flush, hiddenActDisplay }) {
+  assert(hiddenActDisplay() === "none", "een element met klasse act en hidden blijft verborgen ondanks de act-opmaak");
   await flush(); await flush(); await flush();
   assert(byIdMap["repository-link"].href === "https://github.com/lxdg-technologies/git-routekaart-demo", "repositorydashboard linkt naar de gekoppelde repository");
   assert(byIdMap["repository-status"].textContent.includes("Rechtstreeks uit GitHub") && !byIdMap["repository-status"].className.includes("error"), "repositorydashboard meldt een geslaagde publieke API-koppeling");

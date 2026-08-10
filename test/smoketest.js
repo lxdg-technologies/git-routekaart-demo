@@ -136,6 +136,10 @@ const delen = [
   const findBtn = txt => created.filter(e => e.tag === "button" && e.textContent.includes(txt)).pop();
   const mapResult = () => byIdMap["map-scroll"].innerHTML;
   const glossaryResult = () => byIdMap["begrippen-lijst"].innerHTML;
+  const hiddenActDisplay = () => {
+    const rules = [...html.matchAll(/\.act\[hidden\]\s*\{([^}]*)\}/g)].map(match => match[1]);
+    return rules.some(body => /display\s*:\s*none\s*!important\s*;?/i.test(body)) ? "none" : "block";
+  };
   const state = () => __state();
   const setFetchMode = mode => { fetchMode = mode; };
 
@@ -171,7 +175,7 @@ const delen = [
 
   // Vóór de eerste await uitlezen: het deel release-badge controleert de beginwaarde van de badge.
   const initialBadge = byIdMap["release-badge-label"].textContent;
-  const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, state, setFetchMode, stappen, initialBadge, decorateLogTerms: window.__decorateLogTerms };
+  const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, hiddenActDisplay, state, setFetchMode, stappen, initialBadge, decorateLogTerms: window.__decorateLogTerms };
 
   for (const [, deel] of delen) await deel(gereedschap);
 
