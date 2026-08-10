@@ -189,16 +189,25 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertIn("pull request #83: label soort:github toegevoegd", actions)
 
     def test_pull_request_zonder_bron_verwijdert_geen_bestaand_soortlabel(self):
-        client = FakePullRequestGitHub(None)
-        client.rest = lambda path, **kwargs: (
-            [{"number": 74, "state": "open"}] if "/issues?" in path else
-            [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
-              "title": "Werk", "body": "Geen koppeling", "labels": [{"name": "soort:github"}]}]
-            if "/pulls?" in path else []
-        )
-        actions = projectbord.sync(client, project=client.project_data())
-        self.assertNotIn(("remove-label", 83, "soort:github"), client.mutations)
-        self.assertFalse(any("label soort:github verwijderd" in action for action in actions))
+        for body in ("Geen koppeling", "Fixes #74"):
+            with self.subTest(body=body):
+                client = FakePullRequestGitHub(None)
+                client.rest = lambda path, body=body, **kwargs: (
+                    [{"number": 74, "state": "open"}] if "/issues?" in path else
+                    [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
+                      "title": "Werk", "body": body, "labels": [{"name": "soort:github"}]}]
+                    if "/pulls?" in path else []
+                )
+                if body == "Fixes #74":
+                    client.rest = lambda path, **kwargs: (
+                        [{"number": 74, "state": "open", "labels": []}] if "/issues?" in path else
+                        [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
+                          "title": "Werk", "body": body, "labels": [{"name": "soort:github"}]}]
+                        if "/pulls?" in path else []
+                    )
+                actions = projectbord.sync(client, project=client.project_data())
+                self.assertNotIn(("remove-label", 83, "soort:github"), client.mutations)
+                self.assertFalse(any("label soort:github verwijderd" in action for action in actions))
 
     def test_koppeling_volgt_sluitwoord_in_pr_tekst(self):
         self.assertEqual(projectbord._linked_issue_number({"title": "Werk", "body": "Fixes #96"}), 96)
