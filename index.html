@@ -47,6 +47,10 @@
   header.top h1 { font-size: 1.45rem; font-weight: 700; margin: 0; letter-spacing: -.01em; }
   header.top h1 .metro { color: var(--main-line); }
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+  .deployment-versions { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .35rem .8rem; align-items: baseline; margin-top: .15rem; padding: .45rem .65rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink-soft); font-size: .78rem; }
+  .deployment-versions strong { color: var(--ink); }
+  .deployment-version { display: inline-flex; gap: .35rem; min-width: 0; align-items: baseline; }
+  .deployment-version code { color: var(--ink); font: 700 .82rem var(--mono); overflow-wrap: anywhere; }
   .repository-dashboard { max-width: 1520px; margin: 0 auto 1rem; }
   .repository-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .repository-heading h2 { margin-bottom: .2rem; }
@@ -179,8 +183,12 @@
   .env.dev { border-color: var(--warn); }
   .env.test { border-color: var(--accent); }
   .env.live { border-color: var(--ok); }
-  .test-live-status { margin: .7rem 0 0; padding: .55rem .65rem; border: 1px solid var(--accent); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
-  .test-live-status a { color: var(--accent); font-weight: 700; }
+  .test-live-status { margin: .7rem 0 0; padding: .65rem .7rem; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
+  .test-live-status strong { display: block; font-size: 1rem; line-height: 1.25; }
+  .test-live-status ul { display: grid; gap: .2rem; margin: .45rem 0 0; padding: 0; list-style: none; }
+  .test-live-status li::first-letter { font-weight: 700; }
+  .act[hidden] { display: none !important; }
+  .test-live-status a.act { display: block; color: var(--ink); font-weight: 600; text-decoration: none; }
   .test-live-status.is-safe { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
   .test-live-status.is-blocked { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
   .test-live-status button { margin-top: .55rem; }
@@ -277,6 +285,11 @@
 <header class="top">
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
+  <div class="deployment-versions" aria-label="Echte deploymentversies">
+    <strong>Echte deploymentversies:</strong>
+    <span class="deployment-version">Test <code id="real-test-version">—</code></span>
+    <span class="deployment-version">Live <code id="real-live-version">—</code></span>
+  </div>
 </header>
 
 <!-- ==== SECTIE: LAYOUT ==== -->
@@ -381,17 +394,22 @@
           <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
         </button>
       </div>
-      <p class="test-live-status" id="test-live-status" hidden aria-live="polite">
-        <span id="test-live-status-text"></span>
-        <br><button type="button" class="act" id="test-live-check">Controleer of Test klaar is voor live</button>
-        <a id="test-live-promote-link" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer">Naar handmatige promotie in GitHub Actions ↗</a>
-      </p>
-      <button class="act" id="btn-promote">🚀 Promoveer test → live<small>zet de geteste versie op het echte systeem</small></button>
-      <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small>draait de wijziging terug met een nieuwe commit</small></button>
+      <div class="test-live-status" id="test-live-status" aria-live="polite">
+        <strong id="test-live-status-text">Nog niet gecontroleerd</strong>
+        <ul id="test-live-conditions" hidden>
+          <li id="test-live-condition-checks"></li>
+          <li id="test-live-condition-published"></li>
+          <li id="test-live-condition-human"></li>
+        </ul>
+        <button type="button" class="act" id="test-live-check">Controleer of Test klaar is voor live</button>
+        <a class="act" id="test-live-promote-link" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer" role="button">Naar handmatige promotie in GitHub Actions ↗</a>
+      </div>
+      <button class="act" id="btn-promote">🚀 Promoveer test → live<small id="promote-sub">zet de geteste versie op het echte systeem</small></button>
+      <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small id="revert-sub">draait de wijziging terug met een nieuwe commit</small></button>
       <div class="rollback-controls" id="rollback-controls">
         <label for="rollback-version">Terugrollen naar eerdere live-versie</label>
         <select id="rollback-version" aria-label="Kies eerdere live-versie"></select>
-        <button class="act" id="btn-rollback">↶ Rollback live<small>zet een eerder bewezen versie direct terug</small></button>
+        <button class="act" id="btn-rollback">↶ Rollback live<small id="rollback-sub">zet een eerder bewezen versie direct terug</small></button>
       </div>
     </div>
 
@@ -417,8 +435,8 @@
       <div class="chips" id="branch-chips"></div>
       <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
       <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
-      <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small>iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
-      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small>stop een storing snel, met minder controle vooraf</small></button>
+      <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small id="collega-sub">iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
+      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small id="hotfix-sub">stop een storing snel, met minder controle vooraf</small></button>
       <div id="tickets"></div>
       <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
     </div>
@@ -507,7 +525,7 @@
     { term: "Deploy / Deployment", keywords: ["deployment", "deploy"], explanation: "Het beschikbaar maken van een versie in een omgeving.", example: "Een merge naar main start automatisch de GitHub Pages-deployment." },
     { term: "CI (Continuous Integration)", keywords: ["continuous integration", "CI"], explanation: "Automatische controle die wijzigingen bouwt en test zodra ze worden gepusht.", example: "De preview-workflow draait bij een nieuwe PR-commit." },
     { term: "CI checks", keywords: ["CI checks", "CI-checks"], explanation: "De afzonderlijke controles binnen CI, zoals tests, linting of een preview-build.", example: "Een groene preview-check betekent dat de preview-workflow geslaagd is." },
-    { term: "CI monitoring unavailable", keywords: ["CI monitoring unavailable"], explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
+    { term: "CI-status ontbreekt", keywords: ["CI monitoring unavailable"], explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
     { term: "Review / reviewer / review-aanvraag", keywords: ["review-aanvraag", "reviewer", "review"], explanation: "Een review is de beoordeling van een PR; een reviewer moet expliciet als beoordelaar worden aangevraagd. Reviews is de wachtrij met PR's die op beoordeling wachten, niet hetzelfde als de werkitemstatus In Review.", example: "Vraag DCS-Rob aan als reviewer; daarna verschijnt de PR in diens Reviews-lijst." },
     { term: "Reviews versus In Review", keywords: ["In Review", "Reviews"], explanation: "Reviews is de plek waar pull requests op jouw beoordeling wachten. In Review is alleen de status van een Linear-issue — de twee lijken op elkaar maar betekenen iets anders.", example: "DCS-171 kan In Review staan terwijl PR #16 in Robs Reviews-lijst wacht." },
     { term: "Approve / Request changes", keywords: ["Request changes", "Approve"], explanation: "Approve keurt een PR goed; Request changes vraagt om aanpassingen voordat hij gemerged kan worden.", example: "Een reviewer kiest Approve als de checks en code kloppen, of Request changes bij een probleem." },
@@ -899,13 +917,16 @@
   async function loadTestLiveStatus() {
     const status = el("test-live-status");
     const text = el("test-live-status-text");
+    const conditions = el("test-live-conditions");
     const link = el("test-live-promote-link");
     const checkButton = el("test-live-check");
     link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
-    status.hidden = true;
-    status.classList.remove("is-safe", "is-blocked");
-    link.hidden = true;
     const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
+    status.hidden = !isTestPage;
+    status.classList.remove("is-safe", "is-blocked");
+    conditions.hidden = true;
+    text.textContent = "Nog niet gecontroleerd";
+    link.hidden = true;
     if (!isTestPage || typeof fetch !== "function") return;
     try {
       const [testVersion, testEnvironmentResponse, liveResponse] = await Promise.all([
@@ -920,27 +941,39 @@
       if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("liveversie is ongeldig");
       const test = testVersion.build.version;
       const live = liveData.version.trim();
-      text.textContent = test === live
-        ? `Testversie: ${test}. Liveversie: ${live}. Verschil: er is niets nieuws te controleren.`
-        : `Testversie: ${test}. Liveversie: ${live}. Verschil: Test loopt voor; controleer eerst de wijzigingen sinds Live.`;
+      setDeploymentVersions(test, live);
+      if (test === live) {
+        text.textContent = "! Nog niet veilig";
+        el("test-live-condition-checks").textContent = "! Er is geen nieuw verschil tussen Test en Live.";
+        el("test-live-condition-published").textContent = "○ Er is niets nieuws te controleren.";
+        el("test-live-condition-human").textContent = "○ Een mens kan pas akkoord geven als Test voorloopt.";
+        conditions.hidden = false;
+        status.classList.add("is-blocked");
+      }
       checkButton.disabled = test === live;
-      checkButton.onclick = () => checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData });
-      status.hidden = false;
+      checkButton.onclick = () => checkTestLiveStatus({ status, text, conditions, link, checkButton, testVersion, testEnvironment, liveData });
     } catch (error) {
-      text.textContent = "De test- of liveversie kon niet betrouwbaar worden gelezen. Veilig livegaan kan nu niet worden vastgesteld.";
+      text.textContent = "! Nog niet veilig";
+      el("test-live-condition-checks").textContent = "! De test- of liveversie kon niet betrouwbaar worden gelezen.";
+      el("test-live-condition-published").textContent = "○ Controleer eerst of de gepubliceerde versie klopt.";
+      el("test-live-condition-human").textContent = "○ Een mens kan pas akkoord geven na een geslaagde controle.";
+      conditions.hidden = false;
       status.classList.add("is-blocked");
-      status.hidden = false;
       checkButton.disabled = true;
     }
   }
-  async function checkTestLiveStatus({ status, text, link, checkButton, testVersion, testEnvironment, liveData }) {
+  async function checkTestLiveStatus({ status, text, conditions, link, checkButton, testVersion, testEnvironment, liveData }) {
     link.hidden = true;
     checkButton.disabled = true;
+    conditions.hidden = false;
     status.classList.remove("is-safe", "is-blocked");
     const testSha = testVersion.build.sha;
     const publishedSha = testEnvironment.sha.trim();
     if (!testSha || testSha !== publishedSha || testEnvironment.version.trim() !== testVersion.build.version) {
-      text.textContent += " Controle niet groen: de testpublicatie hoort niet aantoonbaar bij de gecontroleerde versie.";
+      text.textContent = "! Nog niet veilig";
+      el("test-live-condition-checks").textContent = "! De verplichte controles horen niet aantoonbaar bij deze versie.";
+      el("test-live-condition-published").textContent = "! De testpublicatie klopt niet met de gecontroleerde versie.";
+      el("test-live-condition-human").textContent = "○ Eerst moet de juiste versie op Test staan.";
       status.classList.add("is-blocked");
       return;
     }
@@ -952,18 +985,53 @@
       const required = ["quality"];
       const allGreen = required.every(name => checks.some(check => check.name === name && check.head_sha === testSha && check.status === "completed" && check.conclusion === "success"));
       if (!allGreen) {
-        text.textContent += " Controle niet groen: een verplichte controle ontbreekt, draait nog of is mislukt.";
+        text.textContent = "! Nog niet veilig";
+        el("test-live-condition-checks").textContent = "! Een verplichte controle ontbreekt, draait nog of is mislukt.";
+        el("test-live-condition-published").textContent = "✓ De testpublicatie klopt met deze versie.";
+        el("test-live-condition-human").textContent = "○ Eerst moeten alle verplichte controles slagen.";
         status.classList.add("is-blocked");
         return;
       }
-      text.textContent += " Alle verplichte controles zijn geslaagd en de testpublicatie klopt met deze versie. Veilig aanbieden voor handmatige promotie: een mens moet nog bevestigen.";
+      text.textContent = "✓ Veilig om live te zetten";
+      el("test-live-condition-checks").textContent = "✓ Alle verplichte controles zijn geslaagd.";
+      el("test-live-condition-published").textContent = "✓ De testpublicatie klopt met deze versie.";
+      el("test-live-condition-human").textContent = "○ Akkoord van een mens is nog nodig.";
       status.classList.add("is-safe");
       link.hidden = testVersion.build.version === liveData.version.trim();
     } catch (error) {
-      text.textContent += " De verplichte controles konden niet worden gelezen. Veilig livegaan kan daarom niet worden bevestigd.";
+      text.textContent = "! Nog niet veilig";
+      el("test-live-condition-checks").textContent = "! De verplichte controles konden niet worden gelezen.";
+      el("test-live-condition-published").textContent = "✓ De testpublicatie klopt met deze versie.";
+      el("test-live-condition-human").textContent = "○ Eerst moeten de controles betrouwbaar worden gelezen.";
       status.classList.add("is-blocked");
     } finally {
       checkButton.disabled = false;
+    }
+  }
+  function deploymentUrl(path) {
+    const pathname = typeof location !== "undefined" && typeof location.pathname === "string" ? location.pathname : "/";
+    const marker = "/git-routekaart-demo/";
+    const markerIndex = pathname.indexOf(marker);
+    const base = markerIndex >= 0 ? pathname.slice(0, markerIndex + marker.length) : "/";
+    return `${base}${path}`;
+  }
+  function setDeploymentVersions(test, live) {
+    el("real-test-version").textContent = test;
+    el("real-live-version").textContent = live;
+  }
+  async function loadDeploymentVersions() {
+    if (typeof fetch !== "function" || repositoryUsesSimulatedData()) return;
+    try {
+      const [testResponse, liveResponse] = await Promise.all([
+        fetch(deploymentUrl("test/environment.json"), { cache: "no-store" }),
+        fetch(deploymentUrl("environment.json"), { cache: "no-store" }),
+      ]);
+      if (!testResponse.ok || !liveResponse.ok) throw new Error("deploymentgegevens ontbreken");
+      const [testData, liveData] = await Promise.all([testResponse.json(), liveResponse.json()]);
+      if (!testData || typeof testData.version !== "string" || !testData.version.trim() || !liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("deploymentversies zijn ongeldig");
+      setDeploymentVersions(testData.version.trim(), liveData.version.trim());
+    } catch (error) {
+      setDeploymentVersions("niet beschikbaar", "niet beschikbaar");
     }
   }
   async function loadLatestRelease() {
@@ -1001,6 +1069,7 @@
       active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
       missions: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
       colleagueSeq: 0,
+      hotfixAvailable: true,
       mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
       relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null, livePromotedAt: null },
       selectedStart: null,
@@ -1096,6 +1165,7 @@
     renderCommandReference();
     setupReleaseBadge();
     loadLatestRelease();
+    if (typeof location !== "undefined") loadDeploymentVersions();
     loadTestLiveStatus();
     render();
   }
@@ -1181,6 +1251,7 @@
     S.env.test = v;
     S.env.testCommit = S.branches.main.head;
     S.releases.push({ version: v, commitId: S.env.testCommit });
+    if (mergeType !== "hotfix") S.hotfixAvailable = true;
     const route = mergeType === "rebase" ? "Deze rebase-merge levert" : mergeType === "hotfix" ? "Deze hotfix levert" : "Deze merge-commit levert";
     log(`CI bouwt ${v} en zet hem op <b>test</b>`, `${route} versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
     tick(7);
@@ -1234,7 +1305,7 @@
     tick(8); render();
   }
   function hotfix() {
-    if (S.env.test === S.env.live || !S.env.liveCommit) return;
+    if (!S.env.liveCommit || !S.hotfixAvailable) return;
     const liveCommit = byId(S.env.liveCommit), mainHead = S.branches.main.head;
     if (!liveCommit || !mainHead) return;
     const lane = S.laneFree.length ? S.laneFree.shift() : 1;
@@ -1245,6 +1316,7 @@
     merge.hotfix = true;
     S.branches[name].merged = true;
     S.active = "main";
+    S.hotfixAvailable = false;
     log(`Hotfix vanaf live ${S.env.live} uitgevoerd`, "Deze noodgreep vertrok vanaf wat nu live stond en sloeg issue, branch, PR en de gewone controles vooraf over. Daardoor ging hij met minder tussenstappen sneller naar live, maar met minder controle vooraf is de kans op een nieuwe fout groter. Breng deze wijziging daarna alsnog via de gewone route terug, zodat de normale controle en historie weer kloppen.");
     release("hotfix");
     promote();
@@ -1412,10 +1484,17 @@
     liveAge.textContent = S.env.livePromotedAt === null
       ? "alleen na jouw akkoord"
       : formatElapsedSince(S.env.livePromotedAt, Date.now());
-    el("btn-promote").disabled = !behind;
-    el("btn-hotfix").disabled = !behind;
+    const promoteButton = el("btn-promote");
+    promoteButton.disabled = !behind;
+    el("promote-sub").textContent = behind
+      ? "zet de geteste versie op het echte systeem"
+      : "Test loopt niet voor op live — er is niets te promoveren";
     const head = byId(S.branches.main.head);
-    el("btn-revert").disabled = !head || (head.kind !== "merge" && head.kind !== "squash");
+    const canRevert = Boolean(head && (head.kind === "merge" || head.kind === "squash"));
+    el("btn-revert").disabled = !canRevert;
+    el("revert-sub").textContent = canRevert
+      ? "draait de wijziging terug met een nieuwe commit"
+      : "Op main staat nog geen merge om terug te draaien";
     const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
     const rollbackCandidates = liveIndex > 0 ? S.releases.slice(0, liveIndex) : [];
     const rollbackSelect = el("rollback-version");
@@ -1429,7 +1508,24 @@
       S.rollbackPreviewCommit = target ? target.commitId : null;
       render();
     };
-    el("btn-rollback").disabled = rollbackCandidates.length === 0;
+    const canRollback = rollbackCandidates.length > 0;
+    el("btn-rollback").disabled = !canRollback;
+    el("rollback-sub").textContent = canRollback
+      ? "zet een eerder bewezen versie direct terug"
+      : "Er is nog geen eerdere live-versie om naar terug te rollen";
+    const canHotfix = Boolean(S.env.liveCommit && S.hotfixAvailable);
+    el("btn-hotfix").disabled = !canHotfix;
+    el("hotfix-sub").textContent = canHotfix
+      ? "stop een storing snel, met minder controle vooraf"
+      : S.env.liveCommit
+        ? "Er is al een hotfix uitgevoerd — wacht op een nieuwe aanleiding"
+        : "Er is nog geen live-versie om vanaf te starten";
+    const active = S.branches[S.active];
+    const canColleagueMerge = Boolean(active && active.name !== "main" && !active.merged);
+    el("btn-collega").disabled = !canColleagueMerge;
+    el("collega-sub").textContent = canColleagueMerge
+      ? "iemand anders werkt ook — kijk wat er met main gebeurt"
+      : "Je staat op main — maak eerst een eigen branch";
   }
 
   function renderChips() {
@@ -1704,6 +1800,7 @@
   window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
   window.__promoteAt = promote; // alleen voor test/smoketest.js
   window.__loadTestLiveStatus = loadTestLiveStatus; // alleen voor test/smoketest.js
+  window.__loadDeploymentVersions = loadDeploymentVersions; // alleen voor test/smoketest.js
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
