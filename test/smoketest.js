@@ -37,9 +37,15 @@ const byIdMap = {};
 const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijst", "release-history", "release-badge-label", "release-current-link", "release-build-note", "release-source-label", "release-history-list", "branch-chips", "tickets", "missie-list", "progress", "trophy",
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "promote-sub", "revert-sub", "rollback-sub", "collega-sub", "hotfix-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
-  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version"];
+  "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version",
+  "live-promotion-overlay", "live-promotion-panel", "promotion-checks", "promotion-error", "promotion-demo-note"];
 for (const id of ids) byIdMap[id] = makeEl("div");
+for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live"]) byIdMap[id] = makeEl("button");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
+byIdMap["btn-live-overlay"].textContent = "Naar live zetten";
+byIdMap["live-promotion-overlay"].hidden = true;
+byIdMap["live-promotion-overlay"].setAttribute("aria-hidden", "true");
+byIdMap["live-promotion-panel"].setAttribute("role", "dialog");
 byIdMap["release-badge-label"].textContent = "release: onbekend";
 
 let fetchMode = "version";
@@ -166,6 +172,25 @@ const delen = [
   const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, hiddenActDisplay, state, setFetchMode, stappen, initialBadge, decorateLogTerms: window.__decorateLogTerms };
 
   for (const [, deel] of delen) await deel(gereedschap);
+
+  // Promotie-overlay: zelfstandige mockup met vaste voorbeeldtoestanden.
+  const overlayStateBefore = {
+    test: state().env.test, live: state().env.live, commits: state().commits.length,
+    missions: state().missions.join(","), active: state().active,
+  };
+  assert(typeof byIdMap["btn-live-overlay"].onclick === "function" && byIdMap["btn-live-overlay"].textContent === "Naar live zetten", "bovenbanner heeft een klikbare promotieknop");
+  byIdMap["btn-live-overlay"].onclick();
+  assert(byIdMap["live-promotion-overlay"].hidden === false && byIdMap["live-promotion-overlay"].attributes["aria-hidden"] === "false" && byIdMap["live-promotion-panel"].attributes["role"] === "dialog", "bannerknop opent een zelfstandige voorgrond-overlay");
+  assert(byIdMap["promotion-checks"].innerHTML.includes("Test zonder mergeconflicts") && byIdMap["promotion-checks"].innerHTML.includes("Beschikbare verplichte checks") && byIdMap["promotion-checks"].innerHTML.includes("Live zonder problemen kan worden bijgewerkt"), "overlay toont de drie vaste promotiecontroles");
+  assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-error"].hidden === true, "groene voorbeeldtoestand toont Zet nu live zonder foutuitleg");
+  byIdMap["btn-promotion-red"].onclick();
+  assert(byIdMap["live-promotion-panel"].classList.contains("is-blocked") && byIdMap["promotion-error"].textContent.includes("Herstel eerst") && byIdMap["btn-promotion-recover"].hidden === false, "rode voorbeeldtoestand toont foutuitleg en herstelactie");
+  assert(byIdMap["btn-promotion-live"].hidden === true, "rode voorbeeldtoestand heeft geen beschikbare Zet nu live-knop");
+  byIdMap["btn-promotion-recover"].onclick();
+  byIdMap["btn-promotion-live"].onclick();
+  assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-demo-note"].textContent.includes("niets live gezet") && JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateBefore), "mockup verandert geen simulatiestatus en voert geen live-promotie uit");
+  byIdMap["btn-close-live-overlay"].onclick();
+  assert(byIdMap["live-promotion-overlay"].hidden === true, "overlay kan zelfstandig worden gesloten");
 
   // Testpagina: controleer deploymentmetadata en de verplichte publieke check.
   global.location = { pathname: "/test/" };
