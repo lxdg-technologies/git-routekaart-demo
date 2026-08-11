@@ -851,11 +851,14 @@
   /* ==== SECTIE: RELEASE-BADGE ==== */
   const VERSION_FILE_URL = "version.json";
   const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
-  const RELEASE_ENVIRONMENT = typeof location !== "undefined"
-    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
-      ? "dev"
-      : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
-    : "dev";
+  function getReleaseEnvironment() {
+    return typeof location !== "undefined"
+      ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
+        ? "dev"
+        : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
+      : "dev";
+  }
+  const RELEASE_ENVIRONMENT = getReleaseEnvironment();
 
   function setupReleaseBadge() {
     const badge = el("release-history");
@@ -1346,6 +1349,16 @@
       el("promotion-demo-note").textContent = "Ontwikkelomgeving: menselijke goedkeuring zou nu starten; er is niets live gezet.";
     };
     renderPromotionFixture("green");
+  }
+  function applyPromotionVisibility() {
+    const available = getReleaseEnvironment() !== "live";
+    if (!available) {
+      el("btn-live-overlay")?.remove();
+      el("live-promotion-overlay")?.remove();
+      return false;
+    }
+    initialisePromotionOverlay();
+    return true;
   }
   function newIssue() {
     const [title, slug] = ISSUE_POOL[S.issues.length % ISSUE_POOL.length];
@@ -1952,7 +1965,7 @@
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
-  initialisePromotionOverlay();
+  applyPromotionVisibility();
   el("repository-refresh").onclick = () => loadRepositoryDashboard(true);
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
@@ -1964,6 +1977,7 @@
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__applyPromotionVisibility = applyPromotionVisibility; // alleen voor test/smoketest.js
   init();
   loadRepositoryDashboard();
 })();
