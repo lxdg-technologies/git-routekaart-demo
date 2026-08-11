@@ -23,12 +23,12 @@ function makeEl(tag) {
     set textContent(v) { this._text = v; }, get textContent() { return this._text; },
     appendChild(c) { this.children.push(c); }, append(...c) { this.children.push(...c); },
     addEventListener(name, handler) { this[`on${name}`] = handler; },
+    remove() { this.removed = true; },
     setAttribute(name, value) { this.attributes[name] = String(value); },
     prepend(c) { this.children.unshift(c); }, scrollIntoView() { this.scrolled = true; },
     firstElementChild: null,
   };
   el.firstElementChild = { style: {} };
-  Object.defineProperty(el, "offsetParent", { get() { return this.hidden ? null : {}; } });
   classSets.set(el, classes);
   created.push(el);
   return el;
@@ -186,7 +186,7 @@ const delen = [
   assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-error"].hidden === true, "groene voorbeeldtoestand toont Zet nu live zonder foutuitleg");
   byIdMap["btn-promotion-red"].onclick();
   assert(byIdMap["live-promotion-panel"].classList.contains("is-blocked") && byIdMap["promotion-error"].textContent.includes("Herstel eerst") && byIdMap["btn-promotion-recover"].hidden === false, "rode voorbeeldtoestand toont foutuitleg en herstelactie");
-  assert(byIdMap["btn-promotion-live"].offsetParent === null, "rode voorbeeldtoestand toont de live-goedkeuringsknop niet");
+  assert(byIdMap["btn-promotion-live"].hidden === true, "rode voorbeeldtoestand heeft geen beschikbare Zet nu live-knop");
   byIdMap["btn-promotion-recover"].onclick();
   byIdMap["btn-promotion-live"].onclick();
   assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-demo-note"].textContent.includes("niets live gezet") && JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateBefore), "mockup verandert geen simulatiestatus en voert geen live-promotie uit");
@@ -211,7 +211,7 @@ const delen = [
   assert(JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateAfterRealGreen), "start menselijke goedkeuring verandert geen simulatiestatus en promoveert niet automatisch");
   await loadTestStatus("checks-failed");
   byIdMap["btn-live-overlay"].onclick(); await flush();
-  assert(byIdMap["btn-promotion-live"].offsetParent === null && byIdMap["promotion-error"].textContent.includes("quality-check"), "echte rode Test-status blokkeert de definitieve live-actie met hersteluitleg");
+  assert(byIdMap["btn-promotion-live"].hidden === true && byIdMap["promotion-error"].textContent.includes("quality-check"), "echte rode Test-status blokkeert de definitieve live-actie met hersteluitleg");
   await loadTestStatus("repository-error");
   byIdMap["btn-live-overlay"].onclick(); await flush();
   assert(byIdMap["btn-promotion-live"].hidden === true && byIdMap["promotion-error"].textContent.includes("status"), "ontbrekende of onbereikbare Test-status blokkeert de definitieve live-actie");
@@ -253,6 +253,8 @@ const delen = [
   assert(byIdMap["map-scroll"].innerHTML.includes("⚡") && byIdMap["legend"].innerHTML.includes("hotfix"), "kaart en legenda herkennen de hotfix-route");
   assert([...byIdMap["log"].children].some(entry => entry.innerHTML.includes("live") && entry.innerHTML.includes("minder controle vooraf") && entry.innerHTML.includes("gewone route terug")), "logboek benoemt live-start, snelheid, prijs en terugkeer naar de gewone route");
   assert(byIdMap["btn-hotfix"].disabled === true, "hotfix-knop schakelt uit als test en live weer gelijk zijn");
+
+  await require("./checks/live-promotion")(gereedschap);
 
   if (failed) { console.error(`\n${failed} van ${total} CHECK(S) GEFAALD`); process.exit(1); }
   console.log(`\nALLE ${total} CHECKS GESLAAGD`);
