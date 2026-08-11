@@ -38,6 +38,7 @@
   }
   /* ==== SECTIE: LAYOUT ==== */
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
     background: var(--bg); color: var(--ink);
     font-family: "Segoe UI", system-ui, sans-serif;
@@ -51,6 +52,27 @@
   .deployment-versions strong { color: var(--ink); }
   .deployment-version { display: inline-flex; gap: .35rem; min-width: 0; align-items: baseline; }
   .deployment-version code { color: var(--ink); font: 700 .82rem var(--mono); overflow-wrap: anywhere; }
+  .promotion-banner-button { margin-left: auto; border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .65rem; background: var(--accent); color: #fff; font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
+  .promotion-banner-button:hover, .promotion-banner-button:focus-visible { filter: brightness(1.08); }
+  .promotion-overlay { position: fixed; top: 5rem; right: 1rem; z-index: 20; width: min(370px, calc(100vw - 2rem)); pointer-events: none; }
+  .promotion-overlay[hidden] { display: none; }
+  .promotion-panel { pointer-events: auto; padding: .9rem 1rem; border: 2px solid var(--accent); border-radius: var(--radius); background: var(--panel); box-shadow: 0 10px 28px rgb(0 0 0 / .22); }
+  .promotion-panel h2 { margin: 0; font-size: 1.05rem; }
+  .promotion-panel > p { margin: .25rem 0 .7rem; color: var(--ink-soft); font-size: .82rem; }
+  .promotion-close { float: right; border: 0; background: transparent; color: var(--ink-soft); font-size: 1.2rem; cursor: pointer; }
+  .promotion-modes { display: flex; gap: .4rem; margin-bottom: .7rem; }
+  .promotion-modes button { flex: 1; border: 1px solid var(--line); border-radius: 7px; padding: .35rem; background: var(--chip-bg); color: var(--ink); font: inherit; font-size: .75rem; cursor: pointer; }
+  .promotion-modes button.active { border-color: currentColor; font-weight: 700; }
+  .promotion-checks { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; font-size: .8rem; }
+  .promotion-checks li { padding: .4rem .5rem; border-left: 4px solid var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .promotion-checks li::before { content: "✓ "; font-weight: 700; }
+  .promotion-panel.is-blocked { border-color: var(--danger); }
+  .promotion-panel.is-blocked .promotion-checks li { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+  .promotion-panel.is-blocked .promotion-checks li::before { content: "! "; }
+  .promotion-error { margin: .7rem 0 0; padding: .55rem .65rem; border-radius: 7px; background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); font-size: .8rem; }
+  .promotion-recover, .promotion-live { display: block; width: 100%; margin-top: .65rem; border: 1.5px solid currentColor; border-radius: 7px; padding: .45rem .65rem; background: transparent; color: var(--ink); font: 700 .85rem inherit; cursor: pointer; text-align: center; text-decoration: none; }
+  .promotion-live { background: var(--ok); color: #fff; }
+  .promotion-demo-note { margin: .55rem 0 0; color: var(--ink-soft); font-size: .72rem; }
   .repository-dashboard { max-width: 1520px; margin: 0 auto 1rem; }
   .repository-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .repository-heading h2 { margin-bottom: .2rem; }
@@ -285,12 +307,30 @@
 <header class="top">
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
+  <button type="button" class="promotion-banner-button" id="btn-live-overlay">Naar live zetten</button>
   <div class="deployment-versions" aria-label="Echte deploymentversies">
     <strong>Echte deploymentversies:</strong>
     <span class="deployment-version">Test <code id="real-test-version">—</code></span>
     <span class="deployment-version">Live <code id="real-live-version">—</code></span>
   </div>
 </header>
+
+<div class="promotion-overlay" id="live-promotion-overlay" hidden aria-hidden="true">
+  <section class="promotion-panel" id="live-promotion-panel" role="dialog" aria-modal="false" aria-labelledby="live-promotion-title">
+    <button type="button" class="promotion-close" id="btn-close-live-overlay" aria-label="Sluit promotie-overlay">×</button>
+    <h2 id="live-promotion-title">Promotie naar live</h2>
+    <p id="promotion-description">Zelfstandige controle. De simulatie eronder blijft onaangeraakt.</p>
+    <div class="promotion-modes" id="promotion-modes" aria-label="Kies voorbeeldtoestand">
+      <button type="button" id="btn-promotion-green">Groene voorbeeldtoestand</button>
+      <button type="button" id="btn-promotion-red">Rode voorbeeldtoestand</button>
+    </div>
+    <ul class="promotion-checks" id="promotion-checks"></ul>
+    <p class="promotion-error" id="promotion-error" hidden></p>
+    <button type="button" class="promotion-recover" id="btn-promotion-recover" hidden>Controleer opnieuw</button>
+    <a class="promotion-live" id="btn-promotion-live" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer" role="button">Start menselijke live-goedkeuring ↗</a>
+    <p class="promotion-demo-note" id="promotion-demo-note">Mockup: deze knop voert geen live-promotie uit.</p>
+  </section>
+</div>
 
 <!-- ==== SECTIE: LAYOUT ==== -->
 <div class="wrap">
@@ -1188,6 +1228,125 @@
   }
 
   /* ==== SECTIE: ACTIES ==== */
+  const PROMOTION_FIXTURES = {
+    green: {
+      checks: [
+        "Test zonder mergeconflicts: geen mergeconflicts gevonden",
+        "Beschikbare verplichte checks: quality geslaagd",
+        "Live zonder problemen kan worden bijgewerkt: ja, de geteste versie staat klaar",
+      ],
+      error: "",
+    },
+    red: {
+      checks: [
+        "Test zonder mergeconflicts: controleer de branch voordat je verdergaat",
+        "Beschikbare verplichte checks: quality is mislukt",
+        "Live zonder problemen kan worden bijgewerkt: nee, eerst herstellen",
+      ],
+      error: "Herstel eerst de fout en laat de verplichte checks opnieuw slagen. De menselijke live-goedkeuring blijft daarna nodig.",
+    },
+  };
+  function renderPromotionResult(result) {
+    const panel = el("live-promotion-panel");
+    el("promotion-checks").innerHTML = result.checks.map(check => `<li>${check}</li>`).join("");
+    el("promotion-error").textContent = result.error || "";
+    el("promotion-error").hidden = !result.error;
+    el("btn-promotion-recover").hidden = !result.error;
+    el("btn-promotion-live").hidden = !result.safe;
+    panel.classList.toggle("is-blocked", !result.safe);
+    el("promotion-demo-note").textContent = result.note || "De menselijke live-goedkeuring blijft verplicht; deze actie zet niets automatisch live.";
+  }
+  function renderPromotionFixture(mode) {
+    const fixture = PROMOTION_FIXTURES[mode];
+    renderPromotionResult({ ...fixture, safe: mode === "green", note: "Ontwikkelomgeving: dit zijn fixtures; er is niets live gezet." });
+    el("btn-promotion-green").classList.toggle("active", mode === "green");
+    el("btn-promotion-red").classList.toggle("active", mode === "red");
+  }
+  async function loadRealPromotionStatus() {
+    const fail = message => renderPromotionResult({
+      checks: [
+        "Test zonder mergeconflicts: niet betrouwbaar vast te stellen",
+        "Beschikbare verplichte checks: niet betrouwbaar vast te stellen",
+        "Live zonder problemen kan worden bijgewerkt: nee, statusgegevens ontbreken",
+      ],
+      error: `${message} Controleer de Test-publicatie opnieuw voordat je de menselijke goedkeuring start.`,
+      safe: false,
+      note: "Echte Test-gegevens: promotie blijft geblokkeerd totdat alle controles betrouwbaar zijn.",
+    });
+    renderPromotionResult({
+      checks: ["Teststatus wordt opgehaald…", "Verplichte checks worden opgehaald…", "Live-veiligheid wordt gecontroleerd…"],
+      error: "",
+      safe: false,
+      note: "Echte Test-gegevens worden gecontroleerd; de simulatie blijft onaangeraakt.",
+    });
+    try {
+      const [versionResult, testResponse, liveResponse] = await Promise.all([
+        loadVersionFile(),
+        fetch("environment.json", { cache: "no-store" }),
+        fetch("../environment.json", { cache: "no-store" }),
+      ]);
+      if (versionResult.status !== "ready" || !testResponse.ok || !liveResponse.ok) throw new Error("De Test- of Live-status is niet bereikbaar.");
+      const testData = await testResponse.json();
+      const liveData = await liveResponse.json();
+      const testSha = versionResult.build.sha;
+      const testVersion = versionResult.build.version;
+      if (!testSha || testData?.environment !== "test" || testData.version !== testVersion || testData.sha !== testSha || !liveData?.version) throw new Error("De Test-publicatie en de versiegegevens komen niet aantoonbaar overeen.");
+      const checksResponse = await fetch(`${REPOSITORY_API_ROOT}/commits/${encodeURIComponent(testSha)}/check-runs?per_page=100`, { headers: { Accept: "application/vnd.github+json" } });
+      if (!checksResponse.ok) throw new Error("De verplichte checks konden niet worden gelezen.");
+      const checksData = await checksResponse.json();
+      const checks = Array.isArray(checksData.check_runs) ? checksData.check_runs : [];
+      const quality = checks.find(check => check.name === "quality" && check.head_sha === testSha);
+      const qualityGreen = Boolean(quality && quality.status === "completed" && quality.conclusion === "success");
+      const testIsMain = testData.branch === "main";
+      const liveIsDifferent = liveData.version !== testVersion;
+      const result = {
+        checks: [
+          `Test zonder mergeconflicts: ${testIsMain ? "de geteste versie komt uit main; geen conflict in de opgeslagen Test-versie" : "de bronbranch is niet main"}`,
+          `Beschikbare verplichte checks: ${qualityGreen ? "quality geslaagd" : quality ? `quality ${quality.status === "completed" ? "mislukt" : "draait nog"}` : "quality ontbreekt"}`,
+          `Live zonder problemen kan worden bijgewerkt: ${liveIsDifferent && testIsMain && qualityGreen ? "ja, de geteste versie staat klaar" : "nee, eerst herstellen"}`,
+        ],
+        error: testIsMain && qualityGreen && liveIsDifferent ? "" : !testIsMain ? "De Test-versie komt niet aantoonbaar uit main." : !qualityGreen ? "De verplichte quality-check is niet geslaagd of ontbreekt." : "Test en Live bevatten dezelfde versie; er is niets nieuws te promoveren.",
+        safe: testIsMain && qualityGreen && liveIsDifferent,
+        note: "Echte Test-gegevens: de knop opent alleen de bestaande menselijke live-goedkeuringsstap; er wordt niets automatisch live gezet.",
+      };
+      renderPromotionResult(result);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : "De statusgegevens konden niet worden gelezen.");
+    }
+  }
+  function promotionUsesFixtures() {
+    return repositoryUsesSimulatedData() || typeof location === "undefined";
+  }
+  function openPromotionOverlay() {
+    const overlay = el("live-promotion-overlay");
+    overlay.hidden = false;
+    overlay.setAttribute("aria-hidden", "false");
+    const simulated = promotionUsesFixtures();
+    el("promotion-modes").hidden = !simulated;
+    el("promotion-description").textContent = simulated
+      ? "Zelfstandige voorbeeldcontrole. De simulatie eronder blijft onaangeraakt."
+      : "Zelfstandige controle met echte Test-gegevens. De simulatie eronder blijft onaangeraakt.";
+    if (simulated) renderPromotionFixture("green");
+    else loadRealPromotionStatus();
+  }
+  function closePromotionOverlay() {
+    const overlay = el("live-promotion-overlay");
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  function initialisePromotionOverlay() {
+    el("btn-live-overlay").onclick = openPromotionOverlay;
+    el("btn-close-live-overlay").onclick = closePromotionOverlay;
+    el("btn-promotion-green").onclick = () => renderPromotionFixture("green");
+    el("btn-promotion-red").onclick = () => renderPromotionFixture("red");
+    el("btn-promotion-recover").onclick = () => promotionUsesFixtures() ? renderPromotionFixture("green") : loadRealPromotionStatus();
+    el("btn-promotion-live").onclick = event => {
+      if (!promotionUsesFixtures()) return;
+      event?.preventDefault?.();
+      el("promotion-demo-note").textContent = "Ontwikkelomgeving: menselijke goedkeuring zou nu starten; er is niets live gezet.";
+    };
+    renderPromotionFixture("green");
+  }
   function newIssue() {
     const [title, slug] = ISSUE_POOL[S.issues.length % ISSUE_POOL.length];
     S.issues.push({ num: ++S.issueNo, title, slug, branch: null, closed: false });
@@ -1793,6 +1952,7 @@
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
+  initialisePromotionOverlay();
   el("repository-refresh").onclick = () => loadRepositoryDashboard(true);
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
