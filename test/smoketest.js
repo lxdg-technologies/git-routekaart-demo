@@ -38,7 +38,7 @@ const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijs
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "promote-sub", "revert-sub", "rollback-sub", "collega-sub", "hotfix-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
   "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version",
-  "live-promotion-overlay", "live-promotion-panel", "promotion-checks", "promotion-error", "promotion-demo-note"];
+  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live"]) byIdMap[id] = makeEl("button");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
@@ -75,7 +75,7 @@ global.fetch = async url => {
     { number: 1, title: "Omgevingen ingericht", state: "closed", merged_at: "2026-08-07T09:00:00Z", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/1", head: { ref: "agent/setup" }, base: { ref: "main" } },
   ]);
   if (String(url) === "environment.json") {
-    if (["test-live-behind", "test-live-equal", "checks-green", "checks-failed", "checks-missing"].includes(fetchMode)) return response({ environment: "test", version: "v9.9.9", sha: "abc1234" });
+    if (["test-live-behind", "test-live-equal", "checks-green", "checks-failed", "checks-missing"].includes(fetchMode)) return response({ environment: "test", branch: "main", version: "v9.9.9", sha: "abc1234" });
     if (fetchMode === "test-live-invalid-published") return response({ environment: "test", version: "v9.9.9", sha: "wrongsha" });
     return response({}, 404);
   }
@@ -202,6 +202,21 @@ const delen = [
   byIdMap["test-live-check"].onclick(); await flush();
   assert(byIdMap["test-live-status"].classList.contains("is-safe") && byIdMap["test-live-status-text"].textContent === "✓ Veilig om live te zetten" && byIdMap["test-live-condition-checks"].textContent.includes("Alle verplichte controles zijn geslaagd"), "groene controle toont in één regel dat Test veilig live kan");
   assert(byIdMap["test-live-promote-link"].hidden === false && byIdMap["test-live-condition-human"].textContent.includes("mens"), "alleen groen toont de knop voor handmatige promotie en menselijke bevestiging");
+  byIdMap["btn-live-overlay"].onclick(); await flush();
+  assert(byIdMap["promotion-modes"].hidden === true && byIdMap["promotion-description"].textContent.includes("echte Test-gegevens"), "de Test-overlay gebruikt geen voorbeeldkeuze en meldt echte Test-gegevens");
+  assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-error"].hidden === true && byIdMap["promotion-checks"].innerHTML.includes("quality geslaagd"), "echte groene Test-status toont precies één actie naar de menselijke goedkeuringsstap");
+  const overlayStateAfterRealGreen = { test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active };
+  byIdMap["btn-promotion-live"].onclick({ preventDefault() {} });
+  assert(JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateAfterRealGreen), "start menselijke goedkeuring verandert geen simulatiestatus en promoveert niet automatisch");
+  await loadTestStatus("checks-failed");
+  byIdMap["btn-live-overlay"].onclick(); await flush();
+  assert(byIdMap["btn-promotion-live"].hidden === true && byIdMap["promotion-error"].textContent.includes("quality-check"), "echte rode Test-status blokkeert de definitieve live-actie met hersteluitleg");
+  await loadTestStatus("repository-error");
+  byIdMap["btn-live-overlay"].onclick(); await flush();
+  assert(byIdMap["btn-promotion-live"].hidden === true && byIdMap["promotion-error"].textContent.includes("status"), "ontbrekende of onbereikbare Test-status blokkeert de definitieve live-actie");
+  await loadTestStatus("checks-green");
+  byIdMap["btn-live-overlay"].onclick(); await flush();
+  assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-error"].hidden === true, "opnieuw beschikbare Test-status herstelt de groene actie");
   await loadTestStatus("test-live-equal");
   assert(byIdMap["test-live-status-text"].textContent === "! Nog niet veilig" && byIdMap["test-live-check"].disabled === true && byIdMap["test-live-promote-link"].hidden === true, "gelijke test- en liveversie toont geen veilige promotie-uitkomst");
   await loadTestStatus("checks-failed");
