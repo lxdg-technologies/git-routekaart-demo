@@ -28,6 +28,7 @@ function makeEl(tag) {
     firstElementChild: null,
   };
   el.firstElementChild = { style: {} };
+  Object.defineProperty(el, "offsetParent", { get() { return this.hidden ? null : {}; } });
   classSets.set(el, classes);
   created.push(el);
   return el;
@@ -185,7 +186,7 @@ const delen = [
   assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-error"].hidden === true, "groene voorbeeldtoestand toont Zet nu live zonder foutuitleg");
   byIdMap["btn-promotion-red"].onclick();
   assert(byIdMap["live-promotion-panel"].classList.contains("is-blocked") && byIdMap["promotion-error"].textContent.includes("Herstel eerst") && byIdMap["btn-promotion-recover"].hidden === false, "rode voorbeeldtoestand toont foutuitleg en herstelactie");
-  assert(byIdMap["btn-promotion-live"].hidden === true, "rode voorbeeldtoestand heeft geen beschikbare Zet nu live-knop");
+  assert(byIdMap["btn-promotion-live"].offsetParent === null, "rode voorbeeldtoestand toont de live-goedkeuringsknop niet");
   byIdMap["btn-promotion-recover"].onclick();
   byIdMap["btn-promotion-live"].onclick();
   assert(byIdMap["btn-promotion-live"].hidden === false && byIdMap["promotion-demo-note"].textContent.includes("niets live gezet") && JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateBefore), "mockup verandert geen simulatiestatus en voert geen live-promotie uit");
@@ -210,7 +211,7 @@ const delen = [
   assert(JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateAfterRealGreen), "start menselijke goedkeuring verandert geen simulatiestatus en promoveert niet automatisch");
   await loadTestStatus("checks-failed");
   byIdMap["btn-live-overlay"].onclick(); await flush();
-  assert(byIdMap["btn-promotion-live"].hidden === true && byIdMap["promotion-error"].textContent.includes("quality-check"), "echte rode Test-status blokkeert de definitieve live-actie met hersteluitleg");
+  assert(byIdMap["btn-promotion-live"].offsetParent === null && byIdMap["promotion-error"].textContent.includes("quality-check"), "echte rode Test-status blokkeert de definitieve live-actie met hersteluitleg");
   await loadTestStatus("repository-error");
   byIdMap["btn-live-overlay"].onclick(); await flush();
   assert(byIdMap["btn-promotion-live"].hidden === true && byIdMap["promotion-error"].textContent.includes("status"), "ontbrekende of onbereikbare Test-status blokkeert de definitieve live-actie");
