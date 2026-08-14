@@ -31,15 +31,15 @@ else
 fi
 
 case "$omgeving" in
-  development) titel="Ontwikkelversie"; kleur="var(--warn)" ;;
-  test)        titel="Testversie";      kleur="var(--accent)" ;;
+  development) titel="Ontwikkelversie"; kleur="var(--warn)"; tekstkleur="#10161d" ;;
+  test)        titel="Testversie";      kleur="var(--accent)"; tekstkleur="#fff" ;;
   *) echo "Onbekende omgeving: $omgeving" >&2; exit 1 ;;
 esac
 
 balk=$(cat <<EOF
 <div role="note" style="
   background:${kleur};
-  color:#fff;
+  color:${tekstkleur};
   font:600 14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;
   padding:.55rem 1rem;
   position:sticky;
@@ -50,7 +50,7 @@ balk=$(cat <<EOF
   text-align:center;
   letter-spacing:.01em;">
   ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${versie_label}</code>
-  <span style="display:block;font-weight:400;opacity:.9;">
+  <span style="display:block;font-weight:400;">
     Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
     publiceren nog bezig — wacht een minuut en ververs de pagina.
   </span>
