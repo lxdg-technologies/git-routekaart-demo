@@ -17,6 +17,12 @@
     --ok: #2e8b57;
     --warn: #c47f17;
     --danger: #c43b3b;
+    --env-dev-bg: #fff3d6;
+    --env-dev-ink: #5a3b00;
+    --env-test-bg: #e7f0ff;
+    --env-test-ink: #123b70;
+    --env-live-bg: #e4f5ea;
+    --env-live-ink: #155c37;
     --station: #ffffff;
     --chip-bg: #e7ecf1;
     --radius: 10px;
@@ -26,11 +32,17 @@
     :root {
       --bg: #10161d; --panel: #18212b; --ink: #e8edf2; --ink-soft: #93a3b3;
       --line: #2a3641; --station: #10161d; --chip-bg: #22303c;
+      --env-dev-bg: #5a3b00; --env-dev-ink: #fff3d6;
+      --env-test-bg: #123b70; --env-test-ink: #dbeafe;
+      --env-live-bg: #155c37; --env-live-ink: #dcfce7;
     }
   }
   :root[data-theme="dark"] {
     --bg: #10161d; --panel: #18212b; --ink: #e8edf2; --ink-soft: #93a3b3;
     --line: #2a3641; --station: #10161d; --chip-bg: #22303c;
+    --env-dev-bg: #5a3b00; --env-dev-ink: #fff3d6;
+    --env-test-bg: #123b70; --env-test-ink: #dbeafe;
+    --env-live-bg: #155c37; --env-live-ink: #dcfce7;
   }
   :root[data-theme="light"] {
     --bg: #eef1f4; --panel: #ffffff; --ink: #1b2733; --ink-soft: #5a6a7a;
@@ -159,9 +171,9 @@
   .release-history-list a { color: var(--ink); font-weight: 650; }
   .release-history-list time { color: var(--ink-soft); font-size: .7rem; }
   .release-history-empty { margin: 0; color: var(--ink-soft); font: .75rem var(--sans); }
-  .release-badge.dev { border-color: var(--warn); color: var(--warn); }
-  .release-badge.test { border-color: var(--accent); color: var(--accent); }
-  .release-badge.live { border-color: var(--ok); color: var(--ok); }
+  .release-badge.dev { border-color: var(--warn); background: var(--env-dev-bg); color: var(--env-dev-ink); }
+  .release-badge.test { border-color: var(--accent); background: var(--env-test-bg); color: var(--env-test-ink); }
+  .release-badge.live { border-color: var(--ok); background: var(--env-live-bg); color: var(--env-live-ink); }
   @media (max-width: 700px), (max-device-width: 700px) {
     .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
     .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
@@ -199,12 +211,12 @@
   button.env.dev.active { border-color: var(--warn); }
   button.env.test.active { border-color: var(--accent); }
   button.env.live.active { border-color: var(--ok); }
-  .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
+  .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: inherit; }
   .env-val { font-family: var(--mono); font-weight: 700; font-size: .92rem; margin: .15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .env-sub { font-size: .67rem; color: var(--ink-soft); line-height: 1.25; }
-  .env.dev { border-color: var(--warn); }
-  .env.test { border-color: var(--accent); }
-  .env.live { border-color: var(--ok); }
+  .env-sub { font-size: .67rem; color: inherit; line-height: 1.25; }
+  .env.dev { border-color: var(--warn); background: var(--env-dev-bg); color: var(--env-dev-ink); }
+  .env.test { border-color: var(--accent); background: var(--env-test-bg); color: var(--env-test-ink); }
+  .env.live { border-color: var(--ok); background: var(--env-live-bg); color: var(--env-live-ink); }
   .test-live-status { margin: .7rem 0 0; padding: .65rem .7rem; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
   .test-live-status strong { display: block; font-size: 1rem; line-height: 1.25; }
   .test-live-status ul { display: grid; gap: .2rem; margin: .45rem 0 0; padding: 0; list-style: none; }

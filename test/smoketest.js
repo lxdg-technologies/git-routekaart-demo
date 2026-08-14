@@ -101,7 +101,7 @@ global.fetch = async url => {
   return response({}, 503);
 };
 
-global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), documentElement: {} };
+global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), documentElement: { dataset: {} } };
 global.getComputedStyle = () => ({ getPropertyValue: () => "#1e5aa8" });
 const sessionValues = new Map();
 global.sessionStorage = { getItem: key => sessionValues.get(key) ?? null, setItem: (key, value) => sessionValues.set(key, value) };
@@ -110,6 +110,7 @@ global.window = global;
 // De delen draaien in deze volgorde; de controles bouwen op elkaars toestand voort.
 const delen = [
   ["release-badge", require("./checks/release-badge")],
+  ["contrast", require("./checks/contrast")],
   ["repository-dashboard", require("./checks/repository-dashboard")],
   ["begrippen", require("./checks/begrippen")],
   ["omgevingen", require("./checks/omgevingen")],
