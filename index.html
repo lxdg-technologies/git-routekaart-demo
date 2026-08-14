@@ -1928,15 +1928,18 @@
       if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
       labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
-    // vlaggetjes: waar staat test, waar staat live (altijd op main)
+    // Omgevingsiconen: waar staan ontwikkel, test en live op de kaart.
     const flagY = laneY(0) - R - 14;
     const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
-    if (testC && liveC && testC.id === liveC.id) {
-      flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>test én live staan hier</title>🧪🚀</text>`;
-    } else {
-      if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige test-versie</title>🧪</text>`;
-      if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(liveC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige live-versie</title>🚀</text>`;
-    }
+    const devC = S.active && S.branches[S.active] ? byId(S.branches[S.active].head) : byId(S.branches.main.head);
+    const environmentMarker = (environment, icon, commit, y, label) => {
+      if (!commit) return "";
+      const faded = isEnvFaded(commit) ? ' data-env-faded="true" opacity=".4"' : "";
+      return `<text data-environment="${environment}" x="${cx(commit)}" y="${y}" text-anchor="middle" font-size="14" aria-label="${label}"${faded}>${icon}<title>${label}</title></text>`;
+    };
+    flags += environmentMarker("dev", "💻", devC, flagY - 30, "huidige ontwikkel-omgeving");
+    flags += environmentMarker("test", "🔑", testC, flagY, "huidige test-omgeving");
+    flags += environmentMarker("live", "🌐", liveC, flagY + 30, "huidige live-omgeving");
     const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
     const frame = S.envFilter !== "all" && frameBounds ? (() => {
       const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);

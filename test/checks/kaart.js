@@ -2,7 +2,8 @@
 module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, state, stappen }) {
   stappen.opnieuw();
   assert(byIdMap["env-filter-note"].textContent.includes("Simulatie/oefening") && byIdMap["env-filter-note"].textContent.includes("wijzigen GitHub niet"), "interactieve kaart labelt zichzelf als veilige simulatie");
-  assert(mapResult().includes("🧪🚀"), "kaart toont gecombineerde test/live-vlag bij de start");
+  assert(mapResult().includes('data-environment="test"') && mapResult().includes("🔑") && mapResult().includes('data-environment="live"') && mapResult().includes("🌐"), "kaart toont de huidige Test- en Live-omgevingen");
+  assert(mapResult().includes('data-environment="dev"') && mapResult().includes("💻"), "kaart toont het afgesproken Ontwikkel-icoon");
   assert(mapResult().includes("station-hit") && mapResult().includes("v0.1.0"), "kaart toont release-station en versielabel");
   assert(mapResult().includes('role="button"') && mapResult().includes("branch-line"), "kaart rendert klikbare branch-lijn en stations");
   assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
@@ -44,7 +45,7 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   stappen.mergeRonde("merge");
   assert(mapResult().includes("v0.1.1") && mapResult().includes("release station v0.1.1"), "nieuwe release krijgt label op het juiste station");
   stappen.promote();
-  assert(mapResult().includes("🧪🚀"), "kaart toont gecombineerde vlag na promotie");
+  assert(mapResult().includes('data-environment="test"') && mapResult().includes("🔑") && mapResult().includes('data-environment="live"') && mapResult().includes("🌐"), "kaart toont Test en Live na promotie");
 
   stappen.mergeRonde("squash");
   stappen.revert();
