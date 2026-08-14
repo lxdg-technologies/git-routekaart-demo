@@ -48,10 +48,6 @@
   header.top h1 { font-size: 1.45rem; font-weight: 700; margin: 0; letter-spacing: -.01em; }
   header.top h1 .metro { color: var(--main-line); }
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
-  .deployment-versions { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .35rem .8rem; align-items: baseline; margin-top: .15rem; padding: .45rem .65rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink-soft); font-size: .78rem; }
-  .deployment-versions strong { color: var(--ink); }
-  .deployment-version { display: inline-flex; gap: .35rem; min-width: 0; align-items: baseline; }
-  .deployment-version code { color: var(--ink); font: 700 .82rem var(--mono); overflow-wrap: anywhere; }
   .promotion-banner-button { margin-left: auto; border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .65rem; background: var(--accent); color: #fff; font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
   .promotion-banner-button:hover, .promotion-banner-button:focus-visible { filter: brightness(1.08); }
   .promotion-overlay { position: fixed; top: 5rem; right: 1rem; z-index: 20; width: min(370px, calc(100vw - 2rem)); pointer-events: none; }
@@ -152,6 +148,10 @@
   .release-badge[open] summary::after { content: "⌃"; }
   .release-history-panel { position: absolute; right: 0; bottom: calc(100% + .55rem); width: min(270px, calc(100vw - 2rem)); padding: .65rem .75rem; border: 1px solid currentColor; border-radius: 10px; background: var(--panel); box-shadow: 0 8px 22px rgb(0 0 0 / .16); }
   .release-history-panel h3 { margin: 0 0 .45rem; font: 700 .75rem var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+  .release-deployment-versions { display: grid; gap: .3rem; margin: 0 0 .65rem; padding: .5rem .55rem; border: 1px solid var(--line); border-radius: 7px; background: var(--chip-bg); color: var(--ink-soft); font: .75rem var(--sans); }
+  .release-deployment-versions strong { color: var(--ink); }
+  .release-deployment-version { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; }
+  .release-deployment-version code { color: var(--ink); font: 700 .78rem var(--mono); overflow-wrap: anywhere; text-align: right; }
   .release-current-link { display: block; margin-bottom: .55rem; font-weight: 700; color: currentColor; }
   .release-build-note { margin: 0 0 .55rem; color: var(--ink-soft); font: .72rem var(--sans); }
   .release-history-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
@@ -308,11 +308,6 @@
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
   <button type="button" class="promotion-banner-button" id="btn-live-overlay">Naar live zetten</button>
-  <div class="deployment-versions" aria-label="Echte deploymentversies">
-    <strong>Echte deploymentversies:</strong>
-    <span class="deployment-version">Test <code id="real-test-version">—</code></span>
-    <span class="deployment-version">Live <code id="real-live-version">—</code></span>
-  </div>
 </header>
 
 <div class="promotion-overlay" id="live-promotion-overlay" hidden aria-hidden="true">
@@ -528,6 +523,11 @@
 <details class="release-badge" id="release-history" aria-live="polite">
   <summary id="release-badge-label">release: onbekend</summary>
   <div class="release-history-panel">
+    <div class="release-deployment-versions" aria-label="Echte deploymentversies">
+      <strong>Echte deploymentversies</strong>
+      <span class="release-deployment-version">Test <code id="real-test-version">—</code></span>
+      <span class="release-deployment-version">Live <code id="real-live-version">—</code></span>
+    </div>
     <h3>Releasegeschiedenis <span id="release-source-label"></span></h3>
     <a class="release-current-link" id="release-current-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/releases" target="_blank" rel="noreferrer">Bekijk release op GitHub ↗</a>
     <p class="release-build-note" id="release-build-note"></p>
