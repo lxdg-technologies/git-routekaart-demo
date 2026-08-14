@@ -7,6 +7,7 @@ module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCall
   assert(byIdMap["release-current-link"].href.endsWith("/v9.9.9"), "badge-link verwijst naar de actieve release");
   assert(fetchCalls.includes("version.json"), "badge vraagt buildinformatie op via fetch");
   assert(byIdMap["release-history"].classList.contains("release-badge") && byIdMap["release-history"].classList.contains("dev"), "badge krijgt de ontwikkelstatus in de DOM");
+  assert(byIdMap["release-history"].open !== true, "gesloten releaseknop houdt de extra deploymentinformatie uit beeld");
   setFetchMode("invalid");
   stappen.opnieuw(); await flush(); await flush();
   assert(byIdMap["release-badge-label"].textContent === "release: tijdelijk niet beschikbaar", "ongeldig version.json toont tijdelijk niet beschikbaar");
@@ -25,6 +26,7 @@ module.exports = async function releaseBadge({ assert, flush, byIdMap, fetchCall
   byIdMap["release-history"].dataset.historyLoaded = "false";
   byIdMap["release-history"].ontoggle(); await flush(); await flush();
   assert(byIdMap["release-history-list"].children.length === 2, "releasehistorie rendert alle ontvangen items");
+  assert(byIdMap["release-history"].open === true, "geopende releaseknop toont het uitgebreide releasepaneel");
   const historyLink = byIdMap["release-history-list"].children[0].children[0];
   assert(historyLink.textContent === "v9.9.8", "releasehistorie toont tagnaam");
   assert(historyLink.href === "https://example.test/releases/v9.9.8" && historyLink.target === "_blank", "releasehistorie-item linkt naar release-notes in nieuw tabblad");
