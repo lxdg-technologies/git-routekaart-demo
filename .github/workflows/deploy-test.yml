@@ -90,7 +90,8 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     concurrency:
-      group: gh-pages-environments
+      # Test heeft een eigen rij en annuleert nooit: elke merge blijft aan de beurt.
+      group: gh-pages-test
       cancel-in-progress: false
     environment:
       name: test
@@ -208,4 +209,15 @@ jobs:
             exit 0
           fi
           git commit -m "Deploy $VERSION to test (${GITHUB_SHA::7})"
-          git push origin gh-pages
+          for poging in 1 2 3 4 5; do
+            if git push origin gh-pages; then
+              echo "Test en $VERSION gepubliceerd"
+              exit 0
+            fi
+            echo "Push naar gh-pages afgewezen (poging $poging) — deploymentbranch is intussen bijgewerkt"
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+            sleep 3
+          done
+          echo "::error::Publiceren van test bleef mislukken na 5 pogingen"
+          exit 1
