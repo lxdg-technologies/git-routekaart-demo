@@ -417,19 +417,19 @@
       <p id="env-source-label" class="source-label"></p>
       <div class="envs" aria-label="Kies omgevingsweergave">
         <button type="button" class="env dev" id="env-dev-box" aria-pressed="false" aria-label="Toon Ontwikkel-weergave">
-          <div class="env-name">Ontwikkel</div>
+          <div class="env-name"><span aria-hidden="true">💻</span> Ontwikkel</div>
           <div class="env-val" id="env-dev">—</div>
           <div class="env-sub">jouw branch</div>
         </button>
         <div class="env-arrow">→</div>
         <button type="button" class="env test" id="env-test-box" aria-pressed="false" aria-label="Toon Test-weergave">
-          <div class="env-name">Test</div>
+          <div class="env-name"><span aria-hidden="true">🔑</span> Test</div>
           <div class="env-val" id="env-test">v0.1.0</div>
           <div class="env-sub">elke merge, automatisch</div>
         </button>
         <div class="env-arrow">→</div>
         <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
-          <div class="env-name">Live</div>
+          <div class="env-name"><span aria-hidden="true">🌐</span> Live</div>
           <div class="env-val" id="env-live">v0.1.0</div>
           <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
         </button>
@@ -851,11 +851,14 @@
   /* ==== SECTIE: RELEASE-BADGE ==== */
   const VERSION_FILE_URL = "version.json";
   const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
-  const RELEASE_ENVIRONMENT = typeof location !== "undefined"
-    ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
-      ? "dev"
-      : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
-    : "dev";
+  function getReleaseEnvironment() {
+    return typeof location !== "undefined"
+      ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
+        ? "dev"
+        : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
+      : "dev";
+  }
+  const RELEASE_ENVIRONMENT = getReleaseEnvironment();
 
   function setupReleaseBadge() {
     const badge = el("release-history");
@@ -1346,6 +1349,16 @@
       el("promotion-demo-note").textContent = "Ontwikkelomgeving: menselijke goedkeuring zou nu starten; er is niets live gezet.";
     };
     renderPromotionFixture("green");
+  }
+  function applyPromotionVisibility() {
+    const available = getReleaseEnvironment() !== "live";
+    if (!available) {
+      el("btn-live-overlay")?.remove();
+      el("live-promotion-overlay")?.remove();
+      return false;
+    }
+    initialisePromotionOverlay();
+    return true;
   }
   function newIssue() {
     const [title, slug] = ISSUE_POOL[S.issues.length % ISSUE_POOL.length];
@@ -1915,15 +1928,18 @@
       if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
       labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
-    // vlaggetjes: waar staat test, waar staat live (altijd op main)
+    // Omgevingsiconen: waar staan ontwikkel, test en live op de kaart.
     const flagY = laneY(0) - R - 14;
     const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
-    if (testC && liveC && testC.id === liveC.id) {
-      flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>test én live staan hier</title>🧪🚀</text>`;
-    } else {
-      if (testC) flags += `<text x="${cx(testC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(testC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige test-versie</title>🧪</text>`;
-      if (liveC) flags += `<text x="${cx(liveC)}" y="${flagY}" text-anchor="middle" font-size="14"${isEnvFaded(liveC) ? ' data-env-faded="true" opacity=".4"' : ""}><title>huidige live-versie</title>🚀</text>`;
-    }
+    const devC = S.active && S.branches[S.active] ? byId(S.branches[S.active].head) : byId(S.branches.main.head);
+    const environmentMarker = (environment, icon, commit, y, label) => {
+      if (!commit) return "";
+      const faded = isEnvFaded(commit) ? ' data-env-faded="true" opacity=".4"' : "";
+      return `<text data-environment="${environment}" x="${cx(commit)}" y="${y}" text-anchor="middle" font-size="14" aria-label="${label}"${faded}>${icon}<title>${label}</title></text>`;
+    };
+    flags += environmentMarker("dev", "💻", devC, flagY - 30, "huidige ontwikkel-omgeving");
+    flags += environmentMarker("test", "🔑", testC, flagY, "huidige test-omgeving");
+    flags += environmentMarker("live", "🌐", liveC, flagY + 30, "huidige live-omgeving");
     const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
     const frame = S.envFilter !== "all" && frameBounds ? (() => {
       const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);
@@ -1952,7 +1968,7 @@
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
-  initialisePromotionOverlay();
+  applyPromotionVisibility();
   el("repository-refresh").onclick = () => loadRepositoryDashboard(true);
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
@@ -1964,6 +1980,7 @@
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__applyPromotionVisibility = applyPromotionVisibility; // alleen voor test/smoketest.js
   init();
   loadRepositoryDashboard();
 })();
