@@ -3,8 +3,16 @@ name: Promote a tested version to production
 on:
   workflow_dispatch:
     inputs:
+      selection:
+        description: Kies welke versie zonder handmatig nummer wordt bepaald
+        required: true
+        default: Versie van Test naar Live
+        type: choice
+        options:
+          - Versie van Test naar Live
+          - Vorige Live-versie terugzetten
       version:
-        description: Laat leeg om de versie te nemen die nu op test staat. Vul alleen iets in om terug te rollen naar een oudere versie, bijvoorbeeld v1.2.0
+        description: Optioneel versienummer; dit overschrijft de keuze hierboven, bijvoorbeeld v1.2.0
         required: false
         default: ""
         type: string
@@ -46,6 +54,7 @@ jobs:
         shell: bash
         env:
           CONFIRM: ${{ inputs.confirm }}
+          SELECTION: ${{ inputs.selection }}
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
@@ -54,23 +63,9 @@ jobs:
             exit 1
           fi
 
-          # Geen versie ingevuld: neem wat er nu op test staat. Dat is de normale situatie —
-          # je promoveert wat je zojuist hebt goedgekeurd. Een versie invullen blijft mogelijk
-          # en is de manier om terug te rollen naar een oudere, al bewezen versie.
-          if [ -z "$VERSION" ]; then
-            if [ ! -s site/test/environment.json ]; then
-              echo "::error::De testomgeving heeft geen leesbare versiegegevens, dus er valt niets over te nemen. Vul handmatig een versie in."
-              exit 1
-            fi
-            VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("version",""))' site/test/environment.json)"
-            if [ -z "$VERSION" ]; then
-              echo "::error::De testomgeving noemt geen versie. Vul handmatig een versie in."
-              exit 1
-            fi
-            SELECTIE="overgenomen van test"
-          else
-            SELECTIE="handmatig opgegeven"
-          fi
+          mapfile -t gekozen < <(python3 source/.github/scripts/bepaal-promotieversie.py "$SELECTION" "$VERSION" site/test/environment.json site)
+          VERSION="${gekozen[0]#VERSION=}"
+          SELECTIE="${gekozen[1]#REASON=}"
           echo "Gekozen versie: $VERSION ($SELECTIE)"
           printf '## Promotie naar live\n\nVersie **%s** — %s.\n' "$VERSION" "$SELECTIE" >> "$GITHUB_STEP_SUMMARY"
 
