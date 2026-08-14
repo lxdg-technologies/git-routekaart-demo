@@ -16,15 +16,47 @@ on:
 permissions:
   contents: write
   pull-requests: write
-
-concurrency:
-  group: gh-pages-environments
-  cancel-in-progress: false
+  actions: write
 
 jobs:
-  deploy-dev:
+  cancel-stale-dev:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    steps:
+      - name: Annuleer oudere ontwikkelruns van deze pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.number }}
+          CURRENT_RUN: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          runs="$(gh api --paginate \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs?event=pull_request&per_page=100" \
+            --jq '.workflow_runs[] | select(.name == "Deploy pull request to development") | select(.id != ('$CURRENT_RUN')) | select(.pull_requests | any(.number == ('$PR_NUMBER'))) | select(.status != "completed") | [.id, .head_sha] | @tsv' \
+            || true)"
+          if [ -z "$runs" ]; then
+            echo "Geen oudere ontwikkelrun voor pull request #${PR_NUMBER} gevonden"
+            exit 0
+          fi
+          while IFS=$'\t' read -r run_id old_sha; do
+            [ -n "$run_id" ] || continue
+            if gh api --method POST "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null; then
+              echo "Ontwikkelrun ${run_id} (${old_sha}) geannuleerd: verouderd; run ${CURRENT_RUN} voor pull request #${PR_NUMBER} gaat voor."
+            else
+              echo "::warning::Oudere ontwikkelrun ${run_id} kon niet worden geannuleerd; de concurrency-groep blijft dit opvangen."
+            fi
+          done <<< "$runs"
+
+  deploy-dev:
+    needs: cancel-stale-dev
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    concurrency:
+      # Elke pull request heeft een eigen ontwikkelrij. Een nieuwere run vervangt
+      # alleen een oudere run voor dezelfde pull request.
+      group: gh-pages-development-pr-${{ github.event.number }}
+      cancel-in-progress: true
     environment:
       name: development
       url: https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-${{ github.event.number }}/
@@ -60,6 +92,22 @@ jobs:
             "${{ github.event.pull_request.head.ref }}" \
             "${{ github.event.pull_request.head.sha }}" \
             > "site/dev/pr-${{ github.event.number }}/environment.json"
+
+      - name: Geef test voorrang als die klaarstaat of bezig is
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_runs="$(gh api --paginate \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-test.yml/runs?branch=main&per_page=100" \
+            --jq '[.workflow_runs[] | select(.status != "completed")] | sort_by(.created_at)' \
+            || true)"
+          if [ "$test_runs" != "[]" ] && [ -n "$test_runs" ]; then
+            echo "Ontwikkelpublicatie overgeslagen: test heeft voorrang; een test-run staat klaar of is bezig."
+            exit 0
+          fi
+          echo "Geen wachtende of lopende test-run — ontwikkelpublicatie mag doorgaan."
 
       - name: Publiceer de ontwikkelomgeving
         working-directory: site
@@ -110,6 +158,9 @@ jobs:
   cleanup-dev:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages-development-pr-${{ github.event.number }}
+      cancel-in-progress: false
     steps:
       - name: Checkout deployment branch
         uses: actions/checkout@v6
