@@ -22,6 +22,9 @@ jobs:
       - name: Rooktest draaien
         run: node test/smoketest.js
 
+      - name: Browserkwaliteitspoort draaien
+        run: node test/browser-quality.js
+
       - name: Omgevingsbalk-scrollgedrag testen
         run: bash test/omgevingsbalk.sh
 
