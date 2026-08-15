@@ -178,6 +178,7 @@
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: .35rem; }
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
+  .legend i.env-marker { width: .75em; height: .75em; border-radius: 50%; flex: 0 0 auto; }
   /* ==== SECTIE: RELEASE-BADGE ==== */
   .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; min-width: 145px; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
   .release-badge summary { cursor: pointer; list-style: none; text-align: right; }
@@ -360,7 +361,7 @@
   letter-spacing:.01em;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
     <div style="flex:1 1 22rem;min-width:0;">
-      Ontwikkelversie — pull request #155 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">4edc398</code>
+      Ontwikkelversie — pull request #155 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">fb90cbb</code>
       <span style="display:block;font-weight:400;">
         Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
         publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -2103,19 +2104,21 @@
       if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
       labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
-    // Omgevingsiconen: waar staan ontwikkel, test en live op de kaart.
-    const flagY = laneY(0) - R - 14;
+    // Omgevingsiconen: elk bolletje staat met tussenruimte boven zijn eigen commit.
     const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
     const devC = S.active && S.branches[S.active] ? byId(S.branches[S.active].head) : byId(S.branches.main.head);
-    const environmentMarker = (environment, commit, y, label) => {
+    const environmentMarker = (environment, commit, label) => {
       if (!commit) return "";
       const faded = isEnvFaded(commit) ? ' data-env-faded="true" opacity=".4"' : "";
       const colors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
-      return `<circle data-environment="${environment}" class="environment-marker" cx="${cx(commit)}" cy="${y}" r="5" fill="${colors[environment]}" aria-hidden="true"${faded}><title>${label}</title></circle>`;
+      const stationRadius = commit.kind === "merge" ? R + 3 : R;
+      const markerRadius = 5, markerGap = 8;
+      const y = laneY(branchOf(commit).lane) - stationRadius - markerGap - markerRadius;
+      return `<circle data-environment="${environment}" class="environment-marker" cx="${cx(commit)}" cy="${y}" r="${markerRadius}" fill="${colors[environment]}" aria-hidden="true"${faded}><title>${label}</title></circle>`;
     };
-    flags += environmentMarker("dev", devC, flagY - 30, "huidige ontwikkel-omgeving");
-    flags += environmentMarker("test", testC, flagY, "huidige test-omgeving");
-    flags += environmentMarker("live", liveC, flagY + 30, "huidige live-omgeving");
+    flags += environmentMarker("dev", devC, "huidige ontwikkel-omgeving");
+    flags += environmentMarker("test", testC, "huidige test-omgeving");
+    flags += environmentMarker("live", liveC, "huidige live-omgeving");
     const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
     const frame = S.envFilter !== "all" && frameBounds ? (() => {
       const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);
@@ -2130,7 +2133,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span><i class="env-marker test" aria-hidden="true"></i> = huidige test-commit</span><span><i class="env-marker live" aria-hidden="true"></i> = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span><i class="env-marker dev" aria-hidden="true"></i> = huidige ontwikkel-commit</span><span><i class="env-marker test" aria-hidden="true"></i> = huidige test-commit</span><span><i class="env-marker live" aria-hidden="true"></i> = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
