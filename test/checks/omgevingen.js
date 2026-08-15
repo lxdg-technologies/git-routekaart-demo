@@ -1,6 +1,7 @@
 // Controles rond het omgevingsmodel: wat komt op test, wat op live, en wanneer.
-module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, stappen }) {
+module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, stappen, environmentMarkup }) {
   stappen.opnieuw();
+  assert(["dev", "test", "live"].every(environment => environmentMarkup.includes(`class="env-marker ${environment}" aria-hidden="true"`)), "de drie omgevingsknoppen tonen decoratieve gekleurde bolletjes");
   assert(byIdMap["env-test"].textContent === "v0.1.0", "test start op v0.1.0");
   assert(byIdMap["env-live"].textContent === "v0.1.0", "live start op v0.1.0");
   assert(byIdMap["env-live-age"].textContent === "alleen na jouw akkoord", "live toont vóór promotie geen verstreken live-tijd");
