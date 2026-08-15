@@ -58,6 +58,14 @@ balk=$(cat <<EOF
 EOF
 )
 
+if [ "$omgeving" = "development" ]; then
+  balk="${balk}
+<div style=\"display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.45rem;justify-content:center;\">
+  <button type=\"button\" id=\"btn-review-approve\" style=\"border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;\">Goedkeuren</button>
+  <button type=\"button\" id=\"btn-review-reject\" style=\"border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:transparent;color:#fff;font:700 13px inherit;cursor:pointer;\">Afkeuren</button>
+</div>"
+fi
+
 # Direct na <body> invoegen. Eén keer, en alleen als hij er nog niet staat.
 if grep -q 'role="note"' "$bestand"; then
   echo "Balk staat er al, niets gedaan"

@@ -40,9 +40,9 @@ const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijs
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "promote-sub", "revert-sub", "rollback-sub", "collega-sub", "hotfix-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
   "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version",
-  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note", "review-actions"];
+  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note", "review-guide", "review-guide-title", "review-guide-intro", "review-guide-steps", "review-guide-state", "review-guide-target", "review-guide-github"];
 for (const id of ids) byIdMap[id] = makeEl("div");
-for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live"]) byIdMap[id] = makeEl("button");
+for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live", "btn-review-approve", "btn-review-reject", "btn-close-review-guide", "btn-review-guide-back", "btn-review-guide-next"]) byIdMap[id] = makeEl("button");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
 byIdMap["btn-live-overlay"].textContent = "Naar live zetten";
 byIdMap["live-promotion-overlay"].hidden = true;
@@ -183,10 +183,13 @@ const delen = [
   };
   global.location = { pathname: "/dev/pr-145/" };
   window.__applyPromotionVisibility();
-  const reviewLinks = byIdMap["review-actions"].children;
-  assert(byIdMap["btn-live-overlay"].removed === true && reviewLinks.length === 2 && reviewLinks[0].textContent.includes("Goedkeuren") && reviewLinks[1].textContent.includes("Afkeuren"), "ontwikkelomgeving toont Goedkeuren en Afkeuren en geen liveknop");
-  assert(reviewLinks[0].href === "https://github.com/lxdg-technologies/git-routekaart-demo/pull/145" && reviewLinks[0].children[0].textContent.includes("samen"), "Goedkeuren verwijst naar het actuele PR-nummer en legt Test uit");
-  assert(reviewLinks[1].href === "https://github.com/lxdg-technologies/git-routekaart-demo/pull/145/files" && reviewLinks[1].children[0].textContent.includes("formeel") && reviewLinks[1].children[0].textContent.includes("opmerking"), "Afkeuren opent het files-scherm en legt formeel wijzigingen vragen uit");
+  assert(byIdMap["btn-live-overlay"].removed === true && typeof byIdMap["btn-review-approve"].onclick === "function" && typeof byIdMap["btn-review-reject"].onclick === "function", "ontwikkelomgeving verplaatst Goedkeuren en Afkeuren naar de omgevingsbalk");
+  byIdMap["btn-review-approve"].onclick();
+  assert(byIdMap["review-guide"].hidden === false && byIdMap["review-guide-intro"].textContent.includes("Test") && byIdMap["review-guide-target"].textContent === "Pull request", "Goedkeuren opent eerst een uitleg met een aangewezen GitHub-doel");
+  byIdMap["btn-review-guide-next"].onclick(); byIdMap["btn-review-guide-next"].onclick();
+  assert(byIdMap["review-guide-target"].textContent === "Confirm merge" && byIdMap["review-guide-github"].hidden === false && byIdMap["review-guide-github"].href.endsWith("/pull/145"), "Goedkeuren toont de echte GitHub-knopteksten en pas op het einde de link");
+  byIdMap["btn-review-reject"].onclick();
+  assert(byIdMap["review-guide-title"].textContent.includes("Afkeuren") && byIdMap["review-guide-intro"].textContent.includes("gewone opmerking") && byIdMap["review-guide-target"].textContent === "Files changed", "Afkeuren legt het verschil uit tussen een opmerking en formeel wijzigingen vragen");
   assert(JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateBefore), "beoordelingsknoppen veranderen geen simulatiestatus");
 
   // Testpagina: controleer deploymentmetadata en de verplichte publieke check.
