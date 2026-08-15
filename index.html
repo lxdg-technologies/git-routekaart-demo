@@ -238,6 +238,10 @@
   button.env.test.active { border-color: var(--accent); }
   button.env.live.active { border-color: var(--ok); }
   .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: inherit; }
+  .env-marker { display: inline-block; width: .58em; height: .58em; margin-right: .22em; border-radius: 50%; vertical-align: .06em; }
+  .env-marker.dev { background: var(--warn); }
+  .env-marker.test { background: var(--accent); }
+  .env-marker.live { background: var(--ok); }
   .env-val { font-family: var(--mono); font-weight: 700; font-size: .92rem; margin: .15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .env-sub { font-size: .67rem; color: inherit; line-height: 1.25; }
   .env.dev { border-color: var(--warn); background: var(--env-dev-bg); color: var(--env-dev-ink); }
@@ -484,19 +488,19 @@
       <p id="env-source-label" class="source-label"></p>
       <div class="envs" aria-label="Kies omgevingsweergave">
         <button type="button" class="env dev" id="env-dev-box" aria-pressed="false" aria-label="Toon Ontwikkel-weergave">
-          <div class="env-name"><span aria-hidden="true">💻</span> Ontwikkel</div>
+          <div class="env-name"><span class="env-marker dev" aria-hidden="true"></span>Ontwikkel</div>
           <div class="env-val" id="env-dev">—</div>
           <div class="env-sub">jouw branch</div>
         </button>
         <div class="env-arrow">→</div>
         <button type="button" class="env test" id="env-test-box" aria-pressed="false" aria-label="Toon Test-weergave">
-          <div class="env-name"><span aria-hidden="true">🔑</span> Test</div>
+          <div class="env-name"><span class="env-marker test" aria-hidden="true"></span>Test</div>
           <div class="env-val" id="env-test">v0.1.0</div>
           <div class="env-sub">elke merge, automatisch</div>
         </button>
         <div class="env-arrow">→</div>
         <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
-          <div class="env-name"><span aria-hidden="true">🌐</span> Live</div>
+          <div class="env-name"><span class="env-marker live" aria-hidden="true"></span>Live</div>
           <div class="env-val" id="env-live">v0.1.0</div>
           <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
         </button>
@@ -2077,14 +2081,15 @@
     const flagY = laneY(0) - R - 14;
     const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
     const devC = S.active && S.branches[S.active] ? byId(S.branches[S.active].head) : byId(S.branches.main.head);
-    const environmentMarker = (environment, icon, commit, y, label) => {
+    const environmentMarker = (environment, commit, y, label) => {
       if (!commit) return "";
       const faded = isEnvFaded(commit) ? ' data-env-faded="true" opacity=".4"' : "";
-      return `<text data-environment="${environment}" x="${cx(commit)}" y="${y}" text-anchor="middle" font-size="14" aria-label="${label}"${faded}>${icon}<title>${label}</title></text>`;
+      const colors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
+      return `<circle data-environment="${environment}" class="environment-marker" cx="${cx(commit)}" cy="${y}" r="5" fill="${colors[environment]}" aria-hidden="true"${faded}><title>${label}</title></circle>`;
     };
-    flags += environmentMarker("dev", "💻", devC, flagY - 30, "huidige ontwikkel-omgeving");
-    flags += environmentMarker("test", "🔑", testC, flagY, "huidige test-omgeving");
-    flags += environmentMarker("live", "🌐", liveC, flagY + 30, "huidige live-omgeving");
+    flags += environmentMarker("dev", devC, flagY - 30, "huidige ontwikkel-omgeving");
+    flags += environmentMarker("test", testC, flagY, "huidige test-omgeving");
+    flags += environmentMarker("live", liveC, flagY + 30, "huidige live-omgeving");
     const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
     const frame = S.envFilter !== "all" && frameBounds ? (() => {
       const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);

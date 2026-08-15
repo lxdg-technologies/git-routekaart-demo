@@ -2,8 +2,8 @@
 module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, state, stappen }) {
   stappen.opnieuw();
   assert(byIdMap["env-filter-note"].textContent.includes("Simulatie/oefening") && byIdMap["env-filter-note"].textContent.includes("wijzigen GitHub niet"), "interactieve kaart labelt zichzelf als veilige simulatie");
-  assert(mapResult().includes('data-environment="test"') && mapResult().includes("🔑") && mapResult().includes('data-environment="live"') && mapResult().includes("🌐"), "kaart toont de huidige Test- en Live-omgevingen");
-  assert(mapResult().includes('data-environment="dev"') && mapResult().includes("💻"), "kaart toont het afgesproken Ontwikkel-icoon");
+  assert(mapResult().includes('data-environment="test"') && mapResult().includes('fill="var(--accent)"') && mapResult().includes('data-environment="live"') && mapResult().includes('fill="var(--ok)"'), "kaart toont de huidige Test- en Live-bolletjes in hun bestaande kleuren");
+  assert(mapResult().includes('data-environment="dev"') && mapResult().includes('fill="var(--warn)"') && mapResult().includes('aria-hidden="true"'), "kaart toont het afgesproken Ontwikkel-bolletje als decoratieve marker");
   assert(mapResult().includes("station-hit") && mapResult().includes("v0.1.0"), "kaart toont release-station en versielabel");
   assert(mapResult().includes('role="button"') && mapResult().includes("branch-line"), "kaart rendert klikbare branch-lijn en stations");
   assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
@@ -45,7 +45,7 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   stappen.mergeRonde("merge");
   assert(mapResult().includes("v0.1.1") && mapResult().includes("release station v0.1.1"), "nieuwe release krijgt label op het juiste station");
   stappen.promote();
-  assert(mapResult().includes('data-environment="test"') && mapResult().includes("🔑") && mapResult().includes('data-environment="live"') && mapResult().includes("🌐"), "kaart toont Test en Live na promotie");
+  assert(mapResult().includes('data-environment="test"') && mapResult().includes('fill="var(--accent)"') && mapResult().includes('data-environment="live"') && mapResult().includes('fill="var(--ok)"'), "kaart toont Test en Live na promotie met hun bestaande kleuren");
 
   stappen.mergeRonde("squash");
   stappen.revert();

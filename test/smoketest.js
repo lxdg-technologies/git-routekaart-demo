@@ -177,7 +177,7 @@ const delen = [
 
   // Vóór de eerste await uitlezen: het deel release-badge controleert de beginwaarde van de badge.
   const initialBadge = byIdMap["release-badge-label"].textContent;
-  const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, hiddenActDisplay, state, setFetchMode, stappen, initialBadge, decorateLogTerms: window.__decorateLogTerms };
+  const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, hiddenActDisplay, state, setFetchMode, stappen, initialBadge, environmentMarkup: html, decorateLogTerms: window.__decorateLogTerms };
 
   for (const [, deel] of delen) await deel(gereedschap);
 
