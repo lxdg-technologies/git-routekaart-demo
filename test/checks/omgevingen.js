@@ -8,6 +8,11 @@ module.exports = async function omgevingen({ assert, byIdMap, mapResult, state, 
   assert(byIdMap["btn-revert"].disabled === true, "revert start uitgeschakeld zonder merge-head");
   assert(state().envFilter === "all" && !mapResult().includes("data-env-frame") && byIdMap["env-filter-note"].textContent.includes("Simulatie/oefening") && ["env-dev-box", "env-test-box", "env-live-box"].every(id => byIdMap[id].tag === "button" && typeof byIdMap[id].onclick === "function" && byIdMap[id].attributes["aria-pressed"] === "false"), "omgevingsvakjes starten als native klikbare Alles-weergave met oefenlabel");
   assert(byIdMap["env-source-label"].textContent.includes("kaartversies") && byIdMap["env-source-label"].textContent.includes("echte deploymentgegevens"), "omgevingen onderscheiden oefenkaartversies van echte deploymentgegevens");
+  document.documentElement.dataset.theme = "dark";
+  window.__render();
+  assert(byIdMap["env-dev"].textContent === "—" && byIdMap["env-test"].textContent === "v0.1.0" && byIdMap["env-live"].textContent === "v0.1.0" && byIdMap["release-badge-label"].textContent.includes("release"), "omgevingsnamen, versies en release-status blijven zichtbaar in het donkere thema");
+  document.documentElement.dataset.theme = "light";
+  window.__render();
 
   stappen.mergeRonde("merge");
   assert(byIdMap["env-test"].textContent === "v0.1.1", "merge zet de nieuwe release op test");
