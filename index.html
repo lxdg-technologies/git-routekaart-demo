@@ -62,11 +62,32 @@
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
   .promotion-banner-button { margin-left: auto; border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .65rem; background: var(--accent); color: #fff; font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
   .promotion-banner-button:hover, .promotion-banner-button:focus-visible { filter: brightness(1.08); }
-  .review-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .4rem; }
-  .review-actions[hidden] { display: none; }
-  .review-action { flex: 1 1 15rem; color: var(--ink); border: 1.5px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); text-decoration: none; font-weight: 700; font-size: .82rem; }
-  .review-action:hover, .review-action:focus-visible { border-color: var(--accent); }
-  .review-action small { display: block; margin-top: .2rem; color: var(--ink-soft); font-size: .75rem; font-weight: 400; line-height: 1.3; }
+  .review-guide { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .62); }
+  .review-guide[hidden] { display: none; }
+  .review-guide-panel { width: min(680px, 100%); max-height: min(760px, calc(100vh - 2rem)); overflow: auto; padding: 1rem; border: 2px solid var(--warn); border-radius: var(--radius); background: var(--panel); box-shadow: 0 12px 40px rgb(0 0 0 / .3); }
+  .review-guide-panel h2 { margin: 0; font-size: 1.2rem; }
+  .review-guide-panel > p { margin: .25rem 0 .8rem; color: var(--ink-soft); }
+  .review-guide-close { float: right; border: 0; background: transparent; color: var(--ink-soft); font-size: 1.3rem; cursor: pointer; }
+  .review-guide-steps { display: grid; gap: .45rem; margin: 0 0 .8rem; padding-left: 1.4rem; }
+  .review-guide-steps li { padding: .35rem .5rem; border-radius: 6px; color: var(--ink-soft); }
+  .review-guide-steps li.current { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--ink); font-weight: 700; }
+  .github-mockup { margin: .8rem 0; padding: .8rem; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--panel) 88%, var(--chip-bg)); }
+  .github-mockup header { display: flex; justify-content: space-between; gap: .5rem; margin-bottom: .55rem; font-size: .78rem; }
+  .github-mockup header b { color: var(--ink); }
+  .github-mockup-title { display: flex; justify-content: space-between; gap: .5rem; font-size: .92rem; }
+  .github-mockup-status { margin: .35rem 0 .6rem; color: var(--ink-soft); font-size: .74rem; }
+  .github-mockup-status b { display: inline-block; margin-right: .35rem; padding: .12rem .4rem; border-radius: 999px; background: #1a7f37; color: #fff; }
+  .github-mockup-tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--line); padding-bottom: .55rem; }
+  .github-mockup-item { border: 1.5px solid var(--line); border-radius: 6px; padding: .35rem .5rem; color: var(--ink-soft); background: var(--panel); font: 700 .74rem inherit; opacity: .5; }
+  .github-mockup-item.current { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); color: var(--ink); opacity: 1; }
+  .github-mockup-actions { display: flex; justify-content: flex-end; gap: .35rem; margin-top: .6rem; }
+  .github-mockup-actions .github-mockup-item { opacity: .5; }
+  .github-mockup-target { margin-top: .55rem; color: var(--ink-soft); font-size: .74rem; }
+  .review-guide-controls { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+  .review-guide-controls button, .review-guide-github { border: 1.5px solid var(--accent); border-radius: 7px; padding: .45rem .7rem; background: var(--accent); color: #fff; font: 700 .82rem inherit; cursor: pointer; text-decoration: none; }
+  .review-guide-controls button.secondary { border-color: var(--line); background: transparent; color: var(--ink); }
+  .review-guide-skip { display: block; margin-top: .7rem; color: var(--ink-soft); font-size: .78rem; text-align: center; }
+  .review-guide-github { display: block; width: 100%; margin-top: .7rem; text-align: center; }
   .promotion-overlay { position: fixed; top: 5rem; right: 1rem; z-index: 20; width: min(370px, calc(100vw - 2rem)); pointer-events: none; }
   .promotion-overlay[hidden] { display: none; }
   .promotion-panel { pointer-events: auto; padding: .9rem 1rem; border: 2px solid var(--accent); border-radius: var(--radius); background: var(--panel); box-shadow: 0 10px 28px rgb(0 0 0 / .22); }
@@ -325,8 +346,41 @@
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
   <button type="button" class="promotion-banner-button" id="btn-live-overlay">Naar live zetten</button>
-  <div class="review-actions" id="review-actions" hidden aria-label="Beoordeling van deze pull request"></div>
 </header>
+
+<div class="review-guide" id="review-guide" hidden aria-hidden="true">
+  <section class="review-guide-panel" role="dialog" aria-modal="true" aria-labelledby="review-guide-title">
+    <button type="button" class="review-guide-close" id="btn-close-review-guide" aria-label="Sluit uitleg">×</button>
+    <h2 id="review-guide-title">Zo beoordeel je deze pull request</h2>
+    <p id="review-guide-intro"></p>
+    <ol class="review-guide-steps" id="review-guide-steps"></ol>
+    <div class="github-mockup" aria-label="Vereenvoudigde nabootsing van het GitHub-scherm">
+      <header><b class="github-mockup-item" data-review-target="Pull request">GitHub · Pull request</b><span id="review-guide-state">Open</span></header>
+      <div class="github-mockup-title"><strong id="review-guide-pr-title">Wijziging voor de Git Routekaart</strong><span aria-hidden="true">✎</span></div>
+      <div class="github-mockup-status"><b>Open</b> lxdg-dcs-coder wants to merge 1 commit into main from feat/issue-148-review-uitleg</div>
+      <div class="github-mockup-tabs">
+        <span class="github-mockup-item" data-review-target="Conversation">Conversation</span>
+        <span class="github-mockup-item" data-review-target="Commits">Commits <b>1</b></span>
+        <span class="github-mockup-item" data-review-target="Checks">Checks <b>✓</b></span>
+        <span class="github-mockup-item" data-review-target="Files changed">Files changed <b>4</b></span>
+      </div>
+      <div class="github-mockup-actions">
+        <span class="github-mockup-item" data-review-target="Merge pull request">✓ Merge pull request</span>
+        <span class="github-mockup-item" data-review-target="Confirm merge">Confirm merge</span>
+        <span class="github-mockup-item" data-review-target="Review changes">Review changes</span>
+        <span class="github-mockup-item" data-review-target="Request changes">Request changes</span>
+        <span class="github-mockup-item">Code ▾</span>
+      </div>
+      <div class="github-mockup-target" id="review-guide-target"></div>
+    </div>
+    <div class="review-guide-controls">
+      <button type="button" class="secondary" id="btn-review-guide-back">Vorige stap</button>
+      <button type="button" id="btn-review-guide-next">Volgende stap</button>
+    </div>
+    <a class="review-guide-skip" id="review-guide-skip" target="_blank" rel="noreferrer">Uitleg overslaan en direct naar GitHub ↗</a>
+    <a class="review-guide-github" id="review-guide-github" hidden target="_blank" rel="noreferrer">Open deze pull request op GitHub ↗</a>
+  </section>
+</div>
 
 <div class="promotion-overlay" id="live-promotion-overlay" hidden aria-hidden="true">
   <section class="promotion-panel" id="live-promotion-panel" role="dialog" aria-modal="false" aria-labelledby="live-promotion-title">
@@ -1372,45 +1426,70 @@
     };
     renderPromotionFixture("green");
   }
-  function clearReviewActions() {
-    const actions = el("review-actions");
-    actions.innerHTML = "";
-    actions.hidden = true;
+  const REVIEW_GUIDES = {
+    approve: {
+      title: "Goedkeuren: samenvoegen naar Test",
+      intro: "De wijziging wordt samengevoegd en verschijnt daarna vanzelf op Test. Hij gaat niet meteen naar live.",
+      steps: ["Open de pull request en kijk of de controles groen zijn.", "Klik op de knop Merge pull request.", "Klik daarna op Confirm merge om het samenvoegen te bevestigen."],
+      targets: ["Pull request", "Merge pull request", "Confirm merge"],
+    },
+    reject: {
+      title: "Afkeuren: formeel wijzigingen vragen",
+      intro: "Een gewone opmerking typen zet niets in beweging. Kies in het review-menu formeel Request changes; dan weet de maker dat er eerst iets moet worden aangepast.",
+      steps: ["Open Files changed om de wijziging na te kijken.", "Klik op Review changes.", "Kies Request changes en bevestig je beoordeling."],
+      targets: ["Files changed", "Review changes", "Request changes"],
+    },
+  };
+  let reviewGuideKind = "approve";
+  let reviewGuideStep = 0;
+  function renderReviewGuide() {
+    const guide = REVIEW_GUIDES[reviewGuideKind];
+    el("review-guide-title").textContent = guide.title;
+    el("review-guide-intro").textContent = guide.intro;
+    el("review-guide-pr-title").textContent = `Wijziging voor de Git Routekaart #${simulatedPullRequestNumber()}`;
+    el("review-guide-steps").innerHTML = guide.steps.map((step, index) => `<li class="${index === reviewGuideStep ? "current" : ""}">${step}</li>`).join("");
+    el("review-guide-target").textContent = guide.targets[reviewGuideStep];
+    const mockupItems = document.querySelectorAll ? document.querySelectorAll("[data-review-target]") : [];
+    mockupItems.forEach(item => item.classList.toggle("current", item.dataset.reviewTarget === guide.targets[reviewGuideStep]));
+    el("review-guide-state").textContent = `${reviewGuideStep + 1} / ${guide.steps.length}`;
+    el("btn-review-guide-back").disabled = reviewGuideStep === 0;
+    const last = reviewGuideStep === guide.steps.length - 1;
+    el("btn-review-guide-next").hidden = last;
+    el("review-guide-skip").hidden = false;
+    el("review-guide-skip").href = el("review-guide-github").href;
+    el("review-guide-github").hidden = !last;
+  }
+  function openReviewGuide(kind) {
+    const prNumber = simulatedPullRequestNumber();
+    if (!prNumber) return;
+    reviewGuideKind = kind;
+    reviewGuideStep = 0;
+    const guide = el("review-guide");
+    el("review-guide-github").href = `https://github.com/${REPOSITORY_FULL_NAME}/pull/${prNumber}`;
+    guide.hidden = false;
+    guide.setAttribute("aria-hidden", "false");
+    renderReviewGuide();
+  }
+  function closeReviewGuide() {
+    const guide = el("review-guide");
+    guide.hidden = true;
+    guide.setAttribute("aria-hidden", "true");
   }
   function initialiseReviewActions() {
-    const actions = el("review-actions");
     const prNumber = simulatedPullRequestNumber();
-    actions.innerHTML = "";
-    actions.hidden = true;
-    if (getReleaseEnvironment() !== "dev" || !prNumber) return false;
-    const pullRequestUrl = `https://github.com/${REPOSITORY_FULL_NAME}/pull/${prNumber}`;
-    const approve = document.createElement("a");
-    approve.className = "review-action";
-    approve.href = pullRequestUrl;
-    approve.target = "_blank";
-    approve.rel = "noreferrer";
-    approve.setAttribute("role", "button");
-    approve.textContent = "Goedkeuren — samenvoegen op GitHub";
-    const approveNote = document.createElement("small");
-    approveNote.textContent = "Voeg daar de pull request samen; daarna verschijnt de wijziging vanzelf op Test.";
-    approve.appendChild(approveNote);
-    const reject = document.createElement("a");
-    reject.className = "review-action";
-    reject.href = `${pullRequestUrl}/files`;
-    reject.target = "_blank";
-    reject.rel = "noreferrer";
-    reject.setAttribute("role", "button");
-    reject.textContent = "Afkeuren — wijzigingen vragen";
-    const rejectNote = document.createElement("small");
-    rejectNote.textContent = "Een losse opmerking zet niets in beweging; formeel wijzigingen vragen start de keten opnieuw.";
-    reject.appendChild(rejectNote);
-    actions.append(approve, reject);
-    actions.hidden = false;
+    if (getReleaseEnvironment() !== "dev" || !prNumber) {
+      closeReviewGuide();
+      return false;
+    }
+    el("btn-review-approve")?.addEventListener("click", () => openReviewGuide("approve"));
+    el("btn-review-reject")?.addEventListener("click", () => openReviewGuide("reject"));
+    el("btn-close-review-guide")?.addEventListener("click", closeReviewGuide);
+    el("btn-review-guide-back")?.addEventListener("click", () => { reviewGuideStep--; renderReviewGuide(); });
+    el("btn-review-guide-next")?.addEventListener("click", () => { reviewGuideStep++; renderReviewGuide(); });
     return true;
   }
   function applyPromotionVisibility() {
     const environment = getReleaseEnvironment();
-    clearReviewActions();
     if (environment === "dev") {
       el("btn-live-overlay")?.remove();
       el("live-promotion-overlay")?.remove();
@@ -1418,11 +1497,11 @@
       return true;
     }
     if (environment === "live") {
+      closeReviewGuide();
       el("btn-live-overlay")?.remove();
       el("live-promotion-overlay")?.remove();
       return false;
     }
-    el("review-actions")?.remove();
     initialisePromotionOverlay();
     return true;
   }
