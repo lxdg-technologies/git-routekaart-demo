@@ -360,7 +360,7 @@
   letter-spacing:.01em;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
     <div style="flex:1 1 22rem;min-width:0;">
-      Ontwikkelversie — pull request #155 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">1933238</code>
+      Ontwikkelversie — pull request #155 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">4edc398</code>
       <span style="display:block;font-weight:400;">
         Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
         publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -2130,7 +2130,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span><i class="env-marker test" aria-hidden="true"></i> = huidige test-commit</span><span><i class="env-marker live" aria-hidden="true"></i> = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
