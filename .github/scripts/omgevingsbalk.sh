@@ -30,6 +30,14 @@ else
   versie_label="${kort}"
 fi
 
+review_controls=""
+if [ "$omgeving" = "development" ]; then
+  review_controls='<div style="display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;justify-content:flex-end;flex:0 1 auto;">
+    <button type="button" id="btn-review-approve" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;">Goedkeuren</button>
+    <button type="button" id="btn-review-reject" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:transparent;color:#fff;font:700 13px inherit;cursor:pointer;">Afkeuren</button>
+  </div>'
+fi
+
 case "$omgeving" in
   development) titel="Ontwikkelversie"; kleur="var(--warn)"; tekstkleur="#10161d" ;;
   test)        titel="Testversie";      kleur="var(--accent)"; tekstkleur="#fff" ;;
@@ -47,24 +55,21 @@ balk=$(cat <<EOF
   z-index:1000;
   box-sizing:border-box;
   max-width:100%;
-  text-align:center;
+  text-align:left;
   letter-spacing:.01em;">
-  ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${versie_label}</code>
-  <span style="display:block;font-weight:400;">
-    Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
-    publiceren nog bezig — wacht een minuut en ververs de pagina.
-  </span>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
+    <div style="flex:1 1 22rem;min-width:0;">
+      ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${versie_label}</code>
+      <span style="display:block;font-weight:400;">
+        Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
+        publiceren nog bezig — wacht een minuut en ververs de pagina.
+      </span>
+    </div>
+    ${review_controls}
+  </div>
 </div>
 EOF
 )
-
-if [ "$omgeving" = "development" ]; then
-  balk="${balk}
-<div style=\"display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.45rem;justify-content:center;\">
-  <button type=\"button\" id=\"btn-review-approve\" style=\"border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;\">Goedkeuren</button>
-  <button type=\"button\" id=\"btn-review-reject\" style=\"border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:transparent;color:#fff;font:700 13px inherit;cursor:pointer;\">Afkeuren</button>
-</div>"
-fi
 
 # Direct na <body> invoegen. Eén keer, en alleen als hij er nog niet staat.
 if grep -q 'role="note"' "$bestand"; then

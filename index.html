@@ -74,11 +74,19 @@
   .github-mockup { margin: .8rem 0; padding: .8rem; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--panel) 88%, var(--chip-bg)); }
   .github-mockup header { display: flex; justify-content: space-between; gap: .5rem; margin-bottom: .55rem; font-size: .78rem; }
   .github-mockup header b { color: var(--ink); }
-  .github-mockup-target { border: 1.5px solid var(--line); border-radius: 6px; padding: .45rem .6rem; color: var(--ink); background: var(--panel); font: 700 .8rem inherit; }
-  .github-mockup-target.current { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); }
+  .github-mockup-title { display: flex; justify-content: space-between; gap: .5rem; font-size: .92rem; }
+  .github-mockup-status { margin: .35rem 0 .6rem; color: var(--ink-soft); font-size: .74rem; }
+  .github-mockup-status b { display: inline-block; margin-right: .35rem; padding: .12rem .4rem; border-radius: 999px; background: #1a7f37; color: #fff; }
+  .github-mockup-tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--line); padding-bottom: .55rem; }
+  .github-mockup-item { border: 1.5px solid var(--line); border-radius: 6px; padding: .35rem .5rem; color: var(--ink-soft); background: var(--panel); font: 700 .74rem inherit; opacity: .5; }
+  .github-mockup-item.current { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); color: var(--ink); opacity: 1; }
+  .github-mockup-actions { display: flex; justify-content: flex-end; gap: .35rem; margin-top: .6rem; }
+  .github-mockup-actions .github-mockup-item { opacity: .5; }
+  .github-mockup-target { margin-top: .55rem; color: var(--ink-soft); font-size: .74rem; }
   .review-guide-controls { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
   .review-guide-controls button, .review-guide-github { border: 1.5px solid var(--accent); border-radius: 7px; padding: .45rem .7rem; background: var(--accent); color: #fff; font: 700 .82rem inherit; cursor: pointer; text-decoration: none; }
   .review-guide-controls button.secondary { border-color: var(--line); background: transparent; color: var(--ink); }
+  .review-guide-skip { display: block; margin-top: .7rem; color: var(--ink-soft); font-size: .78rem; text-align: center; }
   .review-guide-github { display: block; width: 100%; margin-top: .7rem; text-align: center; }
   .promotion-overlay { position: fixed; top: 5rem; right: 1rem; z-index: 20; width: min(370px, calc(100vw - 2rem)); pointer-events: none; }
   .promotion-overlay[hidden] { display: none; }
@@ -348,12 +356,28 @@
     <ol class="review-guide-steps" id="review-guide-steps"></ol>
     <div class="github-mockup" aria-label="Vereenvoudigde nabootsing van het GitHub-scherm">
       <header><b>GitHub · Pull request</b><span id="review-guide-state">Open</span></header>
+      <div class="github-mockup-title"><strong>Wijziging voor de Git Routekaart</strong><span aria-hidden="true">✎</span></div>
+      <div class="github-mockup-status"><b>Open</b> lxdg-dcs-coder wants to merge 1 commit into main from feat/issue-148-review-uitleg</div>
+      <div class="github-mockup-tabs">
+        <span class="github-mockup-item" data-review-target="Conversation">Conversation</span>
+        <span class="github-mockup-item" data-review-target="Commits">Commits <b>1</b></span>
+        <span class="github-mockup-item" data-review-target="Checks">Checks <b>✓</b></span>
+        <span class="github-mockup-item" data-review-target="Files changed">Files changed <b>4</b></span>
+      </div>
+      <div class="github-mockup-actions">
+        <span class="github-mockup-item" data-review-target="Merge pull request">✓ Merge pull request</span>
+        <span class="github-mockup-item" data-review-target="Confirm merge">Confirm merge</span>
+        <span class="github-mockup-item" data-review-target="Review changes">Review changes</span>
+        <span class="github-mockup-item" data-review-target="Request changes">Request changes</span>
+        <span class="github-mockup-item">Code ▾</span>
+      </div>
       <div class="github-mockup-target" id="review-guide-target"></div>
     </div>
     <div class="review-guide-controls">
       <button type="button" class="secondary" id="btn-review-guide-back">Vorige stap</button>
       <button type="button" id="btn-review-guide-next">Volgende stap</button>
     </div>
+    <a class="review-guide-skip" id="review-guide-skip" target="_blank" rel="noreferrer">Uitleg overslaan en direct naar GitHub ↗</a>
     <a class="review-guide-github" id="review-guide-github" hidden target="_blank" rel="noreferrer">Open deze pull request op GitHub ↗</a>
   </section>
 </div>
@@ -1424,11 +1448,14 @@
     el("review-guide-intro").textContent = guide.intro;
     el("review-guide-steps").innerHTML = guide.steps.map((step, index) => `<li class="${index === reviewGuideStep ? "current" : ""}">${step}</li>`).join("");
     el("review-guide-target").textContent = guide.targets[reviewGuideStep];
-    el("review-guide-target").classList.toggle("current", true);
+    const mockupItems = document.querySelectorAll ? document.querySelectorAll("[data-review-target]") : [];
+    mockupItems.forEach(item => item.classList.toggle("current", item.dataset.reviewTarget === guide.targets[reviewGuideStep]));
     el("review-guide-state").textContent = `${reviewGuideStep + 1} / ${guide.steps.length}`;
     el("btn-review-guide-back").disabled = reviewGuideStep === 0;
     const last = reviewGuideStep === guide.steps.length - 1;
     el("btn-review-guide-next").hidden = last;
+    el("review-guide-skip").hidden = false;
+    el("review-guide-skip").href = el("review-guide-github").href;
     el("review-guide-github").hidden = !last;
   }
   function openReviewGuide(kind) {

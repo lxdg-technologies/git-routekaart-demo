@@ -40,7 +40,7 @@ const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijs
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "promote-sub", "revert-sub", "rollback-sub", "collega-sub", "hotfix-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
   "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version",
-  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note", "review-guide", "review-guide-title", "review-guide-intro", "review-guide-steps", "review-guide-state", "review-guide-target", "review-guide-github"];
+  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note", "review-guide", "review-guide-title", "review-guide-intro", "review-guide-steps", "review-guide-state", "review-guide-target", "review-guide-skip", "review-guide-github"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live", "btn-review-approve", "btn-review-reject", "btn-close-review-guide", "btn-review-guide-back", "btn-review-guide-next"]) byIdMap[id] = makeEl("button");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
@@ -185,7 +185,7 @@ const delen = [
   window.__applyPromotionVisibility();
   assert(byIdMap["btn-live-overlay"].removed === true && typeof byIdMap["btn-review-approve"].onclick === "function" && typeof byIdMap["btn-review-reject"].onclick === "function", "ontwikkelomgeving verplaatst Goedkeuren en Afkeuren naar de omgevingsbalk");
   byIdMap["btn-review-approve"].onclick();
-  assert(byIdMap["review-guide"].hidden === false && byIdMap["review-guide-intro"].textContent.includes("Test") && byIdMap["review-guide-target"].textContent === "Pull request", "Goedkeuren opent eerst een uitleg met een aangewezen GitHub-doel");
+  assert(byIdMap["review-guide"].hidden === false && byIdMap["review-guide-skip"].hidden === false && byIdMap["review-guide-skip"].href.endsWith("/pull/145") && byIdMap["review-guide-intro"].textContent.includes("Test") && byIdMap["review-guide-target"].textContent === "Pull request", "Goedkeuren opent uitleg met een interactieve GitHub-nabootsing en een overslaan-link");
   byIdMap["btn-review-guide-next"].onclick(); byIdMap["btn-review-guide-next"].onclick();
   assert(byIdMap["review-guide-target"].textContent === "Confirm merge" && byIdMap["review-guide-github"].hidden === false && byIdMap["review-guide-github"].href.endsWith("/pull/145"), "Goedkeuren toont de echte GitHub-knopteksten en pas op het einde de link");
   byIdMap["btn-review-reject"].onclick();
