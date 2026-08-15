@@ -62,6 +62,11 @@
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
   .promotion-banner-button { margin-left: auto; border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .65rem; background: var(--accent); color: #fff; font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
   .promotion-banner-button:hover, .promotion-banner-button:focus-visible { filter: brightness(1.08); }
+  .review-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .4rem; }
+  .review-actions[hidden] { display: none; }
+  .review-action { flex: 1 1 15rem; color: var(--ink); border: 1.5px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); text-decoration: none; font-weight: 700; font-size: .82rem; }
+  .review-action:hover, .review-action:focus-visible { border-color: var(--accent); }
+  .review-action small { display: block; margin-top: .2rem; color: var(--ink-soft); font-size: .75rem; font-weight: 400; line-height: 1.3; }
   .promotion-overlay { position: fixed; top: 5rem; right: 1rem; z-index: 20; width: min(370px, calc(100vw - 2rem)); pointer-events: none; }
   .promotion-overlay[hidden] { display: none; }
   .promotion-panel { pointer-events: auto; padding: .9rem 1rem; border: 2px solid var(--accent); border-radius: var(--radius); background: var(--panel); box-shadow: 0 10px 28px rgb(0 0 0 / .22); }
@@ -320,6 +325,7 @@
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
   <button type="button" class="promotion-banner-button" id="btn-live-overlay">Naar live zetten</button>
+  <div class="review-actions" id="review-actions" hidden aria-label="Beoordeling van deze pull request"></div>
 </header>
 
 <div class="promotion-overlay" id="live-promotion-overlay" hidden aria-hidden="true">
@@ -656,6 +662,10 @@
 
   function repositoryUsesSimulatedData() {
     return typeof location !== "undefined" && /\/dev\/pr-\d+(?:\/|$)/.test(location.pathname || "");
+  }
+  function simulatedPullRequestNumber() {
+    const match = typeof location !== "undefined" ? (location.pathname || "").match(/\/dev\/pr-(\d+)(?:\/|$)/) : null;
+    return match ? match[1] : null;
   }
   function simulatedRepositorySnapshot() {
     const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
@@ -1362,13 +1372,57 @@
     };
     renderPromotionFixture("green");
   }
+  function clearReviewActions() {
+    const actions = el("review-actions");
+    actions.innerHTML = "";
+    actions.hidden = true;
+  }
+  function initialiseReviewActions() {
+    const actions = el("review-actions");
+    const prNumber = simulatedPullRequestNumber();
+    actions.innerHTML = "";
+    actions.hidden = true;
+    if (getReleaseEnvironment() !== "dev" || !prNumber) return false;
+    const pullRequestUrl = `https://github.com/${REPOSITORY_FULL_NAME}/pull/${prNumber}`;
+    const approve = document.createElement("a");
+    approve.className = "review-action";
+    approve.href = pullRequestUrl;
+    approve.target = "_blank";
+    approve.rel = "noreferrer";
+    approve.setAttribute("role", "button");
+    approve.textContent = "Goedkeuren — samenvoegen op GitHub";
+    const approveNote = document.createElement("small");
+    approveNote.textContent = "Voeg daar de pull request samen; daarna verschijnt de wijziging vanzelf op Test.";
+    approve.appendChild(approveNote);
+    const reject = document.createElement("a");
+    reject.className = "review-action";
+    reject.href = `${pullRequestUrl}/files`;
+    reject.target = "_blank";
+    reject.rel = "noreferrer";
+    reject.setAttribute("role", "button");
+    reject.textContent = "Afkeuren — wijzigingen vragen";
+    const rejectNote = document.createElement("small");
+    rejectNote.textContent = "Een losse opmerking zet niets in beweging; formeel wijzigingen vragen start de keten opnieuw.";
+    reject.appendChild(rejectNote);
+    actions.append(approve, reject);
+    actions.hidden = false;
+    return true;
+  }
   function applyPromotionVisibility() {
-    const available = getReleaseEnvironment() !== "live";
-    if (!available) {
+    const environment = getReleaseEnvironment();
+    clearReviewActions();
+    if (environment === "dev") {
+      el("btn-live-overlay")?.remove();
+      el("live-promotion-overlay")?.remove();
+      initialiseReviewActions();
+      return true;
+    }
+    if (environment === "live") {
       el("btn-live-overlay")?.remove();
       el("live-promotion-overlay")?.remove();
       return false;
     }
+    el("review-actions")?.remove();
     initialisePromotionOverlay();
     return true;
   }
