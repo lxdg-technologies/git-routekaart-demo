@@ -22,8 +22,14 @@ jobs:
       - name: Rooktest draaien
         run: node test/smoketest.js
 
+      - name: Chrome instellen
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+
       - name: Browserkwaliteitspoort draaien
         run: node test/browser-quality.js
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
 
       - name: Omgevingsbalk-scrollgedrag testen
         run: bash test/omgevingsbalk.sh
