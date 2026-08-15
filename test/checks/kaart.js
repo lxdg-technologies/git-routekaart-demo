@@ -7,7 +7,7 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   assert(mapResult().includes("station-hit") && mapResult().includes("v0.1.0"), "kaart toont release-station en versielabel");
   assert(mapResult().includes('role="button"') && mapResult().includes("branch-line"), "kaart rendert klikbare branch-lijn en stations");
   assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
-  assert(byIdMap["legend"].innerHTML.includes("release station"), "legenda benoemt release-stations");
+  assert(byIdMap["legend"].innerHTML.includes("release station") && byIdMap["legend"].innerHTML.includes('class="env-marker test" aria-hidden="true"') && byIdMap["legend"].innerHTML.includes('class="env-marker live" aria-hidden="true"') && !byIdMap["legend"].innerHTML.includes("🧪") && !byIdMap["legend"].innerHTML.includes("🚀"), "legenda toont de test- en live-bolletjes die werkelijk op de kaart staan");
 
   stappen.nieuwIssue();
   stappen.maakBranch();

@@ -2104,7 +2104,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span><i class="env-marker test" aria-hidden="true"></i> = huidige test-commit</span><span><i class="env-marker live" aria-hidden="true"></i> = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
