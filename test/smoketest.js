@@ -102,7 +102,12 @@ global.fetch = async url => {
   return response({}, 503);
 };
 
-global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), documentElement: { dataset: {} } };
+const reviewMockupItems = ["Pull request", "Conversation", "Commits", "Checks", "Files changed", "Merge pull request", "Confirm merge", "Review changes", "Request changes"].map(target => {
+  const item = makeEl("span");
+  item.dataset.reviewTarget = target;
+  return item;
+});
+global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), querySelectorAll: selector => selector === "[data-review-target]" ? reviewMockupItems : [], documentElement: { dataset: {} } };
 global.getComputedStyle = () => ({ getPropertyValue: () => "#1e5aa8" });
 const sessionValues = new Map();
 global.sessionStorage = { getItem: key => sessionValues.get(key) ?? null, setItem: (key, value) => sessionValues.set(key, value) };
@@ -185,11 +190,18 @@ const delen = [
   window.__applyPromotionVisibility();
   assert(byIdMap["btn-live-overlay"].removed === true && typeof byIdMap["btn-review-approve"].onclick === "function" && typeof byIdMap["btn-review-reject"].onclick === "function", "ontwikkelomgeving verplaatst Goedkeuren en Afkeuren naar de omgevingsbalk");
   byIdMap["btn-review-approve"].onclick();
-  assert(byIdMap["review-guide"].hidden === false && byIdMap["review-guide-skip"].hidden === false && byIdMap["review-guide-skip"].href.endsWith("/pull/145") && byIdMap["review-guide-intro"].textContent.includes("Test") && byIdMap["review-guide-target"].textContent === "Pull request", "Goedkeuren opent uitleg met een interactieve GitHub-nabootsing en een overslaan-link");
-  byIdMap["btn-review-guide-next"].onclick(); byIdMap["btn-review-guide-next"].onclick();
-  assert(byIdMap["review-guide-target"].textContent === "Confirm merge" && byIdMap["review-guide-github"].hidden === false && byIdMap["review-guide-github"].href.endsWith("/pull/145"), "Goedkeuren toont de echte GitHub-knopteksten en pas op het einde de link");
+  const highlightedReviewTarget = () => reviewMockupItems.filter(item => item.classList.contains("current")).map(item => item.dataset.reviewTarget);
+  assert(byIdMap["review-guide"].hidden === false && byIdMap["review-guide-skip"].hidden === false && byIdMap["review-guide-skip"].href.endsWith("/pull/145") && byIdMap["review-guide-intro"].textContent.includes("Test") && byIdMap["review-guide-target"].textContent === "Pull request" && JSON.stringify(highlightedReviewTarget()) === JSON.stringify(["Pull request"]), "Goedkeuren opent uitleg en licht het pull-requestaanknopingspunt op");
+  byIdMap["btn-review-guide-next"].onclick();
+  assert(JSON.stringify(highlightedReviewTarget()) === JSON.stringify(["Merge pull request"]), "Goedkeuren licht per stap de knop Merge pull request op");
+  byIdMap["btn-review-guide-next"].onclick();
+  assert(byIdMap["review-guide-target"].textContent === "Confirm merge" && byIdMap["review-guide-github"].hidden === false && byIdMap["review-guide-github"].href.endsWith("/pull/145") && JSON.stringify(highlightedReviewTarget()) === JSON.stringify(["Confirm merge"]), "Goedkeuren licht per stap Confirm merge op en toont pas op het einde de link");
   byIdMap["btn-review-reject"].onclick();
-  assert(byIdMap["review-guide-title"].textContent.includes("Afkeuren") && byIdMap["review-guide-intro"].textContent.includes("gewone opmerking") && byIdMap["review-guide-target"].textContent === "Files changed", "Afkeuren legt het verschil uit tussen een opmerking en formeel wijzigingen vragen");
+  assert(byIdMap["review-guide-title"].textContent.includes("Afkeuren") && byIdMap["review-guide-intro"].textContent.includes("gewone opmerking") && byIdMap["review-guide-target"].textContent === "Files changed" && JSON.stringify(highlightedReviewTarget()) === JSON.stringify(["Files changed"]), "Afkeuren licht Files changed op en legt het verschil uit tussen een opmerking en formeel wijzigingen vragen");
+  byIdMap["btn-review-guide-next"].onclick();
+  assert(JSON.stringify(highlightedReviewTarget()) === JSON.stringify(["Review changes"]), "Afkeuren licht per stap Review changes op");
+  byIdMap["btn-review-guide-next"].onclick();
+  assert(JSON.stringify(highlightedReviewTarget()) === JSON.stringify(["Request changes"]), "Afkeuren licht per stap Request changes op");
   assert(JSON.stringify({ test: state().env.test, live: state().env.live, commits: state().commits.length, missions: state().missions.join(","), active: state().active }) === JSON.stringify(overlayStateBefore), "beoordelingsknoppen veranderen geen simulatiestatus");
 
   // Testpagina: controleer deploymentmetadata en de verplichte publieke check.
