@@ -356,7 +356,7 @@
     <ol class="review-guide-steps" id="review-guide-steps"></ol>
     <div class="github-mockup" aria-label="Vereenvoudigde nabootsing van het GitHub-scherm">
       <header><b class="github-mockup-item" data-review-target="Pull request">GitHub · Pull request</b><span id="review-guide-state">Open</span></header>
-      <div class="github-mockup-title"><strong>Wijziging voor de Git Routekaart</strong><span aria-hidden="true">✎</span></div>
+      <div class="github-mockup-title"><strong id="review-guide-pr-title">Wijziging voor de Git Routekaart</strong><span aria-hidden="true">✎</span></div>
       <div class="github-mockup-status"><b>Open</b> lxdg-dcs-coder wants to merge 1 commit into main from feat/issue-148-review-uitleg</div>
       <div class="github-mockup-tabs">
         <span class="github-mockup-item" data-review-target="Conversation">Conversation</span>
@@ -1446,6 +1446,7 @@
     const guide = REVIEW_GUIDES[reviewGuideKind];
     el("review-guide-title").textContent = guide.title;
     el("review-guide-intro").textContent = guide.intro;
+    el("review-guide-pr-title").textContent = `Wijziging voor de Git Routekaart #${simulatedPullRequestNumber()}`;
     el("review-guide-steps").innerHTML = guide.steps.map((step, index) => `<li class="${index === reviewGuideStep ? "current" : ""}">${step}</li>`).join("");
     el("review-guide-target").textContent = guide.targets[reviewGuideStep];
     const mockupItems = document.querySelectorAll ? document.querySelectorAll("[data-review-target]") : [];
