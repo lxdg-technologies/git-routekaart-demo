@@ -6,6 +6,10 @@ Dashboard en interactieve simulatie van een moderne git-werkstroom: **issue → 
 
 **🧪 [Testomgeving](https://lxdg-technologies.github.io/git-routekaart-demo/test/)** — automatisch bijgewerkt na iedere merge naar de beschermde `main`-branch.
 
+## Praktische handleiding
+
+Nieuw met deze repository? Begin bij de [Git Routekaart-handleiding](handleiding/start.md). Daar kies je op basis van je situatie één van zeven routes, met concrete handelingen, verwachte uitkomsten en oplossingen als iets niet verschijnt.
+
 ## Branch- en deploymentmodel
 
 - Wijzigingen gaan via een pull request naar `main`; een merge vernieuwt alleen de testomgeving.
