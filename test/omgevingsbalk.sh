@@ -49,6 +49,17 @@ for eigenschap in properties:
     assert eigenschap in style, f"{eigenschap} ontbreekt bij {omgeving}"
 assert "v1.2.3" in bron and "Dit is niet de echte site." in bron, f"versie en volledige statusmelding ontbreken bij {omgeving}"
 assert "opacity:.9" not in style, f"statusmelding gebruikt nog transparante tekst bij {omgeving}"
+code_match = re.search(r'<code style="([^"]+)">v1\.2\.3\s*·\s*commit\s*0123456</code>', bron)
+assert code_match, f"versietekst heeft geen eigen opmaak bij {omgeving}"
+code_style = html.unescape(code_match.group(1)).replace(" ", "")
+background_property, foreground_property = properties
+assert background_property in code_style and foreground_property in code_style, f"versietekst gebruikt niet de kleuren van de balk bij {omgeving}"
+if omgeving == "test":
+    assert bron.count('id="btn-live-overlay"') == 1, "de testbalk bevat precies één liveknop"
+    assert bron.index('id="btn-live-overlay"') < bron.index("<main>"), "de liveknop hoort in de testbalk en niet in de paginakop"
+else:
+    assert 'id="btn-live-overlay"' not in bron, "de ontwikkelbalk mag geen liveknop bevatten"
+    assert 'id="btn-review-approve"' in bron and 'id="btn-review-reject"' in bron, "de ontwikkelbalk bevat beide reviewknoppen"
 for eigenschap in ("position:sticky", "top:0", "z-index:1000", "box-sizing:border-box", "max-width:100%"):
     assert eigenschap in style, f"{eigenschap} ontbreekt bij {breedte}px"
 assert "position:fixed" not in style, "de banner mag routekaart-bediening niet bedekken"

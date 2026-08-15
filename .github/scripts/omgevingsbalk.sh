@@ -36,6 +36,8 @@ if [ "$omgeving" = "development" ]; then
     <button type="button" id="btn-review-approve" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;">Goedkeuren</button>
     <button type="button" id="btn-review-reject" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:transparent;color:#fff;font:700 13px inherit;cursor:pointer;">Afkeuren</button>
   </div>'
+elif [ "$omgeving" = "test" ]; then
+  review_controls='<button type="button" id="btn-live-overlay" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;white-space:nowrap;">Naar live zetten</button>'
 fi
 
 case "$omgeving" in
@@ -59,7 +61,7 @@ balk=$(cat <<EOF
   letter-spacing:.01em;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
     <div style="flex:1 1 22rem;min-width:0;">
-      ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;">${versie_label}</code>
+      ${titel} — ${label} · versie <code style="font:inherit;font-weight:700;background:${kleur};color:${tekstkleur};padding:.05em .3em;border-radius:.25em;">${versie_label}</code>
       <span style="display:block;font-weight:400;">
         Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
         publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -78,7 +80,8 @@ if grep -q 'role="note"' "$bestand"; then
 fi
 
 tijdelijk="$(mktemp)"
-awk -v balk="$balk" '
+awk -v balk="$balk" -v omgeving="$omgeving" '
+  omgeving == "test" && /id="btn-live-overlay"/ { next }
   { print }
   !gedaan && /<body>/ { print balk; gedaan = 1 }
 ' "$bestand" > "$tijdelijk"
