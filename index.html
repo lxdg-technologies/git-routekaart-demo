@@ -178,6 +178,7 @@
   .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
   .legend span { display: inline-flex; align-items: center; gap: .35rem; }
   .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
+  .legend i.env-marker { width: .75em; height: .75em; border-radius: 50%; flex: 0 0 auto; }
   /* ==== SECTIE: RELEASE-BADGE ==== */
   .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; min-width: 145px; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
   .release-badge summary { cursor: pointer; list-style: none; text-align: right; }
@@ -238,6 +239,10 @@
   button.env.test.active { border-color: var(--accent); }
   button.env.live.active { border-color: var(--ok); }
   .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: inherit; }
+  .env-marker { display: inline-block; width: .58em; height: .58em; margin-right: .22em; border-radius: 50%; vertical-align: .06em; }
+  .env-marker.dev { background: var(--warn); }
+  .env-marker.test { background: var(--accent); }
+  .env-marker.live { background: var(--ok); }
   .env-val { font-family: var(--mono); font-weight: 700; font-size: .92rem; margin: .15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .env-sub { font-size: .67rem; color: inherit; line-height: 1.25; }
   .env.dev { border-color: var(--warn); background: var(--env-dev-bg); color: var(--env-dev-ink); }
@@ -484,19 +489,19 @@
       <p id="env-source-label" class="source-label"></p>
       <div class="envs" aria-label="Kies omgevingsweergave">
         <button type="button" class="env dev" id="env-dev-box" aria-pressed="false" aria-label="Toon Ontwikkel-weergave">
-          <div class="env-name"><span aria-hidden="true">💻</span> Ontwikkel</div>
+          <div class="env-name"><span class="env-marker dev" aria-hidden="true"></span>Ontwikkel</div>
           <div class="env-val" id="env-dev">—</div>
           <div class="env-sub">jouw branch</div>
         </button>
         <div class="env-arrow">→</div>
         <button type="button" class="env test" id="env-test-box" aria-pressed="false" aria-label="Toon Test-weergave">
-          <div class="env-name"><span aria-hidden="true">🔑</span> Test</div>
+          <div class="env-name"><span class="env-marker test" aria-hidden="true"></span>Test</div>
           <div class="env-val" id="env-test">v0.1.0</div>
           <div class="env-sub">elke merge, automatisch</div>
         </button>
         <div class="env-arrow">→</div>
         <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
-          <div class="env-name"><span aria-hidden="true">🌐</span> Live</div>
+          <div class="env-name"><span class="env-marker live" aria-hidden="true"></span>Live</div>
           <div class="env-val" id="env-live">v0.1.0</div>
           <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
         </button>
@@ -2073,18 +2078,21 @@
       if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
       labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
     });
-    // Omgevingsiconen: waar staan ontwikkel, test en live op de kaart.
-    const flagY = laneY(0) - R - 14;
+    // Omgevingsiconen: elk bolletje staat met tussenruimte boven zijn eigen commit.
     const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
     const devC = S.active && S.branches[S.active] ? byId(S.branches[S.active].head) : byId(S.branches.main.head);
-    const environmentMarker = (environment, icon, commit, y, label) => {
+    const environmentMarker = (environment, commit, label) => {
       if (!commit) return "";
       const faded = isEnvFaded(commit) ? ' data-env-faded="true" opacity=".4"' : "";
-      return `<text data-environment="${environment}" x="${cx(commit)}" y="${y}" text-anchor="middle" font-size="14" aria-label="${label}"${faded}>${icon}<title>${label}</title></text>`;
+      const colors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
+      const stationRadius = commit.kind === "merge" ? R + 3 : R;
+      const markerRadius = 5, markerGap = 8;
+      const y = laneY(branchOf(commit).lane) - stationRadius - markerGap - markerRadius;
+      return `<circle data-environment="${environment}" class="environment-marker" cx="${cx(commit)}" cy="${y}" r="${markerRadius}" fill="${colors[environment]}" aria-hidden="true"${faded}><title>${label}</title></circle>`;
     };
-    flags += environmentMarker("dev", "💻", devC, flagY - 30, "huidige ontwikkel-omgeving");
-    flags += environmentMarker("test", "🔑", testC, flagY, "huidige test-omgeving");
-    flags += environmentMarker("live", "🌐", liveC, flagY + 30, "huidige live-omgeving");
+    flags += environmentMarker("dev", devC, "huidige ontwikkel-omgeving");
+    flags += environmentMarker("test", testC, "huidige test-omgeving");
+    flags += environmentMarker("live", liveC, "huidige live-omgeving");
     const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
     const frame = S.envFilter !== "all" && frameBounds ? (() => {
       const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);
@@ -2099,7 +2107,7 @@
     lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
       Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
         `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
-      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span>🧪 = huidige test-commit</span><span>🚀 = huidige live-commit</span>`;
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span><i class="env-marker dev" aria-hidden="true"></i> = huidige ontwikkel-commit</span><span><i class="env-marker test" aria-hidden="true"></i> = huidige test-commit</span><span><i class="env-marker live" aria-hidden="true"></i> = huidige live-commit</span>`;
     }
 
   el("btn-issue").onclick = newIssue;
