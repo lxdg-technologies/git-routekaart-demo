@@ -63,3 +63,6 @@ jobs:
         run: python3 .github/scripts/route-controle.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# Proefrit: deze regel is toegevoegd om de routecontrole te laten afgaan.
+# Deze pull request hoort NIET gemerged te worden — sluiten na de proefrit.
