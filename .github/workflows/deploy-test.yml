@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -76,7 +78,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$VERSION" \
-            --notes "Automatisch genummerde versie van main op commit $GITHUB_SHA. Kandidaat voor onveranderlijke opslag en publicatie naar test."; then
+            --generate-notes; then
             exit 0
           fi
           if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -85,6 +87,63 @@ jobs:
           fi
           echo "::error::Release $VERSION could not be created or verified"
           exit 1
+
+  complete-manual-release:
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add generated release notes without replacing manual text
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ github.event.release.id }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          TARGET_COMMITISH: ${{ github.event.release.target_commitish }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_endpoint="repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
+          generated_endpoint="repos/$GITHUB_REPOSITORY/releases/generate-notes"
+          current_body_file="$(mktemp)"
+          generated_body_file="$(mktemp)"
+          payload_file="$(mktemp)"
+          trap 'rm -f "$current_body_file" "$generated_body_file" "$payload_file"' EXIT
+
+          gh api "$release_endpoint" --jq '.body // ""' >"$current_body_file"
+          if [ -n "$TARGET_COMMITISH" ]; then
+            gh api --method POST "$generated_endpoint" \
+              -f "tag_name=$TAG_NAME" \
+              -f "target_commitish=$TARGET_COMMITISH" \
+              --jq '.body // ""' >"$generated_body_file"
+          else
+            gh api --method POST "$generated_endpoint" \
+              -f "tag_name=$TAG_NAME" \
+              --jq '.body // ""' >"$generated_body_file"
+          fi
+
+          python3 - "$current_body_file" "$generated_body_file" "$payload_file" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          current_path, generated_path, payload_path = map(Path, sys.argv[1:])
+          current = current_path.read_text()
+          generated = generated_path.read_text().strip()
+          if not generated:
+              raise SystemExit("GitHub returned empty generated release notes")
+          if generated in current:
+              print("Generated release notes are already present")
+              raise SystemExit(0)
+
+          addition = "\n\n<!-- lxdg-generated-release-notes -->\n## Generated release notes\n\n" + generated + "\n"
+          payload_path.write_text(json.dumps({"body": current.rstrip() + addition}))
+          PY
+
+          if [ ! -s "$payload_file" ]; then
+            exit 0
+          fi
+          gh api --method PATCH "$release_endpoint" --input "$payload_file" >/dev/null
+          echo "Generated release notes added to release $TAG_NAME"
 
   deploy-test:
     needs: version
