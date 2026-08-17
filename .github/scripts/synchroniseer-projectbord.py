@@ -223,6 +223,26 @@ class GitHub:
             raise RuntimeError(f"Organisatieproject {PROJECT_NUMBER} bestaat niet of is niet toegankelijk")
         return project
 
+    def linked_branches(self, number: int) -> set[str]:
+        data = self.graphql(
+            """
+            query($owner:String!, $name:String!, $number:Int!) {
+              repository(owner:$owner, name:$name) {
+                issue(number:$number) {
+                  linkedBranches(first:100) { nodes { ref { name } } }
+                }
+              }
+            }
+            """,
+            {"owner": ORGANIZATION, "name": REPOSITORY.split("/", 1)[1], "number": number},
+        )
+        issue = data.get("repository", {}).get("issue") or {}
+        return {
+            node["ref"]["name"]
+            for node in issue.get("linkedBranches", {}).get("nodes", [])
+            if node.get("ref", {}).get("name")
+        }
+
     def mutate_status(self, project_id: str, item_id: str, field_id: str, option_id: str) -> None:
         self.graphql(
             """
@@ -309,9 +329,11 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
     for issue in issues:
         number = issue["number"]
         related = [pr for pr in prs if _references_issue(pr, number)]
-        # A branch name containing the issue number is the only branch-to-issue
-        # relation available before a PR exists; do not invent a relation otherwise.
-        branch = any(re.search(rf"(?:^|[-_/])#?{number}(?:$|[-_/])", b["name"]) for b in branches if b["name"] != "main")
+        # Only GitHub's explicit Development relation proves that a branch belongs
+        # to this issue.  A matching number in an unrelated branch name is not a
+        # relation and must never move the issue card.
+        linked_branches = client.linked_branches(number)
+        branch = any(b["name"] in linked_branches for b in branches if b["name"] != "main")
         open_prs = [pr for pr in related if pr["state"] == "open"]
         merged_pr = next((pr for pr in related if pr.get("merged_at")), None)
         merged = merged_pr is not None
