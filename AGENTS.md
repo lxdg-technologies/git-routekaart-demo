@@ -76,6 +76,8 @@ Squash-gedrag op de kaart: gesquashte commits krijgen `c.squashed = true` en wor
 
 ### Controle van de diff vóór de pull request
 
+**Twee routes, twee snelheden.** Kleine, niet-gedrag-wijzigende aanpassingen (documentatie, sjablonen, werkwijze-teksten) mag Claude direct schrijven en als PR openen, zonder Coder/Reviewer — label `route:sneltrein`. Alles wat `index.html` raakt of wat een bezoeker ziet, blijft altijd via de bouwroute (Coder + Reviewer). Het label is puur een filter, geen `soort:`-label — het board-script kijkt er niet naar en kan er dus ook niet door verstoord worden.
+
 5. Controleer vóór het openen van de PR de volledige diff tegen de opdracht in het issue. Verwijder elke wijziging zonder grond in het issue, of breng die terug tot een los voorstel buiten de PR. Controleer daarbij ook of een verbetering die nuttig of technisch aantrekkelijk lijkt toch buiten de gevraagde scope valt.
 6. Open een PR met een duidelijke omschrijving in gewone taal (de reviewer is niet altijd technisch). **Elke PR die de simulatie zelf verandert (dus niet alleen CI/docs) krijgt een expliciete "wat te checken"-regel**, bijv. "Klik X aan en kijk of Y verschijnt". De beoordelaar kijkt in de ontwikkelomgeving van die pull request: `https://lxdg-technologies.github.io/git-routekaart-demo/dev/pr-<nummer>/`. Zonder zo'n regel is dat adres net zo nietszeggend als geen adres — het toont dát er iets is, niet wát.
 
