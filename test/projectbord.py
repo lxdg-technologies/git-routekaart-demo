@@ -56,6 +56,9 @@ class FakeGitHub:
             return []
         raise AssertionError(f"onverwachte API-call: {path}")
 
+    def linked_branches(self, number):
+        return set()
+
     def mutate_status(self, project, item, field, option):
         self.mutations.append(("status", option))
         self.current = {"progress": "In progress", "review": "In review", "done": "Done"}[option]
@@ -100,6 +103,37 @@ class FakePullRequestGitHub(FakeGitHub):
 
 
 class ProjectBoardTests(unittest.TestCase):
+    def test_oude_branch_met_issuenummer_is_geen_bewijs_van_werk(self):
+        class BranchClient(FakeGitHub):
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 164, "state": "open"}]
+                if "/pulls?" in path:
+                    return []
+                if "/branches?" in path:
+                    return [{"name": "main"}, {"name": "feat/dcs-163"}]
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+        states = projectbord._issue_states(BranchClient(None))
+        self.assertFalse(states[164].branch)
+
+    def test_explicit_github_branchkoppeling_is_wel_bewijs_van_werk(self):
+        class BranchClient(FakeGitHub):
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 164, "state": "open"}]
+                if "/pulls?" in path:
+                    return []
+                if "/branches?" in path:
+                    return [{"name": "main"}, {"name": "werk-zonder-nummer"}]
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+            def linked_branches(self, number):
+                return {"werk-zonder-nummer"}
+
+        states = projectbord._issue_states(BranchClient(None))
+        self.assertTrue(states[164].branch)
+
     def test_http_fout_benoemt_de_geweigerde_bron(self):
         error = HTTPError("https://api.github.com/repos/example", 403, "Forbidden", None, io.BytesIO(
             b'{"message":"geen toegang"}'
