@@ -136,16 +136,21 @@ class Berichten(unittest.TestCase):
         self.assertIn("### Deze wijziging kan nog niet door", tekst)
         self.assertIn("**`soort:routekaart`**", tekst)
         self.assertIn("**`soort:github`**", tekst)
-        self.assertNotIn("Geen soort:-label", tekst)
+        self.assertIn("Op een laptop", tekst)
+        self.assertIn("in de GitHub-app", tekst)
+        self.assertIn("Daarna kijkt het systeem vanzelf opnieuw", tekst)
+        self.assertNotIn("agent", tekst.lower())
 
     def test_bericht_voor_twee_soorten_is_voor_mensen(self):
         tekst = route.bericht(route.controleer(["soort:github", "soort:routekaart"], [], ["AGENTS.md"]))
-        self.assertIn("Er staan twee labels op", tekst)
-        self.assertIn("haal er één weg", tekst)
+        self.assertIn("Er staan twee herkenningstekens op", tekst)
+        self.assertIn("Labels", tekst)
+        self.assertIn("Haal één van de twee blokjes weg", tekst)
+        self.assertIn("Daarna kijkt het systeem vanzelf opnieuw", tekst)
 
     def test_bericht_voor_sneltrein_noemt_bestand_onderaan(self):
         tekst = route.bericht(route.controleer(["route:sneltrein", "soort:github"], [], ["index.html"]))
-        self.assertLess(tekst.index("Deze wijziging staat"), tekst.index("<sub>"))
+        self.assertLess(tekst.index("Deze wijziging heeft"), tekst.index("<sub>"))
         self.assertIn("<sub>Om deze onderdelen gaat het: `index.html`</sub>", tekst)
 
     def test_bericht_voor_opgeloste_controle_is_kort(self):
