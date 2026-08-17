@@ -103,17 +103,77 @@ def controleer(
     return problemen
 
 
+def bericht(problemen: list[str]) -> str:
+    """Maak het bericht dat iemand op de pull request moet kunnen begrijpen."""
+    if not problemen:
+        return "<!-- routecontrole -->\n\n### Dit is opgelost\n\nDe controle is opnieuw gedraaid en heeft niets meer te melden. Je kunt verder."
+
+    if problemen[0].startswith("Geen soort:-label"):
+        return """<!-- routecontrole -->
+
+### Deze wijziging kan nog niet door
+
+Er staat nog nergens bij wat voor werk dit is. Daardoor weet het bord niet in welke rij deze kaart hoort, en komt hij op de verkeerde plek terecht.
+
+**Wat je kunt doen** — zet rechts, bij *Labels*, één van deze twee erop:
+
+- **`soort:routekaart`** — de bezoeker van de website merkt er iets van.
+- **`soort:github`** — het gaat om het gereedschap eromheen: het bord, de controles, de agents.
+
+Je mag het label ook op het issue zetten dat deze wijziging afsluit; dat telt net zo goed.
+
+Zodra het label erop staat, kijkt deze controle vanzelf opnieuw. Je hoeft niets opnieuw te starten."""
+
+    if problemen[0].startswith("Meer dan één soort:-label"):
+        return """<!-- routecontrole -->
+
+### Deze wijziging kan nog niet door
+
+Er staan twee labels op die allebei zeggen wat voor werk dit is: `soort:routekaart` en `soort:github`. Zolang dat zo is, is niet te bepalen welke weg dit werk aflegt.
+
+**Wat je kunt doen:** haal er één weg, zodat er precies één overblijft.
+
+Zodra dat gebeurd is, kijkt deze controle vanzelf opnieuw."""
+
+    if any("maar verandert gedrag:" in probleem for probleem in problemen):
+        bestanden = next(
+            probleem.split("maar verandert gedrag: ", 1)[1].split(". De sneltrein", 1)[0]
+            for probleem in problemen if "maar verandert gedrag:" in probleem
+        )
+        return f"""<!-- routecontrole -->
+
+### Deze wijziging kan nog niet door
+
+Deze wijziging staat gemarkeerd als een kleine, snelle aanpassing (`route:sneltrein`). Zulke aanpassingen gaan er zonder tussenkomst doorheen: niemand kijkt ze na.
+
+Maar hier verandert iets waar de website zelf op draait. Dat mag alleen als er wél iemand naar gekeken heeft — daar is die route niet voor bedoeld.
+
+**Wat je kunt doen** — kies er één:
+
+- Haal het label `route:sneltrein` weg. Dan loopt dit langs de gewone route, met controle.
+- Of haal het gedeelte dat de site laat werken hieruit en zet dat in een eigen wijziging. Wat er dan overblijft, mag wel via de sneltrein.
+
+Zodra je het label weghaalt, kijkt deze controle vanzelf opnieuw.
+
+<sub>Om deze onderdelen gaat het: `{bestanden.replace(', ', '`, `')}`</sub>"""
+
+    return "<!-- routecontrole -->\n\n### Deze wijziging kan nog niet door\n\nDe routecontrole heeft een probleem gevonden. Los de gemelde routeafspraak op."
+
+
 class GitHub:
     def __init__(self, token: str, repository: str):
         self.token = token
         self.repository = repository
 
-    def rest(self, path: str) -> Any:
+    def rest(self, path: str, method: str = "GET", data: dict[str, Any] | None = None) -> Any:
         request = Request(
             "https://api.github.com" + path,
+            data=json.dumps(data).encode() if data is not None else None,
+            method=method,
             headers={
                 "Authorization": f"Bearer {self.token}",
                 "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json",
             },
         )
         try:
@@ -146,6 +206,14 @@ class GitHub:
     def issue_labels(self, nummer: int) -> list[str]:
         issue = self.rest(f"/repos/{self.repository}/issues/{nummer}")
         return [label["name"] for label in issue.get("labels", []) if label.get("name")]
+
+    def plaats_of_bewerk_bericht(self, nummer: int, tekst: str) -> None:
+        comments = self.rest(f"/repos/{self.repository}/issues/{nummer}/comments?per_page=100") or []
+        bestaand = next((comment for comment in comments if "<!-- routecontrole -->" in comment.get("body", "")), None)
+        if bestaand:
+            self.rest(f"/repos/{self.repository}/issues/comments/{bestaand['id']}", "PATCH", {"body": tekst})
+        elif "Dit is opgelost" not in tekst:
+            self.rest(f"/repos/{self.repository}/issues/{nummer}/comments", "POST", {"body": tekst})
 
 
 def main() -> int:
@@ -199,9 +267,18 @@ def main() -> int:
 
     problemen = controleer(pr_labels, issue_labels, bestanden)
     if problemen:
+        try:
+            client.plaats_of_bewerk_bericht(nummer, bericht(problemen))
+        except RuntimeError as fout:
+            print(f"::warning::Het routecontrolebericht kon niet worden geplaatst: {fout}", file=sys.stderr)
         for probleem in problemen:
             print(f"::error::{probleem}", file=sys.stderr)
         return 1
+
+    try:
+        client.plaats_of_bewerk_bericht(nummer, bericht(problemen))
+    except RuntimeError as fout:
+        print(f"::warning::Het opgeloste routecontrolebericht kon niet worden bijgewerkt: {fout}", file=sys.stderr)
 
     soorten = ", ".join(sorted(soort_labels(issue_labels) or soort_labels(pr_labels)))
     route = SNELTREIN_LABEL if SNELTREIN_LABEL in pr_labels else "bouwroute"

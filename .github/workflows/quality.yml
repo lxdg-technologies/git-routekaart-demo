@@ -12,11 +12,12 @@ on:
   push:
     branches: [main]
 
-# Expliciet en alleen lezen. De routecontrole vraagt de gewijzigde bestanden en
-# de labels van het gekoppelde issue op; geen enkele stap in deze poort schrijft.
+# De routecontrole plaatst of werkt alleen haar ene begrijpelijke PR-bericht bij;
+# deze poort draait uitsluitend op wijzigingen uit deze repository en schrijft
+# uitsluitend dit ene bericht.
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   issues: read
 
 jobs:

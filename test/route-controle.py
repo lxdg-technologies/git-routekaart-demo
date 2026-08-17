@@ -130,18 +130,46 @@ class SneltreinRegel(unittest.TestCase):
         self.assertEqual(len(problemen), 2)
 
 
+class Berichten(unittest.TestCase):
+    def test_bericht_zonder_soort_is_voor_mensen(self):
+        tekst = route.bericht(route.controleer([], [], ["AGENTS.md"]))
+        self.assertIn("### Deze wijziging kan nog niet door", tekst)
+        self.assertIn("**`soort:routekaart`**", tekst)
+        self.assertIn("**`soort:github`**", tekst)
+        self.assertNotIn("Geen soort:-label", tekst)
+
+    def test_bericht_voor_twee_soorten_is_voor_mensen(self):
+        tekst = route.bericht(route.controleer(["soort:github", "soort:routekaart"], [], ["AGENTS.md"]))
+        self.assertIn("Er staan twee labels op", tekst)
+        self.assertIn("haal er één weg", tekst)
+
+    def test_bericht_voor_sneltrein_noemt_bestand_onderaan(self):
+        tekst = route.bericht(route.controleer(["route:sneltrein", "soort:github"], [], ["index.html"]))
+        self.assertLess(tekst.index("Deze wijziging staat"), tekst.index("<sub>"))
+        self.assertIn("<sub>Om deze onderdelen gaat het: `index.html`</sub>", tekst)
+
+    def test_bericht_voor_opgeloste_controle_is_kort(self):
+        tekst = route.bericht([])
+        self.assertIn("### Dit is opgelost", tekst)
+        self.assertNotIn("route:sneltrein", tekst)
+
+
 class FakeGitHub:
     """Vervangt de echte GitHub-aanroepen; geeft terug wat de test wil zien."""
 
     def __init__(self, bestanden, issue_labels=None):
         self._bestanden = bestanden
         self._issue_labels = issue_labels or []
+        self.comment_calls = []
 
     def bestanden(self, nummer):
         return list(self._bestanden)
 
     def issue_labels(self, nummer):
         return list(self._issue_labels)
+
+    def plaats_of_bewerk_bericht(self, nummer, tekst):
+        self.comment_calls.append((nummer, tekst))
 
 
 class Uitvoering(unittest.TestCase):
@@ -209,6 +237,20 @@ class Uitvoering(unittest.TestCase):
         )
         self.assertEqual(code, 0)
 
+    def test_fout_gaat_naar_het_pr_bericht(self):
+        fake = FakeGitHub(["index.html"])
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as bestand:
+            json.dump(self._payload(["route:sneltrein", "soort:github"]), bestand)
+            pad = bestand.name
+        try:
+            with patch.dict(os.environ, {"GITHUB_EVENT_PATH": pad, "GITHUB_TOKEN": "x"}, clear=True), \
+                 patch.object(route, "GitHub", lambda *a, **k: fake):
+                self.assertEqual(route.main(), 1)
+        finally:
+            os.unlink(pad)
+        self.assertEqual(len(fake.comment_calls), 1)
+        self.assertIn("Deze wijziging kan nog niet door", fake.comment_calls[0][1])
+
 
 class Werkschema(unittest.TestCase):
     """De controle moet echt aanstaan, niet alleen bestaan."""
@@ -233,6 +275,10 @@ class Werkschema(unittest.TestCase):
     def test_de_poort_draait_op_pull_requests_naar_main(self):
         self.assertIn("pull_request:", self.quality)
         self.assertIn("branches: [main]", self.quality)
+
+    def test_de_poort_mag_haar_enige_pr_bericht_bijwerken(self):
+        self.assertIn("pull-requests: write", self.quality)
+        self.assertIn("uitsluitend op wijzigingen uit deze repository", self.quality)
 
 
 if __name__ == "__main__":
