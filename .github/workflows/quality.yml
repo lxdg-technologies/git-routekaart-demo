@@ -4,8 +4,20 @@ name: Quality
 on:
   pull_request:
     branches: [main]
+    # labeled en unlabeled staan hier omdat de routecontrole naar labels kijkt.
+    # Zonder die twee kan een pull request die op een ontbrekend label faalde niet
+    # groen worden door dat label toe te voegen — daar zou een lege commit voor
+    # nodig zijn, en dan wordt de poort iets om omheen te werken.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
+
+# Expliciet en alleen lezen. De routecontrole vraagt de gewijzigde bestanden en
+# de labels van het gekoppelde issue op; geen enkele stap in deze poort schrijft.
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
 
 jobs:
   quality:
@@ -42,3 +54,12 @@ jobs:
 
       - name: ProjectV2-synchronisatie testen
         run: python3 test/projectbord.py
+
+      - name: Routecontrole testen
+        run: python3 test/route-controle.py
+
+      - name: Routecontrole op deze pull request
+        if: github.event_name == 'pull_request'
+        run: python3 .github/scripts/route-controle.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
