@@ -65,7 +65,7 @@ class Koppeling(unittest.TestCase):
 
 class SoortLabelRegel(unittest.TestCase):
     def test_soort_op_de_pull_request_is_genoeg(self):
-        self.assertEqual(route.controleer(["soort:github"], [], ["AGENTS.md"]), [])
+        self.assertEqual(route.controleer(["soort:gittooling"], [], ["AGENTS.md"]), [])
 
     def test_soort_op_het_gekoppelde_issue_is_genoeg(self):
         # Het bord leest het soort van het issue; Coder krijgt zijn PR-label pas
@@ -79,20 +79,20 @@ class SoortLabelRegel(unittest.TestCase):
         self.assertIn("Geen soort:-label", problemen[0])
 
     def test_twee_soorten_falen_ook(self):
-        problemen = route.controleer(["soort:github", "soort:routekaart"], [], ["AGENTS.md"])
+        problemen = route.controleer(["soort:gittooling", "soort:routekaart"], [], ["AGENTS.md"])
         self.assertEqual(len(problemen), 1)
         self.assertIn("Meer dan één soort:-label", problemen[0])
 
     def test_het_issue_wint_van_de_pull_request(self):
         # Dezelfde voorrang als het bord: staat het soort op het issue, dan is
         # een afwijkend label op de PR niet ineens een tweede soort.
-        self.assertEqual(route.controleer(["soort:github"], ["soort:routekaart"], ["AGENTS.md"]), [])
+        self.assertEqual(route.controleer(["soort:gittooling"], ["soort:routekaart"], ["AGENTS.md"]), [])
 
 
 class SneltreinRegel(unittest.TestCase):
     def test_sneltrein_met_alleen_tekst_mag(self):
         problemen = route.controleer(
-            ["route:sneltrein", "soort:github"], [],
+            ["route:sneltrein", "soort:gittooling"], [],
             ["AGENTS.md", ".github/PULL_REQUEST_TEMPLATE.md"],
         )
         self.assertEqual(problemen, [])
@@ -105,19 +105,19 @@ class SneltreinRegel(unittest.TestCase):
 
     def test_sneltrein_die_een_werkschema_raakt_faalt(self):
         problemen = route.controleer(
-            ["route:sneltrein", "soort:github"], [],
+            ["route:sneltrein", "soort:gittooling"], [],
             ["AGENTS.md", ".github/workflows/quality.yml"],
         )
         self.assertEqual(len(problemen), 1)
         self.assertIn(".github/workflows/quality.yml", problemen[0])
 
     def test_sneltrein_die_een_test_raakt_faalt(self):
-        problemen = route.controleer(["route:sneltrein", "soort:github"], [], ["test/smoketest.js"])
+        problemen = route.controleer(["route:sneltrein", "soort:gittooling"], [], ["test/smoketest.js"])
         self.assertEqual(len(problemen), 1)
 
     def test_sneltrein_die_een_script_raakt_faalt(self):
         problemen = route.controleer(
-            ["route:sneltrein", "soort:github"], [], [".github/scripts/route-controle.py"],
+            ["route:sneltrein", "soort:gittooling"], [], [".github/scripts/route-controle.py"],
         )
         self.assertEqual(len(problemen), 1)
 
@@ -135,21 +135,21 @@ class Berichten(unittest.TestCase):
         tekst = route.bericht(route.controleer([], [], ["AGENTS.md"]))
         self.assertIn("### Deze wijziging kan nog niet door", tekst)
         self.assertIn("**`soort:routekaart`**", tekst)
-        self.assertIn("**`soort:github`**", tekst)
+        self.assertIn("**`soort:gittooling`**", tekst)
         self.assertIn("Op een laptop", tekst)
         self.assertIn("in de GitHub-app", tekst)
         self.assertIn("Daarna kijkt het systeem vanzelf opnieuw", tekst)
         self.assertNotIn("agent", tekst.lower())
 
     def test_bericht_voor_twee_soorten_is_voor_mensen(self):
-        tekst = route.bericht(route.controleer(["soort:github", "soort:routekaart"], [], ["AGENTS.md"]))
+        tekst = route.bericht(route.controleer(["soort:gittooling", "soort:routekaart"], [], ["AGENTS.md"]))
         self.assertIn("Er staan twee herkenningstekens op", tekst)
         self.assertIn("Labels", tekst)
         self.assertIn("Haal één van de twee blokjes weg", tekst)
         self.assertIn("Daarna kijkt het systeem vanzelf opnieuw", tekst)
 
     def test_bericht_voor_sneltrein_noemt_bestand_onderaan(self):
-        tekst = route.bericht(route.controleer(["route:sneltrein", "soort:github"], [], ["index.html"]))
+        tekst = route.bericht(route.controleer(["route:sneltrein", "soort:gittooling"], [], ["index.html"]))
         self.assertLess(tekst.index("Deze wijziging heeft"), tekst.index("<sub>"))
         self.assertIn("<sub>Om deze onderdelen gaat het: `index.html`</sub>", tekst)
 
@@ -207,12 +207,12 @@ class Uitvoering(unittest.TestCase):
         }
 
     def test_een_kloppende_pull_request_slaagt(self):
-        code = self._draai(self._payload(["soort:github"]), bestanden=["AGENTS.md"])
+        code = self._draai(self._payload(["soort:gittooling"]), bestanden=["AGENTS.md"])
         self.assertEqual(code, 0)
 
     def test_een_sneltrein_die_gedrag_raakt_faalt(self):
         code = self._draai(
-            self._payload(["route:sneltrein", "soort:github"]), bestanden=["index.html"],
+            self._payload(["route:sneltrein", "soort:gittooling"]), bestanden=["index.html"],
         )
         self.assertEqual(code, 1)
 
@@ -220,11 +220,11 @@ class Uitvoering(unittest.TestCase):
         # De belangrijkste test: als de controle zijn gegevens niet kan
         # vaststellen, mag hij niet slagen. Een pull request zonder gewijzigde
         # bestanden bestaat niet.
-        code = self._draai(self._payload(["soort:github"]), bestanden=[])
+        code = self._draai(self._payload(["soort:gittooling"]), bestanden=[])
         self.assertEqual(code, 1)
 
     def test_zonder_token_is_geen_groen(self):
-        code = self._draai(self._payload(["soort:github"]), bestanden=["AGENTS.md"], token=None)
+        code = self._draai(self._payload(["soort:gittooling"]), bestanden=["AGENTS.md"], token=None)
         self.assertEqual(code, 1)
 
     def test_zonder_gebeurtenis_is_geen_groen(self):
@@ -238,14 +238,14 @@ class Uitvoering(unittest.TestCase):
     def test_het_soort_mag_van_het_gekoppelde_issue_komen(self):
         code = self._draai(
             self._payload([], tekst="Fixes #164"),
-            bestanden=["index.html"], issue_labels=["soort:github"],
+            bestanden=["index.html"], issue_labels=["soort:gittooling"],
         )
         self.assertEqual(code, 0)
 
     def test_fout_gaat_naar_het_pr_bericht(self):
         fake = FakeGitHub(["index.html"])
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as bestand:
-            json.dump(self._payload(["route:sneltrein", "soort:github"]), bestand)
+            json.dump(self._payload(["route:sneltrein", "soort:gittooling"]), bestand)
             pad = bestand.name
         try:
             with patch.dict(os.environ, {"GITHUB_EVENT_PATH": pad, "GITHUB_TOKEN": "x"}, clear=True), \

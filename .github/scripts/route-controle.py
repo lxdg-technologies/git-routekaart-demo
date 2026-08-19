@@ -26,7 +26,7 @@ from typing import Any, Iterable
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-SOORT_LABELS = frozenset({"soort:routekaart", "soort:github"})
+SOORT_LABELS = frozenset({"soort:routekaart", "soort:gittooling"})
 SNELTREIN_LABEL = "route:sneltrein"
 
 # Wat "gedrag" is: alles wat de bezoeker ziet, wat de tests bewaken, en de
@@ -76,7 +76,7 @@ def controleer(
     if not soorten:
         problemen.append(
             "Geen soort:-label. Zet soort:routekaart (de bezoeker ziet het) of "
-            "soort:github (het gereedschap zelf) op deze pull request, of op het "
+            "soort:gittooling (het gereedschap zelf) op deze pull request, of op het "
             "issue dat hij sluit. Zonder dat label komt de kaart op het bord in "
             "de verkeerde baan te staan."
         )
@@ -118,7 +118,7 @@ Er ontbreekt één herkenningsteken voor deze wijziging. Zonder dat weet het ove
 **Wat je kunt doen:** zet één van deze blokjes erbij. Op een laptop staat *Labels* rechts naast de tekst; in de GitHub-app staat *Labels* in de gegevens onder de titel. Kies daar één van:
 
 - **`soort:routekaart`** — de bezoeker van de website merkt er iets van.
-- **`soort:github`** — het gaat om de hulpmiddelen achter de schermen.
+- **`soort:gittooling`** — het gaat om de hulpmiddelen achter de schermen.
 
 Doe dit op de pull request of op het issue dat erbij hoort.
 
@@ -129,7 +129,7 @@ Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten."""
 
 ### Deze wijziging kan nog niet door
 
-Er staan twee herkenningstekens op die elkaar tegenspreken: `soort:routekaart` en `soort:github`. Daardoor weet het overzicht niet waar deze kaart hoort.
+Er staan twee herkenningstekens op die elkaar tegenspreken: `soort:routekaart` en `soort:gittooling`. Daardoor weet het overzicht niet waar deze kaart hoort.
 
 **Wat je kunt doen:** open op een laptop rechts naast de tekst *Labels*, of tik in de GitHub-app onder de titel op *Labels*. Haal één van de twee blokjes weg, zodat er precies één overblijft.
 
