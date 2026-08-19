@@ -91,7 +91,7 @@ class FakePullRequestGitHub(FakeGitHub):
 
     def rest(self, path, **kwargs):
         if "/issues?" in path:
-            return [{"number": 74, "state": "closed", "labels": [{"name": "soort:github"}]}]
+            return [{"number": 74, "state": "closed", "labels": [{"name": "soort:gittooling"}]}]
         if "/pulls?" in path:
             return [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
                      "title": "Werk", "body": "Fixes #74", "labels": []}]
@@ -189,7 +189,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(client.mutations, [])
 
     def test_github_werk_is_live_na_merge_en_routekaart_blijft_test(self):
-        github = projectbord.IssueState(89, "closed", False, False, False, True, False, frozenset({"soort:github"}))
+        github = projectbord.IssueState(89, "closed", False, False, False, True, False, frozenset({"soort:gittooling"}))
         routekaart = projectbord.IssueState(87, "closed", False, False, False, True, False, frozenset({"soort:routekaart"}))
         self.assertEqual(projectbord.target_environment(github), "Live")
         self.assertEqual(projectbord.target_environment(routekaart), "Test")
@@ -216,7 +216,7 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(client.mutations, [])
 
     def test_pull_request_volgt_soort_omgeving_en_status(self):
-        github = projectbord.PullRequestState(83, False, False, True, False, frozenset(), frozenset({"soort:github"}))
+        github = projectbord.PullRequestState(83, False, False, True, False, frozenset(), frozenset({"soort:gittooling"}))
         routekaart = projectbord.PullRequestState(88, False, False, True, False, frozenset(), frozenset({"soort:routekaart"}))
         self.assertEqual(projectbord.target_pr_status(github), "Done")
         self.assertEqual(projectbord.target_pr_environment(github), "Live")
@@ -224,7 +224,7 @@ class ProjectBoardTests(unittest.TestCase):
 
     def test_pull_request_kan_bestaand_handmatig_soortlabel_gebruiken_voor_omgeving(self):
         github = projectbord.PullRequestState(29, False, False, True, False,
-                                              frozenset({"soort:github"}), frozenset())
+                                              frozenset({"soort:gittooling"}), frozenset())
         routekaart = projectbord.PullRequestState(47, False, False, True, False,
                                                   frozenset({"soort:routekaart"}), frozenset())
         self.assertEqual(projectbord.target_pr_environment(github), "Live")
@@ -232,7 +232,7 @@ class ProjectBoardTests(unittest.TestCase):
 
     def test_pull_request_met_andere_issue_labels_gebruikt_eigen_soortlabel_voor_live(self):
         pull_request = projectbord.PullRequestState(99, False, False, True, False,
-                                                    frozenset({"soort:github"}),
+                                                    frozenset({"soort:gittooling"}),
                                                     frozenset({"documentatie"}))
         self.assertEqual(projectbord.target_pr_environment(pull_request), "Live")
 
@@ -261,9 +261,9 @@ class ProjectBoardTests(unittest.TestCase):
         client = FakePullRequestGitHub(None)
         actions = projectbord.sync(client, project=client.project_data())
         self.assertIn(("environment", "live"), client.mutations)
-        self.assertIn(("add-label", 83, "soort:github"), client.mutations)
+        self.assertIn(("add-label", 83, "soort:gittooling"), client.mutations)
         self.assertIn("pull request #83: Geen omgeving → Live", actions)
-        self.assertIn("pull request #83: label soort:github toegevoegd", actions)
+        self.assertIn("pull request #83: label soort:gittooling toegevoegd", actions)
 
     def test_pull_request_zonder_bron_verwijdert_geen_bestaand_soortlabel(self):
         for body in ("Geen koppeling", "Fixes #74"):
@@ -272,19 +272,19 @@ class ProjectBoardTests(unittest.TestCase):
                 client.rest = lambda path, body=body, **kwargs: (
                     [{"number": 74, "state": "open"}] if "/issues?" in path else
                     [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
-                      "title": "Werk", "body": body, "labels": [{"name": "soort:github"}]}]
+                      "title": "Werk", "body": body, "labels": [{"name": "soort:gittooling"}]}]
                     if "/pulls?" in path else []
                 )
                 if body == "Fixes #74":
                     client.rest = lambda path, **kwargs: (
                         [{"number": 74, "state": "open", "labels": []}] if "/issues?" in path else
                         [{"number": 83, "state": "closed", "merged_at": "2026-08-10T10:00:00Z",
-                          "title": "Werk", "body": body, "labels": [{"name": "soort:github"}]}]
+                          "title": "Werk", "body": body, "labels": [{"name": "soort:gittooling"}]}]
                         if "/pulls?" in path else []
                     )
                 actions = projectbord.sync(client, project=client.project_data())
-                self.assertNotIn(("remove-label", 83, "soort:github"), client.mutations)
-                self.assertFalse(any("label soort:github verwijderd" in action for action in actions))
+                self.assertNotIn(("remove-label", 83, "soort:gittooling"), client.mutations)
+                self.assertFalse(any("label soort:gittooling verwijderd" in action for action in actions))
 
     def test_koppeling_volgt_sluitwoord_in_pr_tekst(self):
         self.assertEqual(projectbord._linked_issue_number({"title": "Werk", "body": "Fixes #96"}), 96)

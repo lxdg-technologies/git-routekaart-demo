@@ -65,7 +65,7 @@ def target_status(issue: IssueState) -> str | None:
 def target_environment(issue: IssueState, *, live_commit_sha: str | None = None,
                        compare_status: str | None = None) -> str:
     """Return the environment for the issue's kind of work."""
-    if "soort:github" in issue.labels:
+    if "soort:gittooling" in issue.labels:
         return "Live" if issue.merged_pr else "Geen omgeving"
     if issue.merged_pr:
         return "Live" if live_commit_sha and compare_status in {"ahead", "identical"} else "Test"
@@ -85,7 +85,7 @@ def target_pr_status(pr: PullRequestState) -> str:
 
 
 def _soort_labels(labels: frozenset[str]) -> frozenset[str]:
-    return frozenset(label for label in labels if label in ("soort:routekaart", "soort:github"))
+    return frozenset(label for label in labels if label in ("soort:routekaart", "soort:gittooling"))
 
 
 def target_pr_environment(pr: PullRequestState, *, live_commit_sha: str | None = None,
@@ -94,7 +94,7 @@ def target_pr_environment(pr: PullRequestState, *, live_commit_sha: str | None =
     # there is no usable kind label on the linked issue.  The linked issue
     # remains the only source for changing PR kind labels below.
     labels = _soort_labels(pr.linked_issue_labels) or _soort_labels(pr.labels)
-    if "soort:github" in labels:
+    if "soort:gittooling" in labels:
         return "Live" if pr.merged_pr else "Geen omgeving"
     if pr.merged_pr:
         return "Live" if live_commit_sha and compare_status in {"ahead", "identical"} else "Test"
@@ -435,7 +435,7 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
                 client.mutate_environment(project["id"], item["id"], environment_field["id"], environment_options[environment])
                 actions.append(f"pull request #{number}: {current_environment or 'onbekend'} → {environment}")
 
-            desired_label = next((label for label in ("soort:routekaart", "soort:github")
+            desired_label = next((label for label in ("soort:routekaart", "soort:gittooling")
                                   if label in pr.linked_issue_labels), None)
             if desired_label:
                 for label in sorted(label for label in pr.labels if label.startswith("soort:") and label != desired_label):
@@ -474,7 +474,7 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
         preserve_manual_live = (
             environment != "Live"
             and current_environment == "Live"
-            and "soort:github" not in state.labels
+            and "soort:gittooling" not in state.labels
         )
         if current_environment != environment and not preserve_manual_live:
             client.mutate_environment(project["id"], item["id"], environment_field["id"], environment_options[environment])
