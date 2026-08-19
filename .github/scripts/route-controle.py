@@ -113,27 +113,27 @@ def bericht(problemen: list[str]) -> str:
 
 ### Deze wijziging kan nog niet door
 
-Er staat nog nergens bij wat voor werk dit is. Daardoor weet het bord niet in welke rij deze kaart hoort, en komt hij op de verkeerde plek terecht.
+Er ontbreekt één herkenningsteken voor deze wijziging. Zonder dat weet het overzicht niet waar deze kaart hoort.
 
-**Wat je kunt doen** — zet rechts, bij *Labels*, één van deze twee erop:
+**Wat je kunt doen:** zet één van deze blokjes erbij. Op een laptop staat *Labels* rechts naast de tekst; in de GitHub-app staat *Labels* in de gegevens onder de titel. Kies daar één van:
 
 - **`soort:routekaart`** — de bezoeker van de website merkt er iets van.
-- **`soort:github`** — het gaat om het gereedschap eromheen: het bord, de controles, de agents.
+- **`soort:github`** — het gaat om de hulpmiddelen achter de schermen.
 
-Je mag het label ook op het issue zetten dat deze wijziging afsluit; dat telt net zo goed.
+Doe dit op de pull request of op het issue dat erbij hoort.
 
-Zodra het label erop staat, kijkt deze controle vanzelf opnieuw. Je hoeft niets opnieuw te starten."""
+Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten."""
 
     if problemen[0].startswith("Meer dan één soort:-label"):
         return """<!-- routecontrole -->
 
 ### Deze wijziging kan nog niet door
 
-Er staan twee labels op die allebei zeggen wat voor werk dit is: `soort:routekaart` en `soort:github`. Zolang dat zo is, is niet te bepalen welke weg dit werk aflegt.
+Er staan twee herkenningstekens op die elkaar tegenspreken: `soort:routekaart` en `soort:github`. Daardoor weet het overzicht niet waar deze kaart hoort.
 
-**Wat je kunt doen:** haal er één weg, zodat er precies één overblijft.
+**Wat je kunt doen:** open op een laptop rechts naast de tekst *Labels*, of tik in de GitHub-app onder de titel op *Labels*. Haal één van de twee blokjes weg, zodat er precies één overblijft.
 
-Zodra dat gebeurd is, kijkt deze controle vanzelf opnieuw."""
+Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten."""
 
     if any("maar verandert gedrag:" in probleem for probleem in problemen):
         bestanden = next(
@@ -144,16 +144,13 @@ Zodra dat gebeurd is, kijkt deze controle vanzelf opnieuw."""
 
 ### Deze wijziging kan nog niet door
 
-Deze wijziging staat gemarkeerd als een kleine, snelle aanpassing (`route:sneltrein`). Zulke aanpassingen gaan er zonder tussenkomst doorheen: niemand kijkt ze na.
+Deze wijziging heeft het blokje `route:sneltrein`, maar verandert iets op de website. Bij dit blokje kijkt niemand de wijziging na.
 
-Maar hier verandert iets waar de website zelf op draait. Dat mag alleen als er wél iemand naar gekeken heeft — daar is die route niet voor bedoeld.
+Dat mag alleen wanneer iemand de wijziging wel heeft nagekeken.
 
-**Wat je kunt doen** — kies er één:
+**Wat je kunt doen:** haal op een laptop rechts naast de tekst, of in de GitHub-app onder de titel bij *Labels*, het blokje `route:sneltrein` weg. Of haal de onderdelen voor de website uit deze wijziging.
 
-- Haal het label `route:sneltrein` weg. Dan loopt dit langs de gewone route, met controle.
-- Of haal het gedeelte dat de site laat werken hieruit en zet dat in een eigen wijziging. Wat er dan overblijft, mag wel via de sneltrein.
-
-Zodra je het label weghaalt, kijkt deze controle vanzelf opnieuw.
+Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten.
 
 <sub>Om deze onderdelen gaat het: `{bestanden.replace(', ', '`, `')}`</sub>"""
 
