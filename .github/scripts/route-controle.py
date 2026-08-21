@@ -120,9 +120,9 @@ Er ontbreekt één herkenningsteken voor deze wijziging. Zonder dat weet het ove
 - **`soort:routekaart`** — de bezoeker van de website merkt er iets van.
 - **`soort:gittooling`** — het gaat om de hulpmiddelen achter de schermen.
 
-Doe dit op de pull request of op het issue dat erbij hoort.
+Doe dit bij deze wijziging of op het issue dat erbij hoort.
 
-Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten."""
+Daarna wordt opnieuw gekeken; je hoeft niets te starten."""
 
     if problemen[0].startswith("Meer dan één soort:-label"):
         return """<!-- routecontrole -->
@@ -133,7 +133,7 @@ Er staan twee herkenningstekens op die elkaar tegenspreken: `soort:routekaart` e
 
 **Wat je kunt doen:** open op een laptop rechts naast de tekst *Labels*, of tik in de GitHub-app onder de titel op *Labels*. Haal één van de twee blokjes weg, zodat er precies één overblijft.
 
-Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten."""
+Daarna wordt opnieuw gekeken; je hoeft niets te starten."""
 
     if any("maar verandert gedrag:" in probleem for probleem in problemen):
         bestanden = next(
@@ -150,7 +150,7 @@ Dat mag alleen wanneer iemand de wijziging wel heeft nagekeken.
 
 **Wat je kunt doen:** haal op een laptop rechts naast de tekst, of in de GitHub-app onder de titel bij *Labels*, het blokje `route:sneltrein` weg. Of haal de onderdelen voor de website uit deze wijziging.
 
-Daarna kijkt het systeem vanzelf opnieuw; je hoeft niets te starten.
+Daarna wordt opnieuw gekeken; je hoeft niets te starten.
 
 <sub>Om deze onderdelen gaat het: `{bestanden.replace(', ', '`, `')}`</sub>"""
 

@@ -8,6 +8,7 @@ kwaliteitspoort die groen stond op de verkeerde vraag.
 import importlib.util
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -131,6 +132,30 @@ class SneltreinRegel(unittest.TestCase):
 
 
 class Berichten(unittest.TestCase):
+    def test_bericht_bevat_geen_jargon_in_lopende_tekst(self):
+        situaties = (
+            route.controleer([], [], ["AGENTS.md"]),
+            route.controleer(["soort:gittooling", "soort:routekaart"], [], ["AGENTS.md"]),
+            route.controleer(["route:sneltrein", "soort:gittooling"], [], ["index.html"]),
+            [],
+        )
+        verboden = (
+            r"\broute:",
+            r"\bsoort:",
+            r"\bCoder\b",
+            r"\bReviewer\b",
+            r"\bPR\b",
+            r"\bpull request\b",
+            r"\blabel\b",
+            r"\bsysteem\b",
+        )
+        for problemen in situaties:
+            with self.subTest(problemen=problemen):
+                lopende_tekst = re.sub(r"`[^`]*`", "", route.bericht(problemen))
+                for patroon in verboden:
+                    with self.subTest(patroon=patroon):
+                        self.assertIsNone(re.search(patroon, lopende_tekst, re.IGNORECASE))
+
     def test_bericht_zonder_soort_is_voor_mensen(self):
         tekst = route.bericht(route.controleer([], [], ["AGENTS.md"]))
         self.assertIn("### Deze wijziging kan nog niet door", tekst)
@@ -138,7 +163,7 @@ class Berichten(unittest.TestCase):
         self.assertIn("**`soort:gittooling`**", tekst)
         self.assertIn("Op een laptop", tekst)
         self.assertIn("in de GitHub-app", tekst)
-        self.assertIn("Daarna kijkt het systeem vanzelf opnieuw", tekst)
+        self.assertIn("Daarna wordt opnieuw gekeken", tekst)
         self.assertNotIn("agent", tekst.lower())
 
     def test_bericht_voor_twee_soorten_is_voor_mensen(self):
@@ -146,7 +171,7 @@ class Berichten(unittest.TestCase):
         self.assertIn("Er staan twee herkenningstekens op", tekst)
         self.assertIn("Labels", tekst)
         self.assertIn("Haal één van de twee blokjes weg", tekst)
-        self.assertIn("Daarna kijkt het systeem vanzelf opnieuw", tekst)
+        self.assertIn("Daarna wordt opnieuw gekeken", tekst)
 
     def test_bericht_voor_sneltrein_noemt_bestand_onderaan(self):
         tekst = route.bericht(route.controleer(["route:sneltrein", "soort:gittooling"], [], ["index.html"]))
