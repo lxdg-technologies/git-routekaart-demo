@@ -310,6 +310,53 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertTrue(projectbord._references_issue({"title": "Werk", "body": "Fixes #96"}, 96))
         self.assertTrue(projectbord._references_issue({"title": "Werk", "body": "Zie #96"}, 96))
 
+    def test_losse_issueverwijzing_zet_issues_niet_op_done(self):
+        class ReferenceClient(FakeGitHub):
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [
+                        {"number": 184, "state": "open"},
+                        {"number": 187, "state": "open"},
+                    ]
+                if "/pulls?" in path:
+                    return [{
+                        "number": 188, "state": "closed", "merged_at": "2026-08-22T13:00:00Z",
+                        "title": "Projectbord", "body": "Staat als #184 en #187", "labels": [],
+                    }]
+                if "/branches?" in path:
+                    return []
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+            def linked_branches(self, number):
+                return set()
+
+        states = projectbord._issue_states(ReferenceClient(None))
+        self.assertFalse(states[184].merged_pr)
+        self.assertFalse(states[187].merged_pr)
+        self.assertIsNone(projectbord.target_status(states[184]))
+        self.assertIsNone(projectbord.target_status(states[187]))
+
+    def test_sluitwoord_zet_issue_wel_op_done(self):
+        class ClosingClient(FakeGitHub):
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 187, "state": "open"}]
+                if "/pulls?" in path:
+                    return [{
+                        "number": 188, "state": "closed", "merged_at": "2026-08-22T13:00:00Z",
+                        "title": "Projectbord", "body": "Fixes #187", "labels": [],
+                    }]
+                if "/branches?" in path:
+                    return []
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+            def linked_branches(self, number):
+                return set()
+
+        states = projectbord._issue_states(ClosingClient(None))
+        self.assertTrue(states[187].merged_pr)
+        self.assertEqual(projectbord.target_status(states[187]), "Done")
+
     def test_ontbrekend_soortlabel_is_geen_fout(self):
         issue = projectbord.IssueState(1, "open", True, False, False, False, False)
         self.assertEqual(projectbord.target_environment(issue), "Ontwikkel")
