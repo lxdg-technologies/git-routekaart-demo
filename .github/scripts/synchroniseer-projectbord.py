@@ -341,7 +341,7 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
         open_prs = [pr for pr in related if pr["state"] == "open"]
         merged_pr = next((pr for pr in merged_related if pr.get("merged_at")), None)
         merged = merged_pr is not None
-        closed_unmerged = any(pr["state"] == "closed" and not pr.get("merged_at") for pr in related)
+        closed_unmerged = any(pr["state"] == "closed" and not pr.get("merged_at") for pr in merged_related)
         review = False
         for pr in open_prs:
             requested = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/requested_reviewers")
