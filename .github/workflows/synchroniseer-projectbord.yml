@@ -14,7 +14,7 @@ on:
     - cron: "17 * * * *"
 
 # Werk per kaart maar één keer tegelijk uit; nieuwe gebeurtenissen winnen.
-# Een volgende wijziging op dezelfde kaart annuleert de vorige run.
+# Een nieuw event op dezelfde kaart annuleert de vorige run.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
