@@ -2,6 +2,7 @@
 """Gedragstests voor de ProjectV2-synchronisatie (geen GitHub-mutaties)."""
 import importlib.util
 import io
+import re
 import sys
 import unittest
 from unittest.mock import patch
@@ -9,6 +10,21 @@ from urllib.error import HTTPError
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
+
+
+def _issue_event_types(workflow):
+    match = re.search(r"^  issues:\n    types: \[([^]]+)\]", workflow, re.MULTILINE)
+    if match is None:
+        raise AssertionError("issues-gebeurtenissen ontbreken in workflow")
+    return [event.strip() for event in match.group(1).split(",")]
+
+
+def _assert_required_issue_events(test_case, workflow):
+    events = _issue_event_types(workflow)
+    for event in ("opened", "edited", "labeled", "unlabeled", "closed", "reopened"):
+        test_case.assertIn(event, events, f"vereiste issues-gebeurtenis ontbreekt: {event}")
+
+
 spec = importlib.util.spec_from_file_location("projectbord", ROOT / ".github/scripts/synchroniseer-projectbord.py")
 if spec is None or spec.loader is None:
     raise RuntimeError("kan synchronisatiescript niet laden")
@@ -337,7 +353,7 @@ class ProjectBoardTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
         self.assertIn("types: [opened, synchronize, reopened, closed]", workflow)
         self.assertIn("types: [submitted, dismissed]", workflow)
-        self.assertIn("types: [opened, edited, labeled, unlabeled, closed, reopened, assigned, unassigned]", workflow)
+        _assert_required_issue_events(self, workflow)
         sync_job = workflow.split("  synchroniseer:\n", 1)[1]
         sync_job = sync_job.split("\n  ", 1)[0]
         for event in ("opened", "synchronize", "reopened", "closed", "pull_request_review", "issues"):
@@ -366,6 +382,15 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertNotIn("github.event.review.user.login", workflow)
         self.assertNotIn("github.event.pull_request.head.sha", workflow)
         self.assertIn("ref: main", workflow)
+
+    def test_issues_gebeurtenissen_controleert_toevoegen_en_verwijderen(self):
+        workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
+        uitgebreid = workflow.replace("unassigned]", "unassigned, triaged]", 1)
+        _assert_required_issue_events(self, uitgebreid)
+
+        ingekort = workflow.replace("edited, labeled, unlabeled, closed, reopened", "edited, labeled, unlabeled, reopened", 1)
+        with self.assertRaisesRegex(AssertionError, "closed"):
+            _assert_required_issue_events(self, ingekort)
 
     def test_workflowtoken_heeft_organisatieprojectbereik_en_minimale_rechten(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
