@@ -21,7 +21,9 @@ def _issue_event_types(workflow):
 
 def _assert_required_issue_events(test_case, workflow):
     events = _issue_event_types(workflow)
-    for event in ("opened", "edited", "labeled", "unlabeled", "closed", "reopened"):
+    for event in (
+        "opened", "edited", "labeled", "unlabeled", "closed", "reopened", "assigned", "unassigned"
+    ):
         test_case.assertIn(event, events, f"vereiste issues-gebeurtenis ontbreekt: {event}")
 
 
@@ -388,9 +390,13 @@ class ProjectBoardTests(unittest.TestCase):
         uitgebreid = workflow.replace("unassigned]", "unassigned, triaged]", 1)
         _assert_required_issue_events(self, uitgebreid)
 
-        ingekort = workflow.replace("edited, labeled, unlabeled, closed, reopened", "edited, labeled, unlabeled, reopened", 1)
+        zonder_closed = workflow.replace("edited, labeled, unlabeled, closed, reopened", "edited, labeled, unlabeled, reopened", 1)
         with self.assertRaisesRegex(AssertionError, "closed"):
-            _assert_required_issue_events(self, ingekort)
+            _assert_required_issue_events(self, zonder_closed)
+
+        zonder_assigned = workflow.replace("assigned, unassigned", "unassigned", 1)
+        with self.assertRaisesRegex(AssertionError, "assigned"):
+            _assert_required_issue_events(self, zonder_assigned)
 
     def test_workflowtoken_heeft_organisatieprojectbereik_en_minimale_rechten(self):
         workflow = (ROOT / ".github/workflows/synchroniseer-projectbord.yml").read_text()
