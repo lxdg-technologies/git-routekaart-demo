@@ -1,0 +1,56 @@
+name: Bewaker op stilstaand werk
+
+# Kijkt elk half uur of er werk stilstaat zonder dat iemand het ziet, en zet er
+# dan het etiket "staat stil" op met een bericht in gewone taal eronder.
+#
+# Aanleiding: op 22-08-2026 werd een voorstel afgekeurd. Het issue ging terug
+# naar Backlog en de toewijzing eraf — zo is dat bedoeld. Maar daarna gebeurde
+# er niets, en op het bord was dat niet te zien: teruggelegd werk ziet er
+# precies zo uit als werk dat nooit begonnen is.
+#
+# Deze bewaker kijkt bewust NIET naar het projectbord. Een bord is een weergave
+# en die kan verkeerd staan; deze maand is dat meerdere keren gebeurd. Een
+# bewaker die naar de weergave kijkt, liegt mee met de fout die hij moet vinden.
+# Daarom kijkt hij alleen naar de issues en voorstellen zelf.
+
+on:
+  schedule:
+    # Elk half uur, net naast het hele en halve uur. De bordsynchronisatie
+    # draait op :17; door hier :07 en :37 te kiezen botsen ze niet.
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+# Eén draaibeurt tegelijk. Twee bewakers die tegelijk etiketten zetten en
+# weghalen, kunnen elkaars werk ongedaan maken.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  bewaken:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Zorg dat het etiket bestaat
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Een etiket dat niet bestaat, laat het zetten stil mislukken.
+          gh label create "staat stil" \
+            --repo "$GITHUB_REPOSITORY" \
+            --color d93f0b \
+            --description "hier is te lang niets gebeurd; iemand moet kijken" \
+            2>/dev/null || true
+
+      - name: Kijken wat er stilstaat
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/meld-vastgelopen-werk.py --repo "$GITHUB_REPOSITORY"
