@@ -328,16 +328,20 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
     states: dict[int, IssueState] = {}
     for issue in issues:
         number = issue["number"]
+        # Een losse verwijzing mag lopend werk zichtbaar maken, maar alleen een
+        # expliciet afsluitwoord mag een samengevoegde PR aan dit issue koppelen
+        # voor de status Done.
         related = [pr for pr in prs if _references_issue(pr, number)]
+        merged_related = [pr for pr in related if _linked_issue_number(pr) == number]
         # Only GitHub's explicit Development relation proves that a branch belongs
         # to this issue.  A matching number in an unrelated branch name is not a
         # relation and must never move the issue card.
         linked_branches = client.linked_branches(number)
         branch = any(b["name"] in linked_branches for b in branches if b["name"] != "main")
         open_prs = [pr for pr in related if pr["state"] == "open"]
-        merged_pr = next((pr for pr in related if pr.get("merged_at")), None)
+        merged_pr = next((pr for pr in merged_related if pr.get("merged_at")), None)
         merged = merged_pr is not None
-        closed_unmerged = any(pr["state"] == "closed" and not pr.get("merged_at") for pr in related)
+        closed_unmerged = any(pr["state"] == "closed" and not pr.get("merged_at") for pr in merged_related)
         review = False
         for pr in open_prs:
             requested = client.rest(f"/repos/{REPOSITORY}/pulls/{pr['number']}/requested_reviewers")
