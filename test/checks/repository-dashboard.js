@@ -25,6 +25,23 @@ module.exports = async function repositoryDashboard({ assert, byIdMap, fetchCall
   assert(!byIdMap["repository-status"].className.includes("error") && byIdMap["repository-status"].innerHTML.includes("Bekijk de repository op GitHub"), "mislukte repository-aanvraag toont een neutrale GitHub-link");
   assert(!byIdMap["repository-commits"].innerHTML.includes("Laden…") && byIdMap["repository-commits"].innerHTML === cachedCommit, "repositorydashboard behoudt bestaande cache bij een mislukte vernieuwing");
 
+  setFetchMode("version");
+  byIdMap["release-history"].open = false;
+  const callsBeforeBackendSwitch = fetchCalls.length;
+  byIdMap["repository-backend"].value = "gitapi";
+  byIdMap["repository-backend"].onchange();
+  await flush(); await flush(); await flush();
+  const backendSwitchCalls = fetchCalls.slice(callsBeforeBackendSwitch);
+  assert(backendSwitchCalls.filter(url => url === "https://gitapi.lxdg.tech/api/v1/repos/lxdg-technologies/git-routekaart-demo/dashboard").length === 1 && !backendSwitchCalls.some(url => url.includes("/branches?")), "nieuwe backend haalt het samengevoegde dashboard met één API-call op");
+  assert(byIdMap["repository-status"].textContent.includes("Via gitapi.lxdg.tech") && byIdMap["repository-commits"].innerHTML.includes("via nieuwe Git API"), "dropdown toont en rendert gegevens uit de nieuwe backend");
+
+  setFetchMode("history");
+  byIdMap["release-history"].open = true;
+  byIdMap["release-history"].dataset.historyLoaded = "false";
+  byIdMap["release-history"].ontoggle();
+  await flush(); await flush();
+  assert(fetchCalls.some(url => url === "https://gitapi.lxdg.tech/api/v1/repos/lxdg-technologies/git-routekaart-demo/releases?per_page=5"), "releasehistorie gebruikt de gekozen nieuwe backend");
+
   const callsBeforeDevelopment = fetchCalls.length;
   setFetchMode("version");
   global.location = { protocol: "https:", hostname: "lxdg-technologies.github.io", pathname: "/git-routekaart-demo/dev/pr-51/" };
