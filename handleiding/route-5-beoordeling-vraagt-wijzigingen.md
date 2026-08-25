@@ -35,7 +35,7 @@ Dit is normaal en het is goed nieuws: op 10-08 zijn er twee wijzigingen tegengeh
 
 **Wat je doet:** stuur Coder terug met de precieze fout. Noem het regelnummer of de letterlijke tekst, en zeg wat er in plaats daarvan moet.
 
-**Wat je hoort te zien:** een nieuwe commit op **dezelfde** branch, en de kaart op het bord springt terug naar **In progress**.
+**Wat je hoort te zien:** een nieuwe commit op **dezelfde** branch, en de kaart op het bord springt terug naar **Ready**, zonder toegewezene. Het werk ligt klaar om opnieuw opgepakt te worden.
 
 **Klopt het niet:**
 - Maakt Coder een nieuwe pull request aan? Dan is de opdracht verkeerd begrepen. Sluit de nieuwe en zeg dat hij op dezelfde tak moet werken.

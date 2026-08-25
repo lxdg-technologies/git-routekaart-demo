@@ -68,10 +68,11 @@ Alleen wat je nodig hebt om de routes te volgen.
 | Groen vinkje bij een controle | Die controle is geslaagd |
 | Rood kruis bij `quality` | **Stop.** Dit is de enige controle die samenvoegen tegenhoudt |
 | Rood kruis bij `review-guard` | Vervelend om te zien, maar het houdt niets tegen. Dat is bewust |
-| Kaart op **Ready** | Het issue is bouwklaar. Nog niemand mee bezig |
-| Kaart op **In progress** | Er wordt aan gebouwd, of de beoordeling vroeg wijzigingen |
-| Kaart op **In review** | Er ligt een beoordeling |
-| Kaart op **Done** | Samengevoegd |
+| Kaart op **Backlog** | Het werk ligt op de stapel en is nog niet bouwklaar |
+| Kaart op **Ready** | Het issue is bouwklaar en ligt klaar om opgepakt te worden; niemand is toegewezen |
+| Kaart op **In progress** | Iemand bouwt aan het issue |
+| Kaart op **In review** | De beoordeling van het werk loopt nu |
+| Kaart op **Done** | Het werk is samengevoegd |
 | Kaart in **Geen omgeving** | Nog niet gebouwd, of het gaat over het gereedschap zelf |
 
 ## Als er iets anders op je scherm staat dan hier
