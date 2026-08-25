@@ -89,12 +89,12 @@ def _status_change(current: str | None, desired: str | None, subject: str) -> tu
     """Return a safe status mutation and the corresponding log entry.
 
     Project-board status is an append-only workflow. Ready is an explicit
-    handoff by an agent, so the synchronizer must never replace it with a
-    status inferred from GitHub facts.
+    handoff by an agent, so the synchronizer must not replace it with a
+    status inferred from GitHub facts, except for the final Done status.
     """
     if desired is None or current == desired:
         return None, None
-    if current == "Ready":
+    if current == "Ready" and desired != "Done":
         return None, f"{subject}: status overgeslagen — Ready blijft staan (agent staat klaar)"
     if current in STATUS_ORDER and desired in STATUS_ORDER and STATUS_ORDER[desired] < STATUS_ORDER[current]:
         return None, f"{subject}: status overgeslagen — {current} blijft staan (geen achteruitgang naar {desired})"

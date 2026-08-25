@@ -248,6 +248,11 @@ class ProjectBoardTests(unittest.TestCase):
         self.assertEqual(client.mutations, [])
         self.assertTrue(any("geen achteruitgang naar In progress" in action for action in actions))
 
+    def test_samengevoegd_voorstel_zet_ready_op_done(self):
+        client = FakePullRequestGitHub(None, current="Ready")
+        projectbord.sync(client, project=client.project_data())
+        self.assertIn(("status", "done"), client.mutations)
+
     def test_github_werk_is_live_na_merge_en_routekaart_blijft_test(self):
         github = projectbord.IssueState(89, "closed", False, False, False, True, False, frozenset({"soort:gittooling"}))
         routekaart = projectbord.IssueState(87, "closed", False, False, False, True, False, frozenset({"soort:routekaart"}))
