@@ -44,6 +44,8 @@ const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijs
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live", "btn-review-approve", "btn-review-reject", "btn-close-review-guide", "btn-review-guide-back", "btn-review-guide-next"]) byIdMap[id] = makeEl("button");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
+byIdMap["repository-backend"] = makeEl("select");
+byIdMap["repository-backend"].value = "github";
 byIdMap["btn-live-overlay"].textContent = "Naar live zetten";
 byIdMap["live-promotion-overlay"].hidden = true;
 byIdMap["live-promotion-overlay"].setAttribute("aria-hidden", "true");
@@ -55,7 +57,23 @@ const fetchCalls = [];
 const response = (payload, status = 200) => ({ ok: status >= 200 && status < 300, status, async json() { return payload; } });
 global.fetch = async url => {
   fetchCalls.push(String(url));
-  if (fetchMode === "repository-error" && String(url).startsWith("https://api.github.com/repos/lxdg-technologies/git-routekaart-demo")) return response({}, 503);
+  if (fetchMode === "repository-error" && ["https://api.github.com/repos/lxdg-technologies/git-routekaart-demo", "https://gitapi.lxdg.tech/api/v1/repos/lxdg-technologies/git-routekaart-demo"].some(root => String(url).startsWith(root))) return response({}, 503);
+  if (String(url) === "https://gitapi.lxdg.tech/api/v1/repos/lxdg-technologies/git-routekaart-demo/dashboard") return response({
+    savedAt: Date.now(),
+    repository: { full_name: "lxdg-technologies/git-routekaart-demo", default_branch: "main", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo" },
+    commits: [
+      { sha: "api123456789", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/commit/api1234", commit: { message: "feat: via nieuwe Git API", author: { date: "2026-08-08T10:00:00Z" } } },
+    ],
+    branches: [
+      { name: "main", protected: true, commit: { sha: "api123456789" } },
+    ],
+    issues: [
+      { number: 8, title: "Issue via nieuwe Git API", state: "open", updated_at: "2026-08-08T10:00:00Z", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/issues/8" },
+    ],
+    prs: [
+      { number: 9, title: "PR via nieuwe Git API", state: "open", merged_at: null, html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/9", head: { ref: "feat/git-api" }, base: { ref: "main" } },
+    ],
+  });
   if (String(url) === "https://api.github.com/repos/lxdg-technologies/git-routekaart-demo") return response({
     full_name: "lxdg-technologies/git-routekaart-demo", default_branch: "main", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo",
   });
@@ -216,6 +234,7 @@ const delen = [
   await loadTestStatus("checks-green");
   byIdMap["test-live-check"].onclick(); await flush();
   assert(byIdMap["test-live-status"].classList.contains("is-safe") && byIdMap["test-live-status-text"].textContent === "✓ Veilig om live te zetten" && byIdMap["test-live-condition-checks"].textContent.includes("Alle verplichte controles zijn geslaagd"), "groene controle toont in één regel dat Test veilig live kan");
+  assert(fetchCalls.some(url => url === "https://gitapi.lxdg.tech/api/v1/repos/lxdg-technologies/git-routekaart-demo/commits/abc1234/check-runs?per_page=100"), "veiligheidscontrole gebruikt de gekozen nieuwe backend");
   assert(byIdMap["test-live-promote-link"].hidden === false && byIdMap["test-live-condition-human"].textContent.includes("mens"), "alleen groen toont de knop voor handmatige promotie en menselijke bevestiging");
   byIdMap["btn-live-overlay"].onclick(); await flush();
   assert(byIdMap["promotion-modes"].hidden === true && byIdMap["promotion-description"].textContent.includes("echte Test-gegevens"), "de Test-overlay gebruikt geen voorbeeldkeuze en meldt echte Test-gegevens");

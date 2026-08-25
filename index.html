@@ -114,6 +114,8 @@
   .repository-heading a { color: var(--accent); font-family: var(--mono); font-weight: 700; text-decoration: none; }
   .repository-heading a:hover, .repository-heading a:focus-visible { text-decoration: underline; }
   .repository-actions { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; color: var(--ink-soft); font-size: .75rem; }
+  .repository-backend { display: flex; align-items: center; gap: .35rem; }
+  .repository-backend select { border: 1px solid var(--line); border-radius: 7px; background: var(--chip-bg); color: var(--ink); padding: .3rem .45rem; font: inherit; }
   .repository-refresh { border: 1px solid var(--line); border-radius: 7px; background: var(--chip-bg); color: var(--ink); padding: .3rem .55rem; cursor: pointer; font: inherit; }
   .repository-refresh:disabled { cursor: wait; opacity: .6; }
   .repository-status { min-height: 1.35em; margin: .7rem 0; padding: .5rem .65rem; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-soft); font-size: .82rem; }
@@ -569,6 +571,12 @@
       <p><a id="repository-link" href="https://github.com/lxdg-technologies/git-routekaart-demo" target="_blank" rel="noreferrer">lxdg-technologies/git-routekaart-demo ↗</a></p>
     </div>
     <div class="repository-actions">
+      <label class="repository-backend" for="repository-backend">Databron
+        <select id="repository-backend">
+          <option value="github">GitHub API (huidig)</option>
+          <option value="gitapi">Git API (nieuw)</option>
+        </select>
+      </label>
       <span id="repository-updated">Nog niet bijgewerkt</span>
       <button type="button" class="repository-refresh" id="repository-refresh">↻ Vernieuwen</button>
     </div>
@@ -715,9 +723,36 @@
 
   /* ==== SECTIE: REPOSITORY ==== */
   const REPOSITORY_FULL_NAME = "lxdg-technologies/git-routekaart-demo";
-  const REPOSITORY_API_ROOT = `https://api.github.com/repos/${REPOSITORY_FULL_NAME}`;
-  const REPOSITORY_CACHE_KEY = `git-routekaart-repository-v1:${REPOSITORY_FULL_NAME}`;
+  const REPOSITORY_BACKENDS = {
+    github: {
+      name: "GitHub API",
+      apiRoot: `https://api.github.com/repos/${REPOSITORY_FULL_NAME}`,
+      aggregateDashboard: false,
+    },
+    gitapi: {
+      name: "gitapi.lxdg.tech",
+      apiRoot: `https://gitapi.lxdg.tech/api/v1/repos/${REPOSITORY_FULL_NAME}`,
+      aggregateDashboard: true,
+    },
+  };
   const REPOSITORY_CACHE_TTL = 5 * 60 * 1000;
+
+  function selectedRepositoryBackend() {
+    const selected = el("repository-backend")?.value;
+    return Object.prototype.hasOwnProperty.call(REPOSITORY_BACKENDS, selected) ? selected : "github";
+  }
+  function repositoryBackend() {
+    return REPOSITORY_BACKENDS[selectedRepositoryBackend()];
+  }
+  function repositoryCacheKey(backendName = selectedRepositoryBackend()) {
+    return `git-routekaart-repository-v1:${backendName}:${REPOSITORY_FULL_NAME}`;
+  }
+  function repositoryReleaseHistoryUrl() {
+    return `${repositoryBackend().apiRoot}/releases?per_page=5`;
+  }
+  function repositoryCheckRunsUrl(sha) {
+    return `${repositoryBackend().apiRoot}/commits/${encodeURIComponent(sha)}/check-runs?per_page=100`;
+  }
 
   function repositoryUsesSimulatedData() {
     return typeof location !== "undefined" && /\/dev\/pr-\d+(?:\/|$)/.test(location.pathname || "");
@@ -774,9 +809,9 @@
     if (Number.isNaN(date.getTime())) return "datum onbekend";
     return new Intl.DateTimeFormat("nl-NL", { day: "2-digit", month: "short", year: "numeric" }).format(date);
   }
-  function repositoryCacheRead() {
+  function repositoryCacheRead(backendName) {
     try {
-      const cached = sessionStorage.getItem(REPOSITORY_CACHE_KEY);
+      const cached = sessionStorage.getItem(repositoryCacheKey(backendName));
       if (!cached) return null;
       const parsed = JSON.parse(cached);
       return parsed && Date.now() - parsed.savedAt < REPOSITORY_CACHE_TTL ? parsed : null;
@@ -784,22 +819,21 @@
       return null;
     }
   }
-  function repositoryCacheWrite(snapshot) {
+  function repositoryCacheWrite(snapshot, backendName) {
     try {
-      sessionStorage.setItem(REPOSITORY_CACHE_KEY, JSON.stringify(snapshot));
+      sessionStorage.setItem(repositoryCacheKey(backendName), JSON.stringify(snapshot));
     } catch (error) {
       // De pagina blijft werken als opslag is uitgeschakeld of vol is.
     }
   }
-  async function fetchRepositoryJson(url) {
+  async function fetchRepositoryJson(url, backendName = selectedRepositoryBackend()) {
+    const headers = { Accept: "application/vnd.github+json" };
+    if (backendName === "github") headers["X-GitHub-Api-Version"] = "2022-11-28";
     const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
+      headers,
     });
     if (!response.ok) {
-      const error = new Error(`GitHub API: ${response.status}`);
+      const error = new Error(`Repositorygegevens: ${response.status}`);
       error.status = response.status;
       throw error;
     }
@@ -813,7 +847,7 @@
     }
     list.innerHTML = items.slice(0, 8).map(renderer).join("");
   }
-  function renderRepositoryDashboard(snapshot, source) {
+  function renderRepositoryDashboard(snapshot, source, backendName = selectedRepositoryBackend()) {
     const { repository, commits, branches, issues, prs } = snapshot;
     const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
     const simulated = source === "simulated";
@@ -824,7 +858,7 @@
     el("repository-status").className = "repository-status";
     el("repository-status").textContent = simulated
       ? "Gesimuleerde GitHub-gegevens · ontwikkelomgeving · geen verbinding met de GitHub API"
-      : `Rechtstreeks uit GitHub · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
+      : `${backendName === "gitapi" ? "Via gitapi.lxdg.tech" : "Rechtstreeks uit GitHub"} · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
     el("repository-source-label").textContent = simulated
       ? "Oefengegevens: branches, commits, issues, pull requests en dashboardversie zijn voorbeelden."
       : "Echte GitHub-gegevens: branches, commits, issues, pull requests en dashboardversie.";
@@ -886,43 +920,59 @@
   async function loadRepositoryDashboard(force = false) {
     const refresh = el("repository-refresh");
     const status = el("repository-status");
+    const backendName = selectedRepositoryBackend();
+    const backend = REPOSITORY_BACKENDS[backendName];
     refresh.disabled = true;
     status.className = "repository-status";
     status.textContent = force ? "GitHub-gegevens worden opnieuw opgehaald…" : "GitHub-gegevens worden opgehaald…";
-    const cached = repositoryCacheRead();
+    const cached = repositoryCacheRead(backendName);
     if (repositoryUsesSimulatedData()) {
-      renderRepositoryDashboard(simulatedRepositorySnapshot(), "simulated");
+      renderRepositoryDashboard(simulatedRepositorySnapshot(), "simulated", backendName);
       refresh.disabled = false;
       return;
     }
     if (!force) {
       if (cached) {
-        renderRepositoryDashboard(cached, "cache");
+        renderRepositoryDashboard(cached, "cache", backendName);
         refresh.disabled = false;
         return;
       }
     }
     try {
-      const repository = await fetchRepositoryJson(REPOSITORY_API_ROOT);
-      const defaultBranch = repository.default_branch || "main";
-      const [commits, branches, rawIssues, prs] = await Promise.all([
-        fetchRepositoryJson(`${REPOSITORY_API_ROOT}/commits?sha=${encodeURIComponent(defaultBranch)}&per_page=100`),
-        fetchRepositoryJson(`${REPOSITORY_API_ROOT}/branches?per_page=100`),
-        fetchRepositoryJson(`${REPOSITORY_API_ROOT}/issues?state=all&sort=updated&per_page=100`),
-        fetchRepositoryJson(`${REPOSITORY_API_ROOT}/pulls?state=all&sort=updated&direction=desc&per_page=100`),
-      ]);
-      const snapshot = {
-        savedAt: Date.now(),
-        repository,
-        commits: Array.isArray(commits) ? commits : [],
-        branches: Array.isArray(branches) ? branches : [],
-        issues: Array.isArray(rawIssues) ? rawIssues.filter(issue => !issue.pull_request) : [],
-        prs: Array.isArray(prs) ? prs : [],
-      };
-      repositoryCacheWrite(snapshot);
-      renderRepositoryDashboard(snapshot, "api");
+      let snapshot;
+      if (backend.aggregateDashboard) {
+        const aggregate = await fetchRepositoryJson(`${backend.apiRoot}/dashboard`, backendName);
+        if (!aggregate || typeof aggregate !== "object" || !aggregate.repository) throw new Error("Repositorydashboard ontbreekt");
+        snapshot = {
+          savedAt: Number.isFinite(aggregate.savedAt) ? aggregate.savedAt : Date.now(),
+          repository: aggregate.repository,
+          commits: Array.isArray(aggregate.commits) ? aggregate.commits : [],
+          branches: Array.isArray(aggregate.branches) ? aggregate.branches : [],
+          issues: Array.isArray(aggregate.issues) ? aggregate.issues : [],
+          prs: Array.isArray(aggregate.prs) ? aggregate.prs : [],
+        };
+      } else {
+        const repository = await fetchRepositoryJson(backend.apiRoot, backendName);
+        const defaultBranch = repository.default_branch || "main";
+        const [commits, branches, rawIssues, prs] = await Promise.all([
+          fetchRepositoryJson(`${backend.apiRoot}/commits?sha=${encodeURIComponent(defaultBranch)}&per_page=100`, backendName),
+          fetchRepositoryJson(`${backend.apiRoot}/branches?per_page=100`, backendName),
+          fetchRepositoryJson(`${backend.apiRoot}/issues?state=all&sort=updated&per_page=100`, backendName),
+          fetchRepositoryJson(`${backend.apiRoot}/pulls?state=all&sort=updated&direction=desc&per_page=100`, backendName),
+        ]);
+        snapshot = {
+          savedAt: Date.now(),
+          repository,
+          commits: Array.isArray(commits) ? commits : [],
+          branches: Array.isArray(branches) ? branches : [],
+          issues: Array.isArray(rawIssues) ? rawIssues.filter(issue => !issue.pull_request) : [],
+          prs: Array.isArray(prs) ? prs : [],
+        };
+      }
+      repositoryCacheWrite(snapshot, backendName);
+      renderRepositoryDashboard(snapshot, "api", backendName);
     } catch (error) {
-      if (cached) renderRepositoryDashboard(cached, "cache");
+      if (cached) renderRepositoryDashboard(cached, "cache", backendName);
       renderRepositoryUnavailable(Boolean(cached));
     } finally {
       refresh.disabled = false;
@@ -931,7 +981,6 @@
 
   /* ==== SECTIE: RELEASE-BADGE ==== */
   const VERSION_FILE_URL = "version.json";
-  const RELEASE_HISTORY_API_URL = `${REPOSITORY_API_ROOT}/releases?per_page=5`;
   function getReleaseEnvironment() {
     return typeof location !== "undefined"
       ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
@@ -1007,7 +1056,7 @@
       return;
     }
     try {
-      const response = await fetch(RELEASE_HISTORY_API_URL, { headers: { Accept: "application/vnd.github+json" } });
+      const response = await fetch(repositoryReleaseHistoryUrl(), { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) throw new Error(`GitHub Releases API: ${response.status}`);
       const releases = await response.json();
       if (!Array.isArray(releases)) throw new Error("GitHub-releasegeschiedenis is geen lijst");
@@ -1102,7 +1151,7 @@
       return;
     }
     try {
-      const response = await fetch(`${REPOSITORY_API_ROOT}/commits/${encodeURIComponent(testSha)}/check-runs?per_page=100`, { headers: { Accept: "application/vnd.github+json" } });
+      const response = await fetch(repositoryCheckRunsUrl(testSha), { headers: { Accept: "application/vnd.github+json" } });
       if (!response.ok) throw new Error(`GitHub-controles: ${response.status}`);
       const data = await response.json();
       const checks = Array.isArray(data.check_runs) ? data.check_runs : [];
@@ -1375,7 +1424,7 @@
       const testSha = versionResult.build.sha;
       const testVersion = versionResult.build.version;
       if (!testSha || testData?.environment !== "test" || testData.version !== testVersion || testData.sha !== testSha || !liveData?.version) throw new Error("De Test-publicatie en de versiegegevens komen niet aantoonbaar overeen.");
-      const checksResponse = await fetch(`${REPOSITORY_API_ROOT}/commits/${encodeURIComponent(testSha)}/check-runs?per_page=100`, { headers: { Accept: "application/vnd.github+json" } });
+      const checksResponse = await fetch(repositoryCheckRunsUrl(testSha), { headers: { Accept: "application/vnd.github+json" } });
       if (!checksResponse.ok) throw new Error("De verplichte checks konden niet worden gelezen.");
       const checksData = await checksResponse.json();
       const checks = Array.isArray(checksData.check_runs) ? checksData.check_runs : [];
@@ -2122,6 +2171,11 @@
   el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
   applyPromotionVisibility();
+  el("repository-backend").onchange = () => {
+    el("release-history").dataset.historyLoaded = "false";
+    loadRepositoryDashboard();
+    if (el("release-history").open) loadReleaseHistory();
+  };
   el("repository-refresh").onclick = () => loadRepositoryDashboard(true);
   el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
   window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
