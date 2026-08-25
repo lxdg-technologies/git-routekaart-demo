@@ -206,6 +206,53 @@ class ProjectBoardTests(unittest.TestCase):
         projectbord.sync(client, project=client.project_data())
         self.assertEqual(client.mutations, [])
 
+    def test_ready_blijft_staan_als_het_bord_werk_ziet(self):
+        class WorkClient(FakeGitHub):
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 74, "state": "open"}]
+                if "/pulls?" in path:
+                    return [{"number": 83, "state": "open", "title": "Werk", "body": "Fixes #74", "labels": []}]
+                if "/branches?" in path:
+                    return []
+                if "/requested_reviewers" in path:
+                    return {"users": [], "teams": []}
+                if "/pulls/" in path:
+                    return []
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+        client = WorkClient(None, current="Ready")
+        client.environment = "Ontwikkel"
+        actions = projectbord.sync(client, project=client.project_data())
+        self.assertEqual(client.mutations, [])
+        self.assertTrue(any("issue #74: status overgeslagen" in action for action in actions))
+
+    def test_status_gaat_nooit_achteruit(self):
+        class WorkClient(FakeGitHub):
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 74, "state": "open"}]
+                if "/pulls?" in path:
+                    return [{"number": 83, "state": "open", "title": "Werk", "body": "Fixes #74", "labels": []}]
+                if "/branches?" in path:
+                    return []
+                if "/requested_reviewers" in path:
+                    return {"users": [], "teams": []}
+                if "/pulls/" in path:
+                    return []
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+        client = WorkClient(None, current="In review")
+        client.environment = "Ontwikkel"
+        actions = projectbord.sync(client, project=client.project_data())
+        self.assertEqual(client.mutations, [])
+        self.assertTrue(any("geen achteruitgang naar In progress" in action for action in actions))
+
+    def test_samengevoegd_voorstel_zet_ready_op_done(self):
+        client = FakePullRequestGitHub(None, current="Ready")
+        projectbord.sync(client, project=client.project_data())
+        self.assertIn(("status", "done"), client.mutations)
+
     def test_github_werk_is_live_na_merge_en_routekaart_blijft_test(self):
         github = projectbord.IssueState(89, "closed", False, False, False, True, False, frozenset({"soort:gittooling"}))
         routekaart = projectbord.IssueState(87, "closed", False, False, False, True, False, frozenset({"soort:routekaart"}))
