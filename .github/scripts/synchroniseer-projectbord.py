@@ -16,7 +16,8 @@ REPOSITORY = "lxdg-technologies/git-routekaart-demo"
 ORGANIZATION = "lxdg-technologies"
 PROJECT_NUMBER = 2
 STATUS_FIELD_NAME = "Status"
-STATUSES = {"In progress", "In review", "Done"}
+STATUS_ORDER = {"Backlog": 0, "Ready": 1, "In progress": 2, "In review": 3, "Done": 4}
+STATUSES = set(STATUS_ORDER)
 ENVIRONMENT_FIELD_NAME = "Omgeving"
 ENVIRONMENTS = {"Geen omgeving", "Ontwikkel", "Test", "Live"}
 
@@ -82,6 +83,22 @@ def target_pr_status(pr: PullRequestState) -> str:
     if pr.review:
         return "In review"
     return "In progress"
+
+
+def _status_change(current: str | None, desired: str | None, subject: str) -> tuple[str | None, str | None]:
+    """Return a safe status mutation and the corresponding log entry.
+
+    Project-board status is an append-only workflow. Ready is an explicit
+    handoff by an agent, so the synchronizer must never replace it with a
+    status inferred from GitHub facts.
+    """
+    if desired is None or current == desired:
+        return None, None
+    if current == "Ready":
+        return None, f"{subject}: status overgeslagen — Ready blijft staan (agent staat klaar)"
+    if current in STATUS_ORDER and desired in STATUS_ORDER and STATUS_ORDER[desired] < STATUS_ORDER[current]:
+        return None, f"{subject}: status overgeslagen — {current} blijft staan (geen achteruitgang naar {desired})"
+    return desired, f"{subject}: {current or 'onbekend'} → {desired}"
 
 
 def _soort_labels(labels: frozenset[str]) -> frozenset[str]:
@@ -424,9 +441,14 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
             desired = target_pr_status(pr)
             current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
                             if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
-            if current != desired:
-                client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
-                actions.append(f"pull request #{number}: {current or 'onbekend'} → {desired}")
+            status_option, status_action = _status_change(current, desired, f"pull request #{number}")
+            if status_option is not None:
+                option_id = options.get(status_option)
+                if option_id is None:
+                    raise RuntimeError(f"ProjectV2 mist statusoptie: {status_option}")
+                client.mutate_status(project["id"], item["id"], status_field["id"], option_id)
+            if status_action:
+                actions.append(status_action)
 
             environment = target_pr_environment(
                 pr,
@@ -458,15 +480,14 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
                 client.archive(project["id"], item["id"])
                 actions.append(f"issue #{number}: kaart gearchiveerd")
             continue
-        if desired is None:
-            status_action = None
-        else:
-            current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
-                            if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
-            status_action = None
-            if current != desired:
-                client.mutate_status(project["id"], item["id"], status_field["id"], options[desired])
-                status_action = f"issue #{number}: {current or 'onbekend'} → {desired}"
+        current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
+                        if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
+        status_option, status_action = _status_change(current, desired, f"issue #{number}")
+        if status_option is not None:
+            option_id = options.get(status_option)
+            if option_id is None:
+                raise RuntimeError(f"ProjectV2 mist statusoptie: {status_option}")
+            client.mutate_status(project["id"], item["id"], status_field["id"], option_id)
 
         environment = target_environment(
             state,
