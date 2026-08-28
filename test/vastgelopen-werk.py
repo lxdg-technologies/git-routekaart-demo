@@ -40,8 +40,10 @@ def voorstel(nummer, minuten, sluit=(), oordeel=None, etiketten=()):
     }
 
 
-def beoordeel(issues=(), voorstellen=(), geduld=45):
-    return bewaker.beoordeel(list(issues), list(voorstellen), geduld, NU)
+def beoordeel(issues=(), voorstellen=(), geduld=45, geduld_zonder_oordeel=240):
+    return bewaker.beoordeel(
+        list(issues), list(voorstellen), geduld, geduld_zonder_oordeel, NU
+    )
 
 
 class Geduld(unittest.TestCase):
@@ -127,9 +129,26 @@ class WachtendeVoorstellen(unittest.TestCase):
         self.assertIn("goedgekeurd", bevindingen[0].uitleg)
 
     def test_nog_niet_beoordeeld_valt_niet_op(self):
-        # Wacht op de beoordelaar; die is misschien net begonnen. Dat is geen
-        # stilstand maar de normale gang van zaken.
+        # Vier uur is de aparte grens voor een voorstel zonder oordeel.
         bevindingen = beoordeel(voorstellen=[voorstel(186, minuten=120, oordeel=None)])
+        self.assertEqual(bevindingen, [])
+
+    def test_nog_niet_beoordeeld_net_binnen_de_grens_valt_niet_op(self):
+        bevindingen = beoordeel(voorstellen=[voorstel(186, minuten=239, oordeel=None)])
+        self.assertEqual(bevindingen, [])
+
+    def test_nog_niet_beoordeeld_na_de_grens_valt_op(self):
+        bevindingen = beoordeel(voorstellen=[voorstel(186, minuten=241, oordeel=None)])
+        self.assertEqual(len(bevindingen), 1)
+        self.assertEqual(bevindingen[0].soort, "pull request")
+        self.assertIn("geen beoordeling", bevindingen[0].uitleg)
+
+    def test_grens_zonder_oordeel_is_los_van_bestaande_grens(self):
+        bevindingen = beoordeel(
+            voorstellen=[voorstel(186, minuten=50, oordeel=None)],
+            geduld=45,
+            geduld_zonder_oordeel=60,
+        )
         self.assertEqual(bevindingen, [])
 
 
