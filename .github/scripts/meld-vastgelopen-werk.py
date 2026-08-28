@@ -44,6 +44,11 @@ AGENT_ACCOUNT = "lxdg-agents"
 # geen vals alarm te geven op werk dat gewoon nog bezig is.
 STANDAARD_GEDULD_MINUTEN = 45
 
+# Een voorstel zonder oordeel krijgt meer tijd. Een beoordeling door een agent
+# duurt normaal enkele minuten; vier uur is ruim genoeg voor een mens die het
+# voorstel later op de dag bekijkt, maar lang genoeg om echte stilstand te zien.
+STANDAARD_GEDULD_ZONDER_OORDEEL_MINUTEN = 4 * 60
+
 # Het etiket dat op stilstaand werk komt. Eén etiket, geen kleurenschema:
 # het moet in één oogopslag duidelijk zijn op het bord en in de lijst.
 ETIKET = "staat stil"
@@ -108,6 +113,7 @@ def beoordeel(
     issues: Iterable[dict],
     pull_requests: Iterable[dict],
     geduld: int = STANDAARD_GEDULD_MINUTEN,
+    geduld_zonder_oordeel: int = STANDAARD_GEDULD_ZONDER_OORDEEL_MINUTEN,
     moment: dt.datetime | None = None,
 ) -> list[Bevinding]:
     """Geef terug welk werk stilstaat. Een lege lijst betekent: alles loopt.
@@ -183,6 +189,32 @@ def beoordeel(
 
     for pr in pull_requests:
         stil = minuten_sinds(pr["updatedAt"], moment)
+        oordeel = pr.get("reviewDecision")
+
+        # Geval 5: er ligt nog helemaal geen oordeel. Dat is normaal zolang
+        # het voorstel nog geen vier uur oud is; daarna wijst de bewaker op
+        # de ontbrekende beoordeling zonder te doen alsof het werk fout is.
+        if oordeel is None:
+            if stil < geduld_zonder_oordeel:
+                continue
+            bevindingen.append(
+                Bevinding(
+                    nummer=pr["number"],
+                    soort="pull request",
+                    stilstand_minuten=stil,
+                    uitleg=(
+                        "Op dit voorstel ligt nog geen beoordeling. Dat is na "
+                        "vier uur waarschijnlijk geen normale wachttijd meer, "
+                        "maar er is niets mis met het voorstel vastgesteld."
+                    ),
+                    wat_nu=(
+                        "laat iemand het voorstel beoordelen, of sluit het als "
+                        "het niet meer nodig is."
+                    ),
+                )
+            )
+            continue
+
         if stil < geduld:
             continue
 
@@ -283,6 +315,12 @@ def main() -> int:
     ontleder.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", ""))
     ontleder.add_argument("--geduld", type=int, default=STANDAARD_GEDULD_MINUTEN)
     ontleder.add_argument(
+        "--geduld-zonder-oordeel",
+        type=int,
+        default=STANDAARD_GEDULD_ZONDER_OORDEEL_MINUTEN,
+        help="hoeveel minuten een voorstel zonder beoordeling mag wachten",
+    )
+    ontleder.add_argument(
         "--alleen-kijken",
         action="store_true",
         help="niets veranderen, alleen tonen wat er gevonden zou worden",
@@ -295,7 +333,9 @@ def main() -> int:
 
     issues = haal_issues(keuzes.repo)
     pull_requests = haal_pull_requests(keuzes.repo)
-    bevindingen = beoordeel(issues, pull_requests, keuzes.geduld)
+    bevindingen = beoordeel(
+        issues, pull_requests, keuzes.geduld, keuzes.geduld_zonder_oordeel
+    )
     stilstaand = {(b.soort, b.nummer) for b in bevindingen}
 
     for bevinding in bevindingen:
