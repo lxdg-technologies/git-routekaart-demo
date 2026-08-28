@@ -19,6 +19,12 @@ Nieuw met deze repository? Begin bij de [Git Routekaart-handleiding](handleiding
 - De workflows registreren echte GitHub deployments in de omgevingen `test` en `live`; beide accepteren alleen de beschermde `main`-branch en `live` vereist een aparte menselijke goedkeuring.
 - `environment.json` op beide URL's maakt zichtbaar van welke versie, branch en commit de omgeving is gebouwd.
 
+### Controle van de gepubliceerde knoppen
+
+Na elke publicatie wordt de werkelijk gepubliceerde pagina opgehaald en gecontroleerd. Op ontwikkel moeten **Goedkeuren** en **Afkeuren** staan, op test **Naar live zetten**, en op live geen van deze knoppen. Klopt er iets niet, dan stopt de publicatie met een melding die benoemt op welke pagina en bij welke knop de afwijking zit.
+
+Je ziet de uitkomst in **Actions**, in de stap **Controleer de knoppen op de drie gepubliceerde omgevingen**. Deze controle bestaat omdat er eerder een dag lang een knop op de echte site stond die daar niet hoorde, terwijl de controles op het bestand wel groen waren.
+
 Zie [DEPLOYMENT.md](DEPLOYMENT.md) voor de technische inrichting en controles.
 
 ## Echte repositorygegevens
