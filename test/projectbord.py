@@ -121,6 +121,43 @@ class FakePullRequestGitHub(FakeGitHub):
 
 
 class ProjectBoardTests(unittest.TestCase):
+    def test_project_items_worden_doorgebladerd_tot_alle_kaarten_binnen_zijn(self):
+        first_page = {
+            "organization": {"projectV2": {
+                "id": "project-1", "statusField": {}, "environmentField": {},
+                "items": {"totalCount": 101, "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
+                          "nodes": [{"id": f"item-{number}"} for number in range(1, 101)]},
+            }}
+        }
+        second_page = {
+            "organization": {"projectV2": {
+                "id": "project-1", "statusField": {}, "environmentField": {},
+                "items": {"totalCount": 101, "pageInfo": {"hasNextPage": False, "endCursor": None},
+                          "nodes": [{"id": "item-101"}]},
+            }}
+        }
+        client = projectbord.GitHub("token")
+        with patch.object(client, "graphql", side_effect=[first_page, second_page]) as graphql:
+            project = client.project()
+        self.assertEqual(len(project["items"]["nodes"]), 101)
+        self.assertEqual(project["items"]["nodes"][0]["id"], "item-1")
+        self.assertEqual(project["items"]["nodes"][-1]["id"], "item-101")
+        self.assertIsNone(graphql.call_args_list[0].args[1]["cursor"])
+        self.assertEqual(graphql.call_args_list[1].args[1]["cursor"], "cursor-1")
+
+    def test_project_items_melden_onvolledige_pagina_als_fout(self):
+        page = {
+            "organization": {"projectV2": {
+                "id": "project-1", "statusField": {}, "environmentField": {},
+                "items": {"totalCount": 101, "pageInfo": {"hasNextPage": False, "endCursor": None},
+                          "nodes": [{"id": "item-1"}]},
+            }}
+        }
+        client = projectbord.GitHub("token")
+        with patch.object(client, "graphql", return_value=page):
+            with self.assertRaisesRegex(RuntimeError, "slechts 1 van 101 kaarten"):
+                client.project()
+
     def test_oude_branch_met_issuenummer_is_geen_bewijs_van_werk(self):
         class BranchClient(FakeGitHub):
             def rest(self, path, **kwargs):

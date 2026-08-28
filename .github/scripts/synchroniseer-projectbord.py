@@ -204,9 +204,9 @@ class GitHub:
         return payload["data"]
 
     def project(self) -> dict[str, Any]:
-        data = self.graphql(
-            """
-            query($org:String!, $number:Int!) {
+        """Read every project item, not just the first page."""
+        query = """
+            query($org:String!, $number:Int!, $cursor:String) {
               organization(login:$org) {
                 projectV2(number:$number) {
                   id
@@ -216,28 +216,53 @@ class GitHub:
                   environmentField: field(name:"Omgeving") {
                     ... on ProjectV2SingleSelectField { id name options { id name } }
                   }
-                  items(first:100) { nodes {
-                    id isArchived
-                    content {
-                      ... on Issue { __typename number repository { nameWithOwner } }
-                      ... on PullRequest { __typename number repository { nameWithOwner } }
-                    }
-                    fieldValues(first:100) { nodes {
-                      ... on ProjectV2ItemFieldSingleSelectValue {
-                        field { ... on ProjectV2SingleSelectField { name } }
-                        name optionId
+                  items(first:100, after:$cursor) {
+                    totalCount
+                    pageInfo { hasNextPage endCursor }
+                    nodes {
+                      id isArchived
+                      content {
+                        ... on Issue { __typename number repository { nameWithOwner } }
+                        ... on PullRequest { __typename number repository { nameWithOwner } }
                       }
-                    }}
-                  }}
+                      fieldValues(first:100) { nodes {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          field { ... on ProjectV2SingleSelectField { name } }
+                          name optionId
+                        }
+                      }}
+                    }
+                  }
                 }
               }
             }
-            """,
-            {"org": ORGANIZATION, "number": PROJECT_NUMBER},
-        )
-        project = data.get("organization", {}).get("projectV2")
-        if not project:
-            raise RuntimeError(f"Organisatieproject {PROJECT_NUMBER} bestaat niet of is niet toegankelijk")
+            """
+        variables: dict[str, Any] = {"org": ORGANIZATION, "number": PROJECT_NUMBER, "cursor": None}
+        all_items: list[dict[str, Any]] = []
+        project: dict[str, Any] | None = None
+        while True:
+            data = self.graphql(query, variables.copy())
+            page_project = data.get("organization", {}).get("projectV2")
+            if not page_project:
+                raise RuntimeError(f"Organisatieproject {PROJECT_NUMBER} bestaat niet of is niet toegankelijk")
+            if project is None:
+                project = page_project
+            page = page_project.get("items") or {}
+            all_items.extend(page.get("nodes") or [])
+            page_info = page.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                total_count = page.get("totalCount")
+                if isinstance(total_count, int) and total_count > len(all_items):
+                    raise RuntimeError(
+                        f"ProjectV2 gaf slechts {len(all_items)} van {total_count} kaarten terug"
+                    )
+                break
+            cursor = page_info.get("endCursor")
+            if not cursor:
+                raise RuntimeError("ProjectV2 meldt een volgende pagina zonder cursor")
+            variables["cursor"] = cursor
+        assert project is not None
+        project["items"] = {"nodes": all_items}
         return project
 
     def linked_branches(self, number: int) -> set[str]:
