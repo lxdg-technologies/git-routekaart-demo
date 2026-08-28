@@ -138,6 +138,16 @@ jobs:
           echo "::error::Publiceren naar gh-pages bleef mislukken na 5 pogingen"
           exit 1
 
+      - name: Chrome instellen voor controle van de gepubliceerde pagina's
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Controleer de knoppen op de drie gepubliceerde omgevingen
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          DEV_PR_NUMBER: ${{ github.event.number }}
+        run: node source/.github/scripts/controleer-gepubliceerde-knoppen.js
+
       # GitHub toont de omgeving zelf al onder "View deployment", maar dat is weggestopt en
       # het woord zegt een niet-technische beoordelaar niets. Eén gewone regel met een
       # klikbaar adres, alleen bij het openen van de pull request zodat het geen spam wordt.

@@ -280,3 +280,12 @@ jobs:
           done
           echo "::error::Publiceren van test bleef mislukken na 5 pogingen"
           exit 1
+
+      - name: Chrome instellen voor controle van de gepubliceerde pagina's
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Controleer de knoppen op de drie gepubliceerde omgevingen
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+        run: node source/.github/scripts/controleer-gepubliceerde-knoppen.js
