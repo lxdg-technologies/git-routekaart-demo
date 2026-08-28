@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* Controleer de werkelijk gerenderde knoppen op de drie gepubliceerde omgevingen. */
 const http = require("http");
+const https = require("https");
 const net = require("net");
 const { spawn } = require("child_process");
 
@@ -23,7 +24,13 @@ function controleerKnoppen(environment, buttons) {
 }
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-function json(url) { return new Promise((resolve, reject) => { http.get(url, response => { let body = ""; response.on("data", chunk => body += chunk); response.on("end", () => { try { resolve(JSON.parse(body)); } catch (error) { reject(error); } }); }).on("error", reject); }); }
+function requestModule(url) {
+  const protocol = new URL(url).protocol;
+  if (protocol === "https:") return https;
+  if (protocol === "http:") return http;
+  throw new Error(`Niet-ondersteund URL-protocol: ${protocol}`);
+}
+function json(url) { return new Promise((resolve, reject) => { requestModule(url).get(url, response => { let body = ""; response.on("data", chunk => body += chunk); response.on("end", () => { try { resolve(JSON.parse(body)); } catch (error) { reject(error); } }); }).on("error", reject); }); }
 class WsClient {
   constructor(url) { this.url = new URL(url); this.socket = null; this.buffer = Buffer.alloc(0); this.pending = new Map(); this.nextId = 1; }
   async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection(Number(this.url.port), this.url.hostname, () => { const key = Buffer.from(Math.random().toString()).toString("base64"); this.socket.write(`GET ${this.url.pathname} HTTP/1.1\r\nHost: ${this.url.host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ${key}\r\nSec-WebSocket-Version: 13\r\n\r\n`); }); let head = Buffer.alloc(0); const ready = data => { head = Buffer.concat([head, data]); const end = head.indexOf("\r\n\r\n"); if (end < 0) return; if (!head.subarray(0, end).toString().includes("101")) return reject(new Error("Chrome DevTools WebSocket handshake mislukt")); this.socket.removeListener("data", ready); this.socket.on("data", data2 => this.receive(data2)); const rest = head.subarray(end + 4); if (rest.length) this.receive(rest); resolve(); }; this.socket.on("data", ready); this.socket.on("error", reject); }); }
@@ -58,4 +65,4 @@ async function main() {
   finally { cdp.close(); chrome.kill(); }
 }
 if (require.main === module) main().catch(error => { console.error(`FAIL: ${error.message}`); process.exitCode = 1; });
-module.exports = { controleerKnoppen };
+module.exports = { controleerKnoppen, requestModule };

@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 const assert = require("assert");
-const { controleerKnoppen } = require("../.github/scripts/controleer-gepubliceerde-knoppen.js");
+const { controleerKnoppen, requestModule } = require("../.github/scripts/controleer-gepubliceerde-knoppen.js");
+
+assert.strictEqual(requestModule("https://example.com"), require("https"));
+assert.strictEqual(requestModule("http://127.0.0.1:9231/json/list"), require("http"));
+assert.throws(() => requestModule("ftp://example.com"), /Niet-ondersteund URL-protocol/);
 
 function check(environment, buttons, expected) {
   assert.deepStrictEqual(controleerKnoppen(environment, buttons), expected);
