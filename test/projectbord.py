@@ -53,7 +53,7 @@ class FakeGitHub:
             "id": "project-1",
             "statusField": {"id": "status-field", "name": "Status", "options": [
                 {"id": "backlog", "name": "Backlog"}, {"id": "ready", "name": "Ready"},
-                {"id": "progress", "name": "In progress"}, {"id": "review", "name": "In review"},
+                {"id": "progress", "name": "In progress"}, {"id": "review", "name": "Wacht op jou"},
                 {"id": "done", "name": "Done"},
             ]},
             "environmentField": {"id": "environment-field", "name": "Omgeving", "options": [
@@ -79,7 +79,7 @@ class FakeGitHub:
 
     def mutate_status(self, project, item, field, option):
         self.mutations.append(("status", option))
-        self.current = {"progress": "In progress", "review": "In review", "done": "Done"}[option]
+        self.current = {"progress": "In progress", "review": "Wacht op jou", "done": "Done"}[option]
 
     def mutate_environment(self, project, item, field, option):
         self.mutations.append(("environment", option))
@@ -229,7 +229,7 @@ class ProjectBoardTests(unittest.TestCase):
             (projectbord.IssueState(1, "open", False, False, False, False, False), None),
             (projectbord.IssueState(1, "open", False, False, False, False, False), None),
             (projectbord.IssueState(1, "open", True, False, False, False, False), "In progress"),
-            (projectbord.IssueState(1, "open", False, True, True, False, False), "In review"),
+            (projectbord.IssueState(1, "open", False, True, True, False, False), "Wacht op jou"),
             (projectbord.IssueState(1, "open", False, True, False, True, False), "Done"),
             (projectbord.IssueState(1, "closed", False, False, False, False, True), "ARCHIVE"),
             (projectbord.IssueState(1, "open", False, True, True, True, False), "Done"),
@@ -279,7 +279,7 @@ class ProjectBoardTests(unittest.TestCase):
                     return []
                 raise AssertionError(f"onverwachte API-call: {path}")
 
-        client = WorkClient(None, current="In review")
+        client = WorkClient(None, current="Wacht op jou")
         client.environment = "Ontwikkel"
         actions = projectbord.sync(client, project=client.project_data())
         self.assertEqual(client.mutations, [])
@@ -340,8 +340,8 @@ class ProjectBoardTests(unittest.TestCase):
 
     def test_reviewstatussen_bepalen_de_status_van_openstaand_werk(self):
         self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, "CHANGES_REQUESTED", False, False)), "In progress")
-        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, "APPROVED", False, False)), "In review")
-        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, True, False, False)), "In review")
+        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, "APPROVED", False, False)), "Wacht op jou")
+        self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, True, False, False)), "Wacht op jou")
         self.assertEqual(projectbord.target_status(projectbord.IssueState(1, "open", False, True, False, False, False)), "In progress")
 
     def test_laatste_review_overschrijft_oudere_afkeuring(self):
@@ -356,7 +356,7 @@ class ProjectBoardTests(unittest.TestCase):
 
     def test_pull_request_zonder_beoordeling_is_in_progress_en_met_beoordeling_in_review(self):
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, False, False, False)), "In progress")
-        self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, True, False, False)), "In review")
+        self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, True, True, False, False)), "Wacht op jou")
         self.assertEqual(projectbord.target_pr_status(projectbord.PullRequestState(1, False, False, False, True)), "Done")
 
     def test_pull_request_krijgt_label_van_gekoppeld_issue_en_logt_omgeving(self):
