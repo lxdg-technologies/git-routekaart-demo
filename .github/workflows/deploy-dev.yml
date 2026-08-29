@@ -122,21 +122,7 @@ jobs:
             exit 0
           fi
           git commit -m "Deploy dev voor PR #${{ github.event.number }} (${GITHUB_SHA::7})"
-          # Opnieuw proberen als een andere omgevingsdeploy net voor was. De concurrency-groep
-          # vangt het meeste af, maar bij meerdere openstaande pull requests kan een wachtende
-          # run alsnog vervangen worden; deze lus voorkomt dat een deploy stilzwijgend verdwijnt.
-          for poging in 1 2 3 4 5; do
-            if git push origin gh-pages; then
-              echo "Gepubliceerd"
-              exit 0
-            fi
-            echo "Push afgewezen (poging $poging) — deploymentbranch is intussen bijgewerkt"
-            git fetch origin gh-pages
-            git rebase origin/gh-pages
-            sleep 3
-          done
-          echo "::error::Publiceren naar gh-pages bleef mislukken na 5 pogingen"
-          exit 1
+          bash ../source/.github/scripts/publiceer-omgeving.sh
 
       - name: Chrome instellen voor controle van de gepubliceerde pagina's
         id: chrome
@@ -195,14 +181,4 @@ jobs:
             exit 0
           fi
           git commit -m "Ruim dev op voor gesloten PR #${{ github.event.number }}"
-          for poging in 1 2 3 4 5; do
-            if git push origin gh-pages; then
-              echo "Opgeruimd"
-              exit 0
-            fi
-            git fetch origin gh-pages
-            git rebase origin/gh-pages
-            sleep 3
-          done
-          echo "::error::Opruimen van gh-pages bleef mislukken na 5 pogingen"
-          exit 1
+          bash ../source/.github/scripts/publiceer-omgeving.sh
