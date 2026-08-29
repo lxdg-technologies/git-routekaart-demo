@@ -73,3 +73,21 @@ grep -Fq 'Push afgewezen' "$tmp/test.log"
 printf 'ok  : gelijktijdige publicaties behouden beide omgevingen na een botsing\n'
 printf 'ok  : onafhankelijke publicatie blokkeert niet op een trage publicatie\n'
 printf '\nALLE DEPLOYMENTRIJ-CHECKS GESLAAGD\n'
+
+# Elke taak die het publiceerscript aanroept, moet de broncode ook echt hebben.
+# Op 29-08-2026 miste die in de opruimtaak: het opruimen van een gesloten
+# voorstel viel om met "No such file or directory", en de proefomgeving bleef
+# staan. Zie #209.
+for workflow in "$root/.github/workflows/deploy-dev.yml" "$root/.github/workflows/deploy-test.yml"; do
+  ontbreekt="$(awk '
+    /^  [a-z-]+:$/ { taak=$1; heeft[taak]=heeft[taak] }
+    /path: source/ { bron[taak]=1 }
+    /publiceer-omgeving\.sh/ { gebruikt[taak]=1 }
+    END { for (t in gebruikt) if (!(t in bron)) print t }
+  ' "$workflow")"
+  if [ -n "$ontbreekt" ]; then
+    printf 'FAIL: %s roept het publiceerscript aan zonder de broncode: %s\n' "${workflow##*/}" "$ontbreekt" >&2
+    exit 1
+  fi
+  printf 'ok  : elke taak in %s die publiceert heeft de broncode\n' "${workflow##*/}"
+done
