@@ -16,7 +16,16 @@ REPOSITORY = "lxdg-technologies/git-routekaart-demo"
 ORGANIZATION = "lxdg-technologies"
 PROJECT_NUMBER = 2
 STATUS_FIELD_NAME = "Status"
-STATUS_ORDER = {"Backlog": 0, "Ready": 1, "In progress": 2, "In review": 3, "Done": 4}
+# De banen op het bord, in de volgorde waarin werk ze doorloopt.
+#
+# "Wacht op jou" heette tot 29-08-2026 "In review". Die naam beschreef wat de
+# machine deed en niet wat een mens eraan had: een kaart komt er namelijk pas in
+# als de beoordeling KLAAR is. Rob las dat als "er wordt nog aan gewerkt" en
+# dacht daardoor dat het bord achterliep, terwijl het binnen vier seconden na
+# het oordeel bijgewerkt werd. De vertraging zat in het woord, niet in de tijd.
+#
+# In progress = een agent is bezig. Wacht op jou = alles is klaar, jouw beurt.
+STATUS_ORDER = {"Backlog": 0, "Ready": 1, "In progress": 2, "Wacht op jou": 3, "Done": 4}
 STATUSES = set(STATUS_ORDER)
 ENVIRONMENT_FIELD_NAME = "Omgeving"
 ENVIRONMENTS = {"Geen omgeving", "Ontwikkel", "Test", "Live"}
@@ -57,7 +66,7 @@ def target_status(issue: IssueState) -> str | None:
         if issue.review == "CHANGES_REQUESTED":
             return "In progress"
         if issue.review:
-            return "In review"
+            return "Wacht op jou"
     if issue.branch or issue.open_pr:
         return "In progress"
     return None
@@ -81,7 +90,7 @@ def target_pr_status(pr: PullRequestState) -> str:
     if pr.review == "CHANGES_REQUESTED":
         return "In progress"
     if pr.review:
-        return "In review"
+        return "Wacht op jou"
     return "In progress"
 
 
