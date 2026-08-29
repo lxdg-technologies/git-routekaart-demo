@@ -1,0 +1,2222 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Routekaart — issues, branches & merges</title>
+<style>
+  /* ==== SECTIE: THEMA ==== */
+  :root {
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --ink: #1b2733;
+    --ink-soft: #5a6a7a;
+    --line: #d5dce3;
+    --main-line: #1e5aa8;
+    --accent: #1e5aa8;
+    --ok: #2e8b57;
+    --warn: #c47f17;
+    --danger: #c43b3b;
+    --env-dev-bg: #fff3d6;
+    --env-dev-ink: #5a3b00;
+    --env-test-bg: #e7f0ff;
+    --env-test-ink: #123b70;
+    --env-live-bg: #e4f5ea;
+    --env-live-ink: #155c37;
+    --station: #ffffff;
+    --chip-bg: #e7ecf1;
+    --radius: 10px;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10161d; --panel: #18212b; --ink: #e8edf2; --ink-soft: #93a3b3;
+      --line: #2a3641; --station: #10161d; --chip-bg: #22303c;
+      --env-dev-bg: #5a3b00; --env-dev-ink: #fff3d6;
+      --env-test-bg: #123b70; --env-test-ink: #dbeafe;
+      --env-live-bg: #155c37; --env-live-ink: #dcfce7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10161d; --panel: #18212b; --ink: #e8edf2; --ink-soft: #93a3b3;
+    --line: #2a3641; --station: #10161d; --chip-bg: #22303c;
+    --env-dev-bg: #5a3b00; --env-dev-ink: #fff3d6;
+    --env-test-bg: #123b70; --env-test-ink: #dbeafe;
+    --env-live-bg: #155c37; --env-live-ink: #dcfce7;
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f4; --panel: #ffffff; --ink: #1b2733; --ink-soft: #5a6a7a;
+    --line: #d5dce3; --station: #ffffff; --chip-bg: #e7ecf1;
+  }
+  /* ==== SECTIE: LAYOUT ==== */
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 1.25rem; line-height: 1.5;
+  }
+  header.top { max-width: 1200px; margin: 0 auto 1rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1rem; }
+  header.top h1 { font-size: 1.45rem; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  header.top h1 .metro { color: var(--main-line); }
+  header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+  .promotion-banner-button { margin-left: auto; border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .65rem; background: var(--accent); color: #fff; font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
+  .promotion-banner-button:hover, .promotion-banner-button:focus-visible { filter: brightness(1.08); }
+  .review-guide { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .62); }
+  .review-guide[hidden] { display: none; }
+  .review-guide-panel { width: min(680px, 100%); max-height: min(760px, calc(100vh - 2rem)); overflow: auto; padding: 1rem; border: 2px solid var(--warn); border-radius: var(--radius); background: var(--panel); box-shadow: 0 12px 40px rgb(0 0 0 / .3); }
+  .review-guide-panel h2 { margin: 0; font-size: 1.2rem; }
+  .review-guide-panel > p { margin: .25rem 0 .8rem; color: var(--ink-soft); }
+  .review-guide-close { float: right; border: 0; background: transparent; color: var(--ink-soft); font-size: 1.3rem; cursor: pointer; }
+  .review-guide-steps { display: grid; gap: .45rem; margin: 0 0 .8rem; padding-left: 1.4rem; }
+  .review-guide-steps li { padding: .35rem .5rem; border-radius: 6px; color: var(--ink-soft); }
+  .review-guide-steps li.current { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--ink); font-weight: 700; }
+  .github-mockup { margin: .8rem 0; padding: .8rem; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--panel) 88%, var(--chip-bg)); }
+  .github-mockup header { display: flex; justify-content: space-between; gap: .5rem; margin-bottom: .55rem; font-size: .78rem; }
+  .github-mockup header b { color: var(--ink); }
+  .github-mockup-title { display: flex; justify-content: space-between; gap: .5rem; font-size: .92rem; }
+  .github-mockup-status { margin: .35rem 0 .6rem; color: var(--ink-soft); font-size: .74rem; }
+  .github-mockup-status b { display: inline-block; margin-right: .35rem; padding: .12rem .4rem; border-radius: 999px; background: #1a7f37; color: #fff; }
+  .github-mockup-tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--line); padding-bottom: .55rem; }
+  .github-mockup-item { border: 1.5px solid var(--line); border-radius: 6px; padding: .35rem .5rem; color: var(--ink-soft); background: var(--panel); font: 700 .74rem inherit; opacity: .5; }
+  .github-mockup-item.current { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); color: var(--ink); opacity: 1; }
+  .github-mockup-actions { display: flex; justify-content: flex-end; gap: .35rem; margin-top: .6rem; }
+  .github-mockup-actions .github-mockup-item { opacity: .5; }
+  .github-mockup-target { margin-top: .55rem; color: var(--ink-soft); font-size: .74rem; }
+  .review-guide-controls { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+  .review-guide-controls button, .review-guide-github { border: 1.5px solid var(--accent); border-radius: 7px; padding: .45rem .7rem; background: var(--accent); color: #fff; font: 700 .82rem inherit; cursor: pointer; text-decoration: none; }
+  .review-guide-controls button.secondary { border-color: var(--line); background: transparent; color: var(--ink); }
+  .review-guide-skip { display: block; margin-top: .7rem; color: var(--ink-soft); font-size: .78rem; text-align: center; }
+  .review-guide-github { display: block; width: 100%; margin-top: .7rem; text-align: center; }
+  .promotion-overlay { position: fixed; top: 5rem; right: 1rem; z-index: 20; width: min(370px, calc(100vw - 2rem)); pointer-events: none; }
+  .promotion-overlay[hidden] { display: none; }
+  .promotion-panel { pointer-events: auto; padding: .9rem 1rem; border: 2px solid var(--accent); border-radius: var(--radius); background: var(--panel); box-shadow: 0 10px 28px rgb(0 0 0 / .22); }
+  .promotion-panel h2 { margin: 0; font-size: 1.05rem; }
+  .promotion-panel > p { margin: .25rem 0 .7rem; color: var(--ink-soft); font-size: .82rem; }
+  .promotion-close { float: right; border: 0; background: transparent; color: var(--ink-soft); font-size: 1.2rem; cursor: pointer; }
+  .promotion-modes { display: flex; gap: .4rem; margin-bottom: .7rem; }
+  .promotion-modes button { flex: 1; border: 1px solid var(--line); border-radius: 7px; padding: .35rem; background: var(--chip-bg); color: var(--ink); font: inherit; font-size: .75rem; cursor: pointer; }
+  .promotion-modes button.active { border-color: currentColor; font-weight: 700; }
+  .promotion-checks { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; font-size: .8rem; }
+  .promotion-checks li { padding: .4rem .5rem; border-left: 4px solid var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .promotion-checks li::before { content: "✓ "; font-weight: 700; }
+  .promotion-panel.is-blocked { border-color: var(--danger); }
+  .promotion-panel.is-blocked .promotion-checks li { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+  .promotion-panel.is-blocked .promotion-checks li::before { content: "! "; }
+  .promotion-error { margin: .7rem 0 0; padding: .55rem .65rem; border-radius: 7px; background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); font-size: .8rem; }
+  .promotion-recover, .promotion-live { display: block; width: 100%; margin-top: .65rem; border: 1.5px solid currentColor; border-radius: 7px; padding: .45rem .65rem; background: transparent; color: var(--ink); font: 700 .85rem inherit; cursor: pointer; text-align: center; text-decoration: none; }
+  .promotion-live { background: var(--ok); color: #fff; }
+  .promotion-demo-note { margin: .55rem 0 0; color: var(--ink-soft); font-size: .72rem; }
+  .repository-dashboard { max-width: 1520px; margin: 0 auto 1rem; }
+  .repository-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .repository-heading h2 { margin-bottom: .2rem; }
+  .repository-heading p { margin: 0; color: var(--ink-soft); font-size: .85rem; }
+  .repository-heading a { color: var(--accent); font-family: var(--mono); font-weight: 700; text-decoration: none; }
+  .repository-heading a:hover, .repository-heading a:focus-visible { text-decoration: underline; }
+  .repository-actions { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; color: var(--ink-soft); font-size: .75rem; }
+  .repository-backend { display: flex; align-items: center; gap: .35rem; }
+  .repository-backend select { border: 1px solid var(--line); border-radius: 7px; background: var(--chip-bg); color: var(--ink); padding: .3rem .45rem; font: inherit; }
+  .repository-refresh { border: 1px solid var(--line); border-radius: 7px; background: var(--chip-bg); color: var(--ink); padding: .3rem .55rem; cursor: pointer; font: inherit; }
+  .repository-refresh:disabled { cursor: wait; opacity: .6; }
+  .repository-status { min-height: 1.35em; margin: .7rem 0; padding: .5rem .65rem; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-soft); font-size: .82rem; }
+  .repository-status.error { border-color: var(--danger); color: var(--danger); }
+  .repository-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; margin-bottom: .7rem; }
+  .repository-stat { padding: .55rem .65rem; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--panel) 88%, var(--chip-bg)); }
+  .repository-stat b { display: block; font: 700 1.05rem var(--mono); color: var(--ink); }
+  .repository-stat span { color: var(--ink-soft); font-size: .72rem; }
+  .repository-columns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; }
+  .repository-column { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: .55rem .65rem; }
+  .repository-column h3 { display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .45rem; font-size: .82rem; }
+  .repository-column h3 a { color: var(--accent); font-size: .7rem; font-weight: 600; text-decoration: none; }
+  .repository-list { display: grid; gap: .42rem; margin: 0; padding: 0; list-style: none; }
+  .repository-list li { min-width: 0; padding-top: .42rem; border-top: 1px solid var(--line); }
+  .repository-list li:first-child { padding-top: 0; border-top: 0; }
+  .repository-list a { display: block; overflow: hidden; color: var(--ink); font-size: .79rem; font-weight: 650; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+  .repository-list a:hover, .repository-list a:focus-visible { color: var(--accent); text-decoration: underline; }
+  .repository-meta { display: flex; justify-content: space-between; gap: .4rem; margin-top: .12rem; color: var(--ink-soft); font: .68rem var(--mono); }
+  .repository-state { font-weight: 700; }
+  .repository-state.open { color: var(--ok); }
+  .repository-state.closed { color: var(--danger); }
+  .repository-state.merged { color: #8250df; }
+  .repository-empty { color: var(--ink-soft); font-size: .76rem; }
+  @media (max-width: 1100px) { .repository-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 700px) {
+    .repository-summary, .repository-columns { grid-template-columns: 1fr; }
+    .repository-actions { justify-content: flex-start; }
+  }
+  .wrap { max-width: 1520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0,1fr) 300px 300px; gap: 1rem; align-items: start; }
+  @media (max-width: 1150px) {
+    .wrap { display: flex; flex-direction: column; }
+    .wrap > div { display: contents; }
+    .wrap > div > .card { width: 100%; box-sizing: border-box; }
+    #map-card { order: 1; position: sticky; top: 0; z-index: 5; max-height: 45vh; overflow: auto; background: var(--panel); }
+    #omgevingen { display: contents; order: 2; }
+    #omgevingen > h2 { order: 2; width: 100%; box-sizing: border-box; margin: 0; padding: .9rem 1rem .35rem; background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+    #omgevingen > .envs { order: 2; width: 100%; box-sizing: border-box; padding: 0 .9rem .9rem; background: var(--panel); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); }
+    .side-b > .card:nth-child(1) { order: 3; }
+    #omgevingen > #btn-promote, #omgevingen > #btn-revert, #omgevingen > #rollback-controls { order: 4; margin-top: 0; }
+    .side-b > .card:nth-child(2) { order: 5; }
+    #missies { order: 6; }
+    #omg-uitleg { order: 7; }
+    #begrippen { order: 8; }
+    #vgl { order: 9; }
+  }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
+  .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft); margin: 0 0 .6rem; font-weight: 600; }
+
+  /* ==== SECTIE: KAART ==== */
+  #map-card { padding: .6rem .6rem .2rem; }
+  #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
+  #map-scroll svg { display: block; }
+  .env-filter-note { min-height: 1.35em; margin: 0 .25rem .35rem; color: var(--ink-soft); font-size: .82rem; }
+  .source-label { margin: .35rem 0 .7rem; color: var(--ink-soft); font-size: .82rem; }
+  .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
+  .branch-line:hover, .branch-line:focus-visible { stroke-width: 8px; filter: drop-shadow(0 0 3px currentColor); }
+  .pr-preview { cursor: pointer; transition: filter .15s; }
+  .pr-preview:hover, .pr-preview:focus-visible { filter: drop-shadow(0 0 3px currentColor); }
+  .branch-line-hit { cursor: pointer; pointer-events: stroke; }
+  .station-hit { cursor: pointer; }
+  .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; padding: .45rem .5rem .55rem; border-top: 1px solid var(--line); font-size: .8rem; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: .35rem; }
+  .legend i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
+  .legend i.env-marker { width: .75em; height: .75em; border-radius: 50%; flex: 0 0 auto; }
+  /* ==== SECTIE: RELEASE-BADGE ==== */
+  .release-badge { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10; min-width: 145px; padding: .35rem .65rem; border: 1.5px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 8px rgb(0 0 0 / .12); font-family: var(--mono); font-size: .75rem; }
+  .release-badge summary { cursor: pointer; list-style: none; text-align: right; }
+  .release-badge summary::-webkit-details-marker { display: none; }
+  .release-badge summary::after { content: "⌄"; margin-left: .35rem; color: currentColor; }
+  .release-badge[open] summary::after { content: "⌃"; }
+  .release-history-panel { position: absolute; right: 0; bottom: calc(100% + .55rem); width: min(270px, calc(100vw - 2rem)); padding: .65rem .75rem; border: 1px solid currentColor; border-radius: 10px; background: var(--panel); box-shadow: 0 8px 22px rgb(0 0 0 / .16); }
+  .release-history-panel h3 { margin: 0 0 .45rem; font: 700 .75rem var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+  .release-deployment-versions { display: grid; gap: .3rem; margin: 0 0 .65rem; padding: .5rem .55rem; border: 1px solid var(--line); border-radius: 7px; background: var(--chip-bg); color: var(--ink-soft); font: .75rem var(--sans); }
+  .release-deployment-versions strong { color: var(--ink); }
+  .release-deployment-version { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; }
+  .release-deployment-version code { color: var(--ink); font: 700 .78rem var(--mono); overflow-wrap: anywhere; text-align: right; }
+  .release-current-link { display: block; margin-bottom: .55rem; font-weight: 700; color: currentColor; }
+  .release-build-note { margin: 0 0 .55rem; color: var(--ink-soft); font: .72rem var(--sans); }
+  .release-history-list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+  .release-history-list li { display: grid; gap: .1rem; padding-top: .4rem; border-top: 1px solid var(--line); }
+  .release-history-list a { color: var(--ink); font-weight: 650; }
+  .release-history-list time { color: var(--ink-soft); font-size: .7rem; }
+  .release-history-empty { margin: 0; color: var(--ink-soft); font: .75rem var(--sans); }
+  .release-badge.dev { border-color: var(--warn); background: var(--env-dev-bg); color: var(--env-dev-ink); }
+  .release-badge.test { border-color: var(--accent); background: var(--env-test-bg); color: var(--env-test-ink); }
+  .release-badge.live { border-color: var(--ok); background: var(--env-live-bg); color: var(--env-live-ink); }
+  @media (max-width: 700px), (max-device-width: 700px) {
+    .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
+    .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
+  }
+  html.mobile-layout .release-badge { position: relative; right: auto; bottom: auto; width: max-content; max-width: calc(100vw - 2rem); margin: .8rem 1rem 1rem auto; }
+  html.mobile-layout .release-history-panel { width: min(270px, calc(100vw - 2rem)); }
+  /* ==== SECTIE: BEGRIPPEN ==== */
+  #begrippen-lijst { display: grid; gap: .45rem; }
+  #commandoreferentie { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+  #commandoreferentie h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+  .command-note { margin: 0 0 .7rem; color: var(--ink-soft); font-size: .86rem; }
+  .command-groups { display: grid; gap: .5rem; }
+  .command-group { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .command-group summary { cursor: pointer; padding: .5rem .65rem; font-weight: 650; color: var(--ink); }
+  .command-list { display: grid; gap: .5rem; padding: 0 .65rem .65rem; }
+  .command-item { padding: .45rem .55rem; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--panel) 88%, var(--line)); }
+  .command-code { display: block; margin-bottom: .25rem; font: 700 .82rem var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+  .command-item p { margin: .18rem 0 0; font-size: .8rem; color: var(--ink-soft); }
+  .command-item b { color: var(--ink); }
+  .command-warning { margin-top: .35rem !important; padding: .35rem .45rem; border-left: 3px solid var(--warn); color: var(--ink) !important; background: color-mix(in srgb, var(--warn) 10%, transparent); }
+  .term-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .65rem; background: var(--panel); transition: border-color .2s, box-shadow .2s; }
+  .term-item.term-focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); animation: term-focus .9s ease-out; }
+  @keyframes term-focus { 0% { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); } 100% { background: var(--panel); } }
+  .term-item summary { cursor: pointer; font-weight: 650; color: var(--ink); }
+  .term-item summary::marker { color: var(--accent); }
+  .term-explanation { margin: .4rem 0 0; color: var(--ink-soft); font-size: .86rem; }
+  .term-example { margin: .35rem 0 0; padding: .35rem .5rem; border-left: 3px solid var(--accent); color: var(--ink); font-size: .82rem; }
+
+  /* ==== SECTIE: OMGEVINGEN ==== */
+  .envs { display: flex; align-items: stretch; gap: .3rem; }
+  .env { flex: 1 1 0; border: 1.5px solid var(--line); border-radius: 8px; padding: .45rem .4rem; text-align: center; min-width: 0; }
+  button.env { color: var(--ink); background: var(--panel); font: inherit; cursor: pointer; }
+  button.env:hover, button.env:focus-visible { filter: brightness(.98); }
+  button.env.active { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); }
+  button.env.dev.active { border-color: var(--warn); }
+  button.env.test.active { border-color: var(--accent); }
+  button.env.live.active { border-color: var(--ok); }
+  .env-name { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: inherit; }
+  .env-marker { display: inline-block; width: .58em; height: .58em; margin-right: .22em; border-radius: 50%; vertical-align: .06em; }
+  .env-marker.dev { background: var(--warn); }
+  .env-marker.test { background: var(--accent); }
+  .env-marker.live { background: var(--ok); }
+  .env-val { font-family: var(--mono); font-weight: 700; font-size: .92rem; margin: .15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .env-sub { font-size: .67rem; color: inherit; line-height: 1.25; }
+  .env.dev { border-color: var(--warn); background: var(--env-dev-bg); color: var(--env-dev-ink); }
+  .env.test { border-color: var(--accent); background: var(--env-test-bg); color: var(--env-test-ink); }
+  .env.live { border-color: var(--ok); background: var(--env-live-bg); color: var(--env-live-ink); }
+  .test-live-status { margin: .7rem 0 0; padding: .65rem .7rem; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-size: .82rem; line-height: 1.35; }
+  .test-live-status strong { display: block; font-size: 1rem; line-height: 1.25; }
+  .test-live-status ul { display: grid; gap: .2rem; margin: .45rem 0 0; padding: 0; list-style: none; }
+  .test-live-status li::first-letter { font-weight: 700; }
+  .act[hidden] { display: none !important; }
+  .test-live-status a.act { display: block; color: var(--ink); font-weight: 600; text-decoration: none; }
+  .test-live-status.is-safe { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .test-live-status.is-blocked { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+  .test-live-status button { margin-top: .55rem; }
+  .env-arrow { align-self: center; color: var(--ink-soft); flex: 0 0 auto; }
+
+  /* ==== SECTIE: ACTIES ==== */
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .chip {
+    border: 1.5px solid var(--line); background: var(--chip-bg); color: var(--ink);
+    border-radius: 999px; padding: .18rem .7rem; font-size: .82rem; font-family: var(--mono);
+    cursor: pointer;
+  }
+  .chip.active { border-color: currentColor; font-weight: 600; }
+  button.act {
+    display: block; width: 100%; text-align: left;
+    background: var(--panel); color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: 8px;
+    padding: .5rem .7rem; font-size: .9rem; font-family: inherit; cursor: pointer;
+    margin-top: .45rem;
+  }
+  button.act:hover:not(:disabled) { border-color: var(--accent); }
+  button.act:disabled { opacity: .45; cursor: not-allowed; }
+  .log-term { border: 0; border-bottom: 1px dashed var(--accent); background: transparent; color: var(--accent); padding: 0 .08rem; font: inherit; cursor: pointer; }
+  .log-term:hover, .log-term:focus-visible { background: color-mix(in srgb, var(--accent) 12%, transparent); border-bottom-style: solid; }
+  button.act small { display: block; color: var(--ink-soft); font-size: .78rem; }
+  .rollback-controls { margin-top: .45rem; padding-top: .55rem; border-top: 1px dashed var(--line); }
+  .rollback-controls label { display: block; color: var(--ink-soft); font-size: .78rem; margin-bottom: .25rem; }
+  .rollback-controls select { width: 100%; background: var(--panel); color: var(--ink); border: 1.5px solid var(--line); border-radius: 7px; padding: .38rem .5rem; font: .82rem var(--mono); }
+  .rollback-controls select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rollback-controls small { display: block; margin-top: .3rem; color: var(--ink-soft); font-size: .75rem; }
+  button.act.primary { border-color: var(--accent); }
+  button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .mini-btns { display: flex; gap: .4rem; margin-top: .45rem; flex-wrap: wrap; }
+  .mini-btns button {
+    flex: 1 1 auto; background: var(--chip-bg); color: var(--ink); border: 1.5px solid var(--line);
+    border-radius: 7px; padding: .32rem .55rem; font-size: .8rem; font-family: inherit; cursor: pointer;
+  }
+  .mini-btns button:hover:not(:disabled) { border-color: var(--accent); }
+  .mini-btns button:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── issue / PR kaartjes ── */
+  .ticket { border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 7px; padding: .5rem .65rem; margin-top: .5rem; font-size: .85rem; }
+  .ticket.pr { border-left-color: var(--accent); }
+  .ticket.done { border-left-color: var(--ok); opacity: .75; }
+  .ticket .t-head { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
+  .ticket .num { font-family: var(--mono); color: var(--ink-soft); font-size: .78rem; }
+  .badge { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; padding: .05rem .45rem; border-radius: 999px; background: var(--chip-bg); color: var(--ink-soft); white-space: nowrap; }
+  .badge.open { color: var(--ok); }
+  .badge.merged { color: #8250df; }
+
+  /* ==== SECTIE: MISSIES ==== */
+  #missies ol { list-style: none; margin: 0; padding: 0; }
+  #missies li { display: flex; gap: .55rem; padding: .32rem 0; font-size: .87rem; color: var(--ink-soft); align-items: baseline; }
+  #missies li.done { color: var(--ink); }
+  #missies li.done .box { background: var(--ok); border-color: var(--ok); color: #fff; }
+  #missies li.next { color: var(--ink); font-weight: 600; }
+  #missies .box {
+    flex: 0 0 auto; width: 1.05rem; height: 1.05rem; border: 1.5px solid var(--line); border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; transform: translateY(.15rem);
+  }
+  #progress { height: 6px; background: var(--chip-bg); border-radius: 3px; margin: .5rem 0 .2rem; overflow: hidden; }
+  #progress > div { height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+  #trophy { display: none; margin-top: .5rem; padding: .5rem .7rem; border-radius: 8px; background: var(--chip-bg); font-size: .88rem; }
+  #trophy.show { display: block; }
+
+  /* ==== SECTIE: LOGBOEK ==== */
+  #log { max-height: 300px; overflow-y: auto; }
+  .log-entry { border-top: 1px solid var(--line); padding: .5rem .1rem; font-size: .84rem; }
+  .log-entry:first-child { border-top: 0; }
+  .log-entry b { font-weight: 600; }
+  .log-entry .why { color: var(--ink-soft); display: block; margin-top: .1rem; }
+  code { font-family: var(--mono); font-size: .85em; background: var(--chip-bg); padding: .05em .35em; border-radius: 4px; }
+
+  /* ==== SECTIE: STATE ==== */
+  #vgl, #omg-uitleg { margin-top: 1rem; }
+  .vgl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+  .omg-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .8rem; }
+  @media (max-width: 700px) { .vgl-grid, .omg-grid { grid-template-columns: 1fr; } }
+  .vgl-grid h3, .omg-grid h3 { font-size: .92rem; margin: 0 0 .2rem; }
+  .vgl-grid p, .omg-grid p { font-size: .84rem; color: var(--ink-soft); margin: .25rem 0 0; }
+  .vgl-grid svg { width: 100%; height: auto; }
+  .omg-grid .omg-col { border: 1.5px solid var(--line); border-radius: 8px; padding: .6rem .7rem; }
+  .omg-grid .omg-col.c-dev { border-color: var(--warn); }
+  .omg-grid .omg-col.c-test { border-color: var(--accent); }
+  .omg-grid .omg-col.c-live { border-color: var(--ok); }
+  .col-note { font-size: .8rem; color: var(--ink-soft); margin-top: .6rem; }
+
+  .side-a, .side-b { display: flex; flex-direction: column; gap: 1rem; }
+  #reset { background: none; border: none; color: var(--ink-soft); font-size: .78rem; cursor: pointer; text-decoration: underline; padding: 0; font-family: inherit; }
+</style>
+</head>
+<body>
+<div role="note" style="
+  background:var(--warn);
+  color:#10161d;
+  font:600 14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;
+  padding:.55rem 1rem;
+  position:sticky;
+  top:0;
+  z-index:1000;
+  box-sizing:border-box;
+  max-width:100%;
+  text-align:left;
+  letter-spacing:.01em;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
+    <div style="flex:1 1 22rem;min-width:0;">
+      Ontwikkelversie — pull request #208 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">9ec4463</code>
+      <span style="display:block;font-weight:400;">
+        Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
+        publiceren nog bezig — wacht een minuut en ververs de pagina.
+      </span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;justify-content:flex-end;flex:0 1 auto;">
+    <button type="button" id="btn-review-approve" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;">Goedkeuren</button>
+    <button type="button" id="btn-review-reject" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:transparent;color:#fff;font:700 13px inherit;cursor:pointer;">Afkeuren</button>
+  </div>
+  </div>
+</div>
+<header class="top">
+  <h1><span class="metro">◉</span> Git Routekaart</h1>
+  <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
+  <button type="button" class="promotion-banner-button" id="btn-live-overlay">Naar live zetten</button>
+</header>
+
+<div class="review-guide" id="review-guide" hidden aria-hidden="true">
+  <section class="review-guide-panel" role="dialog" aria-modal="true" aria-labelledby="review-guide-title">
+    <button type="button" class="review-guide-close" id="btn-close-review-guide" aria-label="Sluit uitleg">×</button>
+    <h2 id="review-guide-title">Zo beoordeel je deze pull request</h2>
+    <p id="review-guide-intro"></p>
+    <ol class="review-guide-steps" id="review-guide-steps"></ol>
+    <div class="github-mockup" aria-label="Vereenvoudigde nabootsing van het GitHub-scherm">
+      <header><b class="github-mockup-item" data-review-target="Pull request">GitHub · Pull request</b><span id="review-guide-state">Open</span></header>
+      <div class="github-mockup-title"><strong id="review-guide-pr-title">Wijziging voor de Git Routekaart</strong><span aria-hidden="true">✎</span></div>
+      <div class="github-mockup-status"><b>Open</b> lxdg-dcs-coder wants to merge 1 commit into main from feat/issue-148-review-uitleg</div>
+      <div class="github-mockup-tabs">
+        <span class="github-mockup-item" data-review-target="Conversation">Conversation</span>
+        <span class="github-mockup-item" data-review-target="Commits">Commits <b>1</b></span>
+        <span class="github-mockup-item" data-review-target="Checks">Checks <b>✓</b></span>
+        <span class="github-mockup-item" data-review-target="Files changed">Files changed <b>4</b></span>
+      </div>
+      <div class="github-mockup-actions">
+        <span class="github-mockup-item" data-review-target="Merge pull request">✓ Merge pull request</span>
+        <span class="github-mockup-item" data-review-target="Confirm merge">Confirm merge</span>
+        <span class="github-mockup-item" data-review-target="Review changes">Review changes</span>
+        <span class="github-mockup-item" data-review-target="Request changes">Request changes</span>
+        <span class="github-mockup-item">Code ▾</span>
+      </div>
+      <div class="github-mockup-target" id="review-guide-target"></div>
+    </div>
+    <div class="review-guide-controls">
+      <button type="button" class="secondary" id="btn-review-guide-back">Vorige stap</button>
+      <button type="button" id="btn-review-guide-next">Volgende stap</button>
+    </div>
+    <a class="review-guide-skip" id="review-guide-skip" target="_blank" rel="noreferrer">Uitleg overslaan en direct naar GitHub ↗</a>
+    <a class="review-guide-github" id="review-guide-github" hidden target="_blank" rel="noreferrer">Open deze pull request op GitHub ↗</a>
+  </section>
+</div>
+
+<div class="promotion-overlay" id="live-promotion-overlay" hidden aria-hidden="true">
+  <section class="promotion-panel" id="live-promotion-panel" role="dialog" aria-modal="false" aria-labelledby="live-promotion-title">
+    <button type="button" class="promotion-close" id="btn-close-live-overlay" aria-label="Sluit promotie-overlay">×</button>
+    <h2 id="live-promotion-title">Promotie naar live</h2>
+    <p id="promotion-description">Zelfstandige controle. De simulatie eronder blijft onaangeraakt.</p>
+    <div class="promotion-modes" id="promotion-modes" aria-label="Kies voorbeeldtoestand">
+      <button type="button" id="btn-promotion-green">Groene voorbeeldtoestand</button>
+      <button type="button" id="btn-promotion-red">Rode voorbeeldtoestand</button>
+    </div>
+    <ul class="promotion-checks" id="promotion-checks"></ul>
+    <p class="promotion-error" id="promotion-error" hidden></p>
+    <button type="button" class="promotion-recover" id="btn-promotion-recover" hidden>Controleer opnieuw</button>
+    <a class="promotion-live" id="btn-promotion-live" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer" role="button">Start menselijke live-goedkeuring ↗</a>
+    <p class="promotion-demo-note" id="promotion-demo-note">Mockup: deze knop voert geen live-promotie uit.</p>
+  </section>
+</div>
+
+<!-- ==== SECTIE: LAYOUT ==== -->
+<div class="wrap">
+  <div>
+    <!-- ==== SECTIE: KAART ==== -->
+    <div class="card" id="map-card">
+      <p id="env-filter-note" class="env-filter-note" aria-live="polite">Simulatie/oefening: acties op deze kaart wijzigen GitHub niet.</p>
+      <div id="map-scroll"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="card" id="omg-uitleg">
+      <h2>Waarom drie omgevingen?</h2>
+      <div class="omg-grid">
+        <div class="omg-col c-dev">
+          <h3>1 · Ontwikkel</h3>
+          <p>Jouw branch, jouw machine. Hier bouw je, breek je en probeer je — <b>fouten kosten hier niemand iets</b>, want niemand anders draait deze code.</p>
+        </div>
+        <div class="omg-col c-test">
+          <h3>2 · Test</h3>
+          <p>Een kopie van de echte omgeving. Elke merge naar <code>main</code> komt hier <b>automatisch</b> terecht. Fouten worden hier zichtbaar zonder dat gebruikers er last van hebben.</p>
+        </div>
+        <div class="omg-col c-live">
+          <h3>3 · Live</h3>
+          <p>Het echte systeem, met echte gebruikers. Hier komt <b>alleen</b> een versie die op test al bewezen heeft te werken — en alléén via een bewuste, handmatige promotie. Nooit automatisch.</p>
+        </div>
+      </div>
+      <p class="col-note">De kernregel: <b>een merge mag nooit rechtstreeks live gaan.</b> Probeer het rechts: merge een PR en kijk welke omgeving verandert.</p>
+    </div>
+
+    <!-- ==== SECTIE: BEGRIPPEN ==== -->
+    <div class="card" id="begrippen">
+      <h2>Git- en workflowbegrippen</h2>
+      <p class="col-note">Klik een term open voor een korte uitleg en een voorbeeld uit de workflow.</p>
+      <div id="begrippen-lijst"></div>
+      <section id="commandoreferentie" aria-labelledby="commandoreferentie-kop">
+        <h3 id="commandoreferentie-kop">Git-commandoreferentie</h3>
+        <p class="command-note">De kaart laat de workflow zien; deze compacte lijst is naslagwerk voor de echte terminal. Elk commando vertelt wat het doet, wanneer je het gebruikt en geeft een veilig voorbeeld.</p>
+        <div id="commandoreferentie-lijst" class="command-groups"></div>
+      </section>
+    </div>
+
+    <div class="card" id="vgl">
+      <h2>Spiekbrief — wat doet elke merge-knop?</h2>
+      <div class="vgl-grid">
+        <div>
+          <h3>Merge commit</h3>
+          <svg viewBox="0 0 260 70" aria-label="merge commit diagram">
+            <path d="M10 50 H250" stroke="var(--main-line)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="M55 50 C75 50 75 20 95 20 H150 C185 20 185 50 205 50" stroke="var(--warn)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <g fill="var(--station)" stroke-width="2.5">
+              <circle cx="30" cy="50" r="6" stroke="var(--main-line)"/>
+              <circle cx="110" cy="20" r="6" stroke="var(--warn)"/>
+              <circle cx="150" cy="20" r="6" stroke="var(--warn)"/>
+              <circle cx="205" cy="50" r="8" stroke="var(--main-line)"/>
+              <circle cx="205" cy="50" r="3.5" fill="var(--main-line)" stroke="none"/>
+            </g>
+          </svg>
+          <p>Alle commits van de branch blijven zichtbaar in de historie van <code>main</code>, plus één extra "overstapstation": de merge-commit met twee ouders. Volledige detailhistorie, maar de kaart wordt drukker.</p>
+        </div>
+        <div>
+          <h3>Squash &amp; merge</h3>
+          <svg viewBox="0 0 260 70" aria-label="squash merge diagram">
+            <path d="M10 50 H250" stroke="var(--main-line)" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="M55 50 C75 50 75 20 95 20 H165" stroke="var(--warn)" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="3 6" opacity=".55"/>
+            <g fill="var(--station)" stroke-width="2.5">
+              <circle cx="30" cy="50" r="6" stroke="var(--main-line)"/>
+              <circle cx="110" cy="20" r="6" stroke="var(--warn)" opacity=".45"/>
+              <circle cx="150" cy="20" r="6" stroke="var(--warn)" opacity=".45"/>
+              <circle cx="205" cy="50" r="6" stroke="var(--main-line)"/>
+            </g>
+          </svg>
+          <p>Alle branch-commits worden samengeperst tot <em>één</em> nieuwe commit op <code>main</code>. De losse tussenstops verdwijnen uit de main-historie: overzichtelijke rechte lijn, maar minder detail. De PR bewaart het detail wél.</p>
+        </div>
+      </div>
+      <p class="col-note">Vuistregel die veel teams hanteren: <b>squash &amp; merge</b> voor feature-branches met veel "wip"-commits, zodat <code>main</code> één commit per PR krijgt en de CI daar één versietag aan kan hangen.</p>
+    </div>
+  </div>
+
+  <div class="side-a">
+    <!-- ==== SECTIE: OMGEVINGEN ==== -->
+    <div class="card" id="omgevingen">
+      <h2>Omgevingen</h2>
+      <p id="env-source-label" class="source-label"></p>
+      <div class="envs" aria-label="Kies omgevingsweergave">
+        <button type="button" class="env dev" id="env-dev-box" aria-pressed="false" aria-label="Toon Ontwikkel-weergave">
+          <div class="env-name"><span class="env-marker dev" aria-hidden="true"></span>Ontwikkel</div>
+          <div class="env-val" id="env-dev">—</div>
+          <div class="env-sub">jouw branch</div>
+        </button>
+        <div class="env-arrow">→</div>
+        <button type="button" class="env test" id="env-test-box" aria-pressed="false" aria-label="Toon Test-weergave">
+          <div class="env-name"><span class="env-marker test" aria-hidden="true"></span>Test</div>
+          <div class="env-val" id="env-test">v0.1.0</div>
+          <div class="env-sub">elke merge, automatisch</div>
+        </button>
+        <div class="env-arrow">→</div>
+        <button type="button" class="env live" id="env-live-box" aria-pressed="false" aria-label="Toon Live-weergave">
+          <div class="env-name"><span class="env-marker live" aria-hidden="true"></span>Live</div>
+          <div class="env-val" id="env-live">v0.1.0</div>
+          <div class="env-sub" id="env-live-age">alleen na jouw akkoord</div>
+        </button>
+      </div>
+      <div class="test-live-status" id="test-live-status" aria-live="polite">
+        <strong id="test-live-status-text">Nog niet gecontroleerd</strong>
+        <ul id="test-live-conditions" hidden>
+          <li id="test-live-condition-checks"></li>
+          <li id="test-live-condition-published"></li>
+          <li id="test-live-condition-human"></li>
+        </ul>
+        <button type="button" class="act" id="test-live-check">Controleer of Test klaar is voor live</button>
+        <a class="act" id="test-live-promote-link" hidden href="https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml" target="_blank" rel="noreferrer" role="button">Naar handmatige promotie in GitHub Actions ↗</a>
+      </div>
+      <button class="act" id="btn-promote">🚀 Promoveer test → live<small id="promote-sub">zet de geteste versie op het echte systeem</small></button>
+      <button class="act" id="btn-revert">↩️ Revert laatste merge op main<small id="revert-sub">draait de wijziging terug met een nieuwe commit</small></button>
+      <div class="rollback-controls" id="rollback-controls">
+        <label for="rollback-version">Terugrollen naar eerdere live-versie</label>
+        <select id="rollback-version" aria-label="Kies eerdere live-versie"></select>
+        <button class="act" id="btn-rollback">↶ Rollback live<small id="rollback-sub">zet een eerder bewezen versie direct terug</small></button>
+      </div>
+    </div>
+
+    <!-- ==== SECTIE: MISSIES ==== -->
+    <div class="card" id="missies">
+      <h2>Missies</h2>
+      <div id="progress"><div></div></div>
+      <ol id="missie-list"></ol>
+      <div id="trophy">🏆 <b>Alle missies voltooid!</b> Je kent nu de hele route: van issue tot live, mét de nooduitgang (revert). Vergelijk op de kaart waar de stations van elke PR liggen.</div>
+    </div>
+  </div>
+
+  <div class="side-b">
+    <!-- ==== SECTIE: ACTIES ==== -->
+    <div class="card">
+      <h2>Acties</h2>
+      <div id="start-picker" style="font-size:.8rem;color:var(--ink-soft);margin-bottom:.6rem;padding:.4rem .55rem;border:1px dashed var(--line);border-radius:7px;">
+        Startpunt nieuwe branch: <b id="start-label" style="color:var(--ink);font-family:var(--mono);"></b>
+        <span id="start-hint"> — klik een commit op de kaart om een ander startpunt te kiezen</span>
+        <button id="btn-clear-start" style="display:none;margin-left:.4rem;background:none;border:none;color:var(--accent);cursor:pointer;font-family:inherit;text-decoration:underline;padding:0;">✕ terug naar main</button>
+      </div>
+      <div style="font-size:.8rem;color:var(--ink-soft);margin-bottom:.3rem;">Actieve branch (klik om te wisselen):</div>
+      <div class="chips" id="branch-chips"></div>
+      <button class="act primary" id="btn-issue">📋 Nieuw issue<small>Elk stukje werk begint met een issue</small></button>
+      <button class="act" id="btn-commit">💾 Commit op actieve branch<small id="commit-sub"></small></button>
+      <button class="act" id="btn-collega">👤 Collega mergt iets naar main<small id="collega-sub">iemand anders werkt ook — kijk wat er met main gebeurt</small></button>
+      <button class="act" id="btn-hotfix">🚨 Start hotfix vanaf live<small id="hotfix-sub">stop een storing snel, met minder controle vooraf</small></button>
+      <div id="tickets"></div>
+      <div style="margin-top:.7rem;text-align:right;"><button id="reset">↺ opnieuw beginnen</button></div>
+    </div>
+
+    <!-- ==== SECTIE: LOGBOEK ==== -->
+    <div class="card">
+      <h2>Logboek — wat gebeurde er net?</h2>
+      <div id="log"><div class="log-entry"><b>Welkom!</b><span class="why">De blauwe lijn is <code>main</code>: de enige branch waar versies uit gebouwd worden. Hierboven zie je de drie omgevingen. Begin met missie 1.</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==== SECTIE: REPOSITORY ==== -->
+<section class="card repository-dashboard" id="repository-dashboard" aria-labelledby="repository-title">
+  <div class="repository-heading">
+    <div>
+      <h2 id="repository-title">Echte repository</h2>
+      <p><a id="repository-link" href="https://github.com/lxdg-technologies/git-routekaart-demo" target="_blank" rel="noreferrer">lxdg-technologies/git-routekaart-demo ↗</a></p>
+    </div>
+    <div class="repository-actions">
+      <label class="repository-backend" for="repository-backend">Databron
+        <select id="repository-backend">
+          <option value="github">GitHub API (huidig)</option>
+          <option value="gitapi">Git API (nieuw)</option>
+        </select>
+      </label>
+      <span id="repository-updated">Nog niet bijgewerkt</span>
+      <button type="button" class="repository-refresh" id="repository-refresh">↻ Vernieuwen</button>
+    </div>
+  </div>
+  <p class="repository-status" id="repository-status" role="status" aria-live="polite">GitHub-gegevens worden opgehaald…</p>
+  <p class="source-label" id="repository-source-label"></p>
+  <div class="repository-summary" id="repository-summary" aria-label="Samenvatting repository"></div>
+  <div class="repository-columns">
+    <section class="repository-column" aria-labelledby="repository-commits-title">
+      <h3 id="repository-commits-title">Recente geschiedenis <a href="https://github.com/lxdg-technologies/git-routekaart-demo/commits/main" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-commits"><li class="repository-empty">Laden…</li></ul>
+    </section>
+    <section class="repository-column" aria-labelledby="repository-branches-title">
+      <h3 id="repository-branches-title">Branches <a href="https://github.com/lxdg-technologies/git-routekaart-demo/branches" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-branches"><li class="repository-empty">Laden…</li></ul>
+    </section>
+    <section class="repository-column" aria-labelledby="repository-issues-title">
+      <h3 id="repository-issues-title">Issues <a href="https://github.com/lxdg-technologies/git-routekaart-demo/issues" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-issues"><li class="repository-empty">Laden…</li></ul>
+    </section>
+    <section class="repository-column" aria-labelledby="repository-prs-title">
+      <h3 id="repository-prs-title">Pull requests <a href="https://github.com/lxdg-technologies/git-routekaart-demo/pulls?q=is%3Apr" target="_blank" rel="noreferrer">alles ↗</a></h3>
+      <ul class="repository-list" id="repository-prs"><li class="repository-empty">Laden…</li></ul>
+    </section>
+  </div>
+</section>
+
+<!-- ==== SECTIE: RELEASE-BADGE ==== -->
+<details class="release-badge" id="release-history" aria-live="polite">
+  <summary id="release-badge-label">release: onbekend</summary>
+  <div class="release-history-panel">
+    <div class="release-deployment-versions" aria-label="Echte deploymentversies">
+      <strong>Echte deploymentversies</strong>
+      <span class="release-deployment-version">Test <code id="real-test-version">—</code></span>
+      <span class="release-deployment-version">Live <code id="real-live-version">—</code></span>
+    </div>
+    <h3>Releasegeschiedenis <span id="release-source-label"></span></h3>
+    <a class="release-current-link" id="release-current-link" href="https://github.com/lxdg-technologies/git-routekaart-demo/releases" target="_blank" rel="noreferrer">Bekijk release op GitHub ↗</a>
+    <p class="release-build-note" id="release-build-note"></p>
+    <ul class="release-history-list" id="release-history-list">
+      <li><p class="release-history-empty">Klik opnieuw als de geschiedenis nog wordt opgehaald.</p></li>
+    </ul>
+  </div>
+</details>
+
+<script>
+(() => {
+  "use strict";
+  if (document.documentElement?.classList?.toggle) document.documentElement.classList.toggle("mobile-layout", window.innerWidth <= 700);
+  const LANE_COLORS = ["#e07a1f", "#7a3fa0", "#0e8a83", "#c43b3b"];
+  const ISSUE_POOL = [
+    ["Versienummer in dashboard klopt niet", "fix/versienummer"],
+    ["Gripper sluit te traag bij appel-pick", "fix/gripper-snelheid"],
+    ["Camera-status ontbreekt op statuspagina", "feat/camera-status"],
+    ["Kalibratieknop geeft geen feedback", "feat/kalibratie-feedback"],
+    ["Log-bestanden groeien onbeperkt", "fix/log-rotatie"],
+  ];
+  const COMMIT_MSGS = ["eerste opzet", "fix review-opmerking", "test toegevoegd", "typo", "wip", "randgeval afgevangen"];
+  const TERMS = [
+    { term: "Repository (repo)", keywords: ["repository", "repo"], explanation: "De gezamenlijke opslagplaats van de code, geschiedenis en werkinstructies.", example: "git-routekaart-demo is de repository voor deze simulatie." },
+    { term: "Commit", keywords: ["commit"], explanation: "Een vastgelegde wijziging met een korte beschrijving, zodat je later kunt zien wat er veranderde.", example: "Een commit kan de release-badge of een nieuwe uitleg toevoegen." },
+    { term: "Branch", keywords: ["branch", "branches"], explanation: "Een tijdelijk zijspoor waarop je veilig aan een wijziging werkt zonder main direct te veranderen.", example: "feat/dcs-152-vaktermen is een branch voor deze woordenlijst." },
+    { term: "Merge", keywords: ["merge"], explanation: "Het samenvoegen van een goedgekeurde branch met main.", example: "Na de merge komt de wijziging op main en kan GitHub Pages deployen." },
+    { term: "Rebase", keywords: ["rebase"], explanation: "De commits van een branch opnieuw boven op een andere basis plaatsen. Anders dan bij een gewone merge ontstaat daarbij een rechte geschiedenis zonder merge-commit.", example: "Werk vóór het insturen van je pull request de laatste main op je branch bij met rebase, zodat je voorstel op de nieuwste basis vertrekt." },
+    { term: "Fork", keywords: ["fork"], explanation: "Een eigen kopie van een repository onder je eigen account. Anders dan een branch is een fork een aparte repository; branches blijven binnen dezelfde repository.", example: "Maak vanuit een fork een branch voor je wijziging en stuur het werk via een pull request terug naar de oorspronkelijke repository." },
+    { term: "Pull Request (PR)", keywords: ["pull request", "PR"], explanation: "Een voorstel om een branch te mergen, zodat anderen de wijziging en checks kunnen beoordelen.", example: "PR #6 stelde de release-badge voor en wachtte op menselijke beoordeling." },
+    { term: "Tag", keywords: ["tag"], explanation: "Een vast label op één specifieke commit, vaak gebruikt voor een versie.", example: "Tag v1.1.0 markeert de release van de branch-van-commit-feature." },
+    { term: "Release", keywords: ["release"], explanation: "Een uitgebrachte versie met een herkenbare tag en vaak release-notes. In deze kaart is een release gekoppeld aan het station waar een pakketje van die commit is gebouwd en uitgerold; niet elke commit is dus een versie.", example: "Release v1.1.0 hoort bij één release-station op main; de andere commits zijn wel geschiedenis maar geen rollback-doel." },
+    { term: "Issue", keywords: ["issue"], explanation: "Een werkitem met een doel, context en acceptatiepunten.", example: "DCS-152 beschrijft de klikbare woordenlijst met uitleg en voorbeelden." },
+    { term: "Workflow", keywords: ["workflow"], explanation: "De afgesproken route van werk: issue, branch, commit, PR, checks, review, merge en deploy.", example: "Deze demo maakt die workflow zichtbaar als een metrokaart." },
+    { term: "Deploy / Deployment", keywords: ["deployment", "deploy"], explanation: "Het beschikbaar maken van een versie in een omgeving.", example: "Een merge naar main start automatisch de GitHub Pages-deployment." },
+    { term: "CI (Continuous Integration)", keywords: ["continuous integration", "CI"], explanation: "Automatische controle die wijzigingen bouwt en test zodra ze worden gepusht.", example: "De preview-workflow draait bij een nieuwe PR-commit." },
+    { term: "CI checks", keywords: ["CI checks", "CI-checks"], explanation: "De afzonderlijke controles binnen CI, zoals tests, linting of een preview-build.", example: "Een groene preview-check betekent dat de preview-workflow geslaagd is." },
+    { term: "CI-status ontbreekt", keywords: ["CI monitoring unavailable"], explanation: "De status van een CI-check kan tijdelijk niet beschikbaar zijn; dat is iets anders dan een rode check.", example: "Kijk bij twijfel in de Actions-run of de check echt gefaald heeft of alleen geen status rapporteert." },
+    { term: "Review / reviewer / review-aanvraag", keywords: ["review-aanvraag", "reviewer", "review"], explanation: "Een review is de beoordeling van een PR; een reviewer moet expliciet als beoordelaar worden aangevraagd. Reviews is de wachtrij met PR's die op beoordeling wachten, niet hetzelfde als de werkitemstatus In Review.", example: "Vraag DCS-Rob aan als reviewer; daarna verschijnt de PR in diens Reviews-lijst." },
+    { term: "Reviews versus In Review", keywords: ["In Review", "Reviews"], explanation: "Reviews is de plek waar pull requests op jouw beoordeling wachten. In Review is alleen de status van een Linear-issue — de twee lijken op elkaar maar betekenen iets anders.", example: "DCS-171 kan In Review staan terwijl PR #16 in Robs Reviews-lijst wacht." },
+    { term: "Approve / Request changes", keywords: ["Request changes", "Approve"], explanation: "Approve keurt een PR goed; Request changes vraagt om aanpassingen voordat hij gemerged kan worden.", example: "Een reviewer kiest Approve als de checks en code kloppen, of Request changes bij een probleem." },
+    { term: "Draft PR", keywords: ["Draft PR", "draft pull request"], explanation: "Een PR die nog niet klaar is om formeel beoordeeld te worden.", example: "Gebruik Draft PR terwijl de implementatie nog niet klaar is voor DCS-Rob." },
+    { term: "Semver (major / minor / patch)", keywords: ["semver", "major", "minor", "patch"], explanation: "Semver is versionering volgens major.minor.patch: major voor brekende wijzigingen, minor voor nieuwe compatibele functionaliteit en patch voor compatibele fixes.", example: "Een bugfix kan v1.2.3 naar v1.2.4 brengen; nieuwe compatibele functionaliteit naar v1.3.0." },
+    { term: "Pre-release (alpha / beta / rc)", keywords: ["pre-release", "alpha", "beta", "rc"], explanation: "Een pre-release is een versie vóór de stabiele release. Alpha is vroeg, beta is breder testbaar en rc (release candidate) is bijna definitief.", example: "v1.2.0-beta.1 is testbaar, maar nog geen stabiele v1.2.0." },
+    { term: "Rollback versus revert", keywords: ["rollback", "revert"], explanation: "Een rollback zet een eerder gebouwd en bewezen pakket direct terug; een revert maakt een nieuwe commit die een wijziging omkeert en opnieuw gebouwd en getest moet worden.", example: "Zet live terug naar v0.1.1 met rollback; gebruik revert om een merge structureel uit main terug te draaien." },
+    { term: "Hotfix", keywords: ["hotfix"], explanation: "Een hotfix is een noodgreep vanaf wat nu live staat om een storing snel te stoppen. Je slaat controles vooraf over, dus de kans op een nieuwe fout is groter; daarna breng je de wijziging alsnog via de gewone route terug.", example: "Staat test op v0.1.2 en live nog op v0.1.1, dan start een hotfix vanaf live v0.1.1 en zet hij de storing snel recht." },
+    { term: "HEAD", keywords: ["HEAD"], explanation: "HEAD is de huidige kop: de commit waar een branch of checkout op staat.", example: "main ◀ HEAD betekent dat deze commit nu de kop van main is." },
+    { term: "Squash & merge versus merge commit", keywords: ["Squash & merge", "merge commit"], explanation: "Squash & merge maakt één nieuwe commit van alle branch-commits; een merge commit voegt de branch samen en bewaart alle tussenstations met twee ouders.", example: "Kies squash voor een rustige main-lijn of merge commit als je de volledige branchhistorie wilt bewaren." },
+    { term: "Merge conflict", keywords: ["merge conflict"], explanation: "Een merge conflict ontstaat als twee wijzigingen niet automatisch samen te voegen zijn en iemand handmatig moet kiezen welke code blijft.", example: "Los de conflictmarkeringen op, test de uitkomst en maak daarna de merge af." },
+    { term: "PR-preview", keywords: ["PR-preview", "preview"], explanation: "Een tijdelijke website die de versie van één pull request laat zien voordat die naar main gaat.", example: "Open de PR-preview om DCS-171 op mobiel te controleren vóór de merge." },
+    { term: "Webhook", keywords: ["webhook"], explanation: "Een automatisch HTTP-seintje waarmee het ene systeem een ander systeem informeert dat er iets gebeurde.", example: "Een GitHub-webhook kan Linear waarschuwen dat een PR is geopend." },
+    { term: "Scope (rechten)", keywords: ["scope", "rechten"], explanation: "Een scope bepaalt welke acties een token of geautomatiseerde gebruiker mag uitvoeren.", example: "Zonder workflow-scope kan een agent broncode wel pushen maar workflowbestanden niet wijzigen." },
+  ];
+  const COMMAND_GROUPS = [
+    { title: "1. Installatie en eerste configuratie", commands: [
+      ["git --version", "Controleert of Git geïnstalleerd is.", "Bij de eerste keer werken op een computer.", "git --version"],
+      ["git config --global user.name \"Naam\"", "Stelt de naam in die bij jouw commits komt te staan.", "Eenmalig, vóór je commit.", "git config --global user.name \"Sam de Vries\""],
+      ["git config --global user.email \"email@example.com\"", "Stelt het e-mailadres voor jouw commits in.", "Eenmalig, vóór je commit.", "git config --global user.email \"sam@example.com\""],
+      ["git config --global init.defaultBranch main", "Maakt main de standaardnaam voor nieuwe repositories.", "Eenmalig, als je nieuwe repositories maakt.", "git config --global init.defaultBranch main"],
+    ]},
+    { title: "2. Repository en lokale wijzigingen", commands: [
+      ["git init", "Maakt in de huidige map een nieuwe lokale repository.", "Als je met een lege lokale map begint.", "mkdir mijn-project && cd mijn-project && git init"],
+      ["git status", "Toont de huidige branch en welke bestanden gewijzigd, gestaged of nieuw zijn.", "Vaak: vóór en na elke wijziging.", "git status"],
+      ["git add <bestand>", "Zet één bestand klaar voor de volgende commit.", "Als je bewust één bestand wilt meenemen.", "git add index.html"],
+      ["git add .", "Zet alle wijzigingen in de huidige map klaar voor de volgende commit.", "Als je gecontroleerd hebt dat alle wijzigingen erbij horen.", "git add ."],
+      ["git commit -m \"Bericht\"", "Legt de klaargezette wijzigingen vast als één snapshot.", "Als een kleine, afgeronde stap klaar is.", "git commit -m \"Voeg startpagina toe\""],
+      ["git log", "Toont de commitgeschiedenis.", "Als je wilt terugkijken wat er wanneer is vastgelegd.", "git log --oneline"],
+    ]},
+    { title: "3. Branches", commands: [
+      ["git branch <naam>", "Maakt een branch aan zonder ernaartoe te schakelen.", "Als je eerst alleen een zijspoor wilt klaarzetten.", "git branch experiment"],
+      ["git checkout <branch>", "Schakelt naar een bestaande branch.", "Als je op een ander zijspoor wilt werken.", "git checkout experiment"],
+      ["git checkout -b <naam>", "Maakt een branch en schakelt er direct naartoe.", "De gebruikelijke start van nieuw werk.", "git checkout -b feat/startpagina"],
+      ["git branch <nieuwe-naam> <bron-branch>", "Maakt een branch vanaf het huidige punt van een andere branch.", "Als je bewust vanaf een bepaald zijspoor start.", "git branch test-versie main"],
+      ["git branch -M main", "Hernoemt de huidige branch naar main.", "Bij het instellen van een nieuwe lokale repository.", "git branch -M main"],
+      ["git checkout <commit-hash>", "Zet je werkmap op een oude commit om die te bekijken.", "Voor onderzoek naar een eerdere versie.", "git checkout a1b2c3d"],
+      ["git checkout -f main", "Schakelt naar main en gooit lokale wijzigingen in de huidige situatie weg.", "Alleen als je zeker weet dat je die wijzigingen niet meer nodig hebt.", "git checkout -f main", "⚠️ Waarschuwing: niet-opgeslagen wijzigingen kunnen definitief verdwijnen. Controleer eerst git status."],
+    ]},
+    { title: "4. Remote repository en synchronisatie", commands: [
+      ["git remote add origin <url>", "Koppelt je lokale repository aan een repository op GitHub.", "Eenmalig, nadat je lokaal bent begonnen.", "git remote add origin https://github.com/voorbeeld/mijn-project.git"],
+      ["git push -u origin main", "Publiceert main en onthoudt de remote als upstream.", "De eerste keer dat je main naar GitHub stuurt.", "git push -u origin main"],
+      ["git push -u origin <branch>", "Publiceert een nieuwe branch en stelt de upstream in.", "De eerste keer dat je een branch deelt.", "git push -u origin feat/startpagina"],
+      ["git push origin <branch>", "Publiceert de genoemde branch naar origin.", "Als de branch al bestaat en je expliciet die branch wilt sturen.", "git push origin feat/startpagina"],
+      ["git push", "Stuurt nieuwe commits naar de gekoppelde upstream-branch.", "Na volgende commits op een al gekoppelde branch.", "git push"],
+      ["git pull", "Haalt wijzigingen van de upstream op en voegt ze lokaal samen.", "Om je huidige branch bij te werken.", "git pull"],
+      ["git pull origin main", "Haalt main van origin op en voegt die expliciet samen.", "Als je precies de remote main wilt bijwerken.", "git pull origin main"],
+    ]},
+    { title: "5. Mergen en merge-conflicten", commands: [
+      ["git merge <branch>", "Voegt de genoemde branch samen in de branch waarop je nu staat.", "Als het werk op de andere branch klaar is.", "git checkout main && git merge feat/startpagina"],
+      ["git checkout main", "Schakelt naar main.", "Als je main wilt bijwerken of daarin wilt mergen.", "git checkout main"],
+      ["git pull", "Haalt de nieuwste commits op voordat je jouw branch bijwerkt.", "Als iemand anders ondertussen naar main heeft gemergd.", "git pull"],
+      ["git checkout <eigen-branch>", "Schakelt terug naar je eigen werkbranch.", "Na het bijwerken van main.", "git checkout feat/startpagina"],
+      ["git merge main", "Voegt de bijgewerkte main samen in je eigen branch.", "Om conflicten vóór een pull request op te lossen.", "git merge main"],
+      ["git add .", "Zet opgeloste bestanden klaar nadat je conflictmarkeringen hebt verwijderd.", "Na het handmatig oplossen van een conflict.", "git add ."],
+      ["git commit -m \"Resolve merge conflicts\"", "Rondt de merge af met een commit nadat conflicten zijn opgelost.", "Als Git meldt dat de merge klaar kan.", "git commit -m \"Resolve merge conflicts\""],
+      ["git push", "Deelt de opgeloste merge met de remote branch.", "Na het afronden van de conflictmerge.", "git push"],
+    ]},
+    { title: "6. Herstellen en tijdelijk parkeren", commands: [
+      ["git reset --soft <commit>", "Zet commits terug, maar houdt de wijzigingen gestaged.", "Als je commits opnieuw wilt ordenen of samenvoegen.", "git reset --soft HEAD~1"],
+      ["git reset <commit>", "Zet commits terug en houdt de wijzigingen in de werkmap, niet staged.", "Als je de wijzigingen opnieuw wilt beoordelen vóór je ze staget.", "git reset HEAD~1"],
+      ["git reset --hard <commit>", "Zet commits terug en verwijdert ook lokale wijzigingen.", "Alleen als je bewust alles na dat punt wilt weggooien.", "git reset --hard HEAD~1", "⚠️ Waarschuwing: commits en niet-opgeslagen wijzigingen kunnen definitief verdwijnen. Gebruik liever eerst git stash."],
+      ["git revert <commit>", "Maakt een nieuwe commit die de gekozen eerdere commit omkeert.", "Als je een gedeelde wijziging veilig ongedaan wilt maken.", "git revert a1b2c3d"],
+      ["git revert --continue", "Rondt een revert af nadat je een conflict hebt opgelost.", "Als Git na een conflict om vervolgstappen vraagt.", "git add . && git revert --continue"],
+      ["git stash", "Parkeert tijdelijke staged en unstaged wijzigingen zonder ze te committen.", "Als je tijdelijk naar een andere branch moet.", "git stash"],
+      ["git stash list", "Toont alle tijdelijk geparkeerde wijzigingen.", "Als je wilt weten welke stashes beschikbaar zijn.", "git stash list"],
+      ["git stash apply stash@{0}", "Zet een gekozen stash terug en bewaart de stash zelf.", "Als je het geparkeerde werk weer nodig hebt.", "git stash apply stash@{0}"],
+    ]},
+  ];
+
+  /* ==== SECTIE: REPOSITORY ==== */
+  const REPOSITORY_FULL_NAME = "lxdg-technologies/git-routekaart-demo";
+  const REPOSITORY_BACKENDS = {
+    github: {
+      name: "GitHub API",
+      apiRoot: `https://api.github.com/repos/${REPOSITORY_FULL_NAME}`,
+      aggregateDashboard: false,
+    },
+    gitapi: {
+      name: "gitapi.lxdg.tech",
+      apiRoot: `https://gitapi.lxdg.tech/api/v1/repos/${REPOSITORY_FULL_NAME}`,
+      aggregateDashboard: true,
+    },
+  };
+  const REPOSITORY_CACHE_TTL = 5 * 60 * 1000;
+
+  function selectedRepositoryBackend() {
+    const selected = el("repository-backend")?.value;
+    return Object.prototype.hasOwnProperty.call(REPOSITORY_BACKENDS, selected) ? selected : "github";
+  }
+  function repositoryBackend() {
+    return REPOSITORY_BACKENDS[selectedRepositoryBackend()];
+  }
+  function repositoryCacheKey(backendName = selectedRepositoryBackend()) {
+    return `git-routekaart-repository-v1:${backendName}:${REPOSITORY_FULL_NAME}`;
+  }
+  function repositoryReleaseHistoryUrl() {
+    return `${repositoryBackend().apiRoot}/releases?per_page=5`;
+  }
+  function repositoryCheckRunsUrl(sha) {
+    return `${repositoryBackend().apiRoot}/commits/${encodeURIComponent(sha)}/check-runs?per_page=100`;
+  }
+
+  function repositoryUsesSimulatedData() {
+    return typeof location !== "undefined" && /\/dev\/pr-\d+(?:\/|$)/.test(location.pathname || "");
+  }
+  function simulatedPullRequestNumber() {
+    const match = typeof location !== "undefined" ? (location.pathname || "").match(/\/dev\/pr-(\d+)(?:\/|$)/) : null;
+    return match ? match[1] : null;
+  }
+  function simulatedRepositorySnapshot() {
+    const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    return {
+      savedAt: Date.now(),
+      repository: { default_branch: "main" },
+      commits: [
+        { sha: "de10001aabbcc", html_url: `${repositoryUrl}/commits/main`, commit: { message: "feat: voorbeeldwijziging klaar voor review", author: { date: "2026-08-07T10:00:00Z" } } },
+        { sha: "de10000aabbcc", html_url: `${repositoryUrl}/commits/main`, commit: { message: "test: controleer het voorbeeldgedrag", author: { date: "2026-08-07T09:30:00Z" } } },
+      ],
+      branches: [
+        { name: "main", protected: true, commit: { sha: "a11ce00aabbcc" } },
+        { name: "feat/voorbeeld", protected: false, commit: { sha: "de10001aabbcc" } },
+      ],
+      issues: [
+        { number: 12, title: "Voorbeeld: maak de startpagina duidelijker", state: "open", updated_at: "2026-08-07T09:00:00Z", html_url: `${repositoryUrl}/issues` },
+      ],
+      prs: [
+        { number: 13, title: "Voorbeeld: verbeter de startpagina", state: "open", merged_at: null, updated_at: "2026-08-07T10:00:00Z", html_url: `${repositoryUrl}/pulls`, head: { ref: "feat/voorbeeld" }, base: { ref: "main" } },
+      ],
+    };
+  }
+  const SIMULATED_RELEASES = [
+    { tag_name: "v0.1.1", published_at: "2026-08-06T12:00:00Z", html_url: `https://github.com/${REPOSITORY_FULL_NAME}/releases` },
+    { tag_name: "v0.1.0", published_at: "2026-08-05T12:00:00Z", html_url: `https://github.com/${REPOSITORY_FULL_NAME}/releases` },
+  ];
+
+  function escapeRepositoryHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function safeRepositoryUrl(value, fallback) {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && url.hostname === "github.com" ? url.href : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+  function repositoryDate(value) {
+    if (!value) return "datum onbekend";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "datum onbekend";
+    return new Intl.DateTimeFormat("nl-NL", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+  }
+  function repositoryCacheRead(backendName) {
+    try {
+      const cached = sessionStorage.getItem(repositoryCacheKey(backendName));
+      if (!cached) return null;
+      const parsed = JSON.parse(cached);
+      return parsed && Date.now() - parsed.savedAt < REPOSITORY_CACHE_TTL ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+  function repositoryCacheWrite(snapshot, backendName) {
+    try {
+      sessionStorage.setItem(repositoryCacheKey(backendName), JSON.stringify(snapshot));
+    } catch (error) {
+      // De pagina blijft werken als opslag is uitgeschakeld of vol is.
+    }
+  }
+  async function fetchRepositoryJson(url, backendName = selectedRepositoryBackend()) {
+    const headers = { Accept: "application/vnd.github+json" };
+    if (backendName === "github") headers["X-GitHub-Api-Version"] = "2022-11-28";
+    const response = await fetch(url, {
+      headers,
+    });
+    if (!response.ok) {
+      const error = new Error(`Repositorygegevens: ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  }
+  function renderRepositoryList(id, items, renderer, emptyText) {
+    const list = el(id);
+    if (!items.length) {
+      list.innerHTML = `<li class="repository-empty">${escapeRepositoryHtml(emptyText)}</li>`;
+      return;
+    }
+    list.innerHTML = items.slice(0, 8).map(renderer).join("");
+  }
+  function renderRepositoryDashboard(snapshot, source, backendName = selectedRepositoryBackend()) {
+    const { repository, commits, branches, issues, prs } = snapshot;
+    const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    const simulated = source === "simulated";
+    el("repository-title").textContent = simulated ? "Gesimuleerde repository" : "Echte repository";
+    const repoLink = el("repository-link");
+    repoLink.href = repositoryUrl;
+    repoLink.textContent = `${REPOSITORY_FULL_NAME} ↗`;
+    el("repository-status").className = "repository-status";
+    el("repository-status").textContent = simulated
+      ? "Gesimuleerde GitHub-gegevens · ontwikkelomgeving · geen verbinding met de GitHub API"
+      : `${backendName === "gitapi" ? "Via gitapi.lxdg.tech" : "Rechtstreeks uit GitHub"} · publieke gegevens · hoofdbranch ${repository.default_branch || "main"}${source === "cache" ? " · tijdelijk uit browsercache" : ""}`;
+    el("repository-source-label").textContent = simulated
+      ? "Oefengegevens: branches, commits, issues, pull requests en dashboardversie zijn voorbeelden."
+      : "Echte GitHub-gegevens: branches, commits, issues, pull requests en dashboardversie.";
+    el("repository-updated").textContent = simulated
+      ? "Vaste voorbeeldgegevens voor deze ontwikkelomgeving"
+      : `Bijgewerkt ${new Date(snapshot.savedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
+    el("repository-summary").innerHTML = [
+      [branches.length, "branches"],
+      [commits.length, `commits op ${repository.default_branch || "main"} geladen`],
+      [issues.filter(issue => issue.state === "open").length, "open issues"],
+      [prs.filter(pr => pr.state === "open").length, "open pull requests"],
+    ].map(([value, label]) => `<div class="repository-stat"><b>${escapeRepositoryHtml(value)}</b><span>${escapeRepositoryHtml(label)}</span></div>`).join("");
+
+    renderRepositoryList("repository-commits", commits, commit => {
+      const title = String(commit.commit?.message || "Commit zonder bericht").split("\n")[0];
+      const sha = String(commit.sha || "").slice(0, 7);
+      const url = safeRepositoryUrl(commit.html_url, `${repositoryUrl}/commits/${repository.default_branch || "main"}`);
+      const date = commit.commit?.author?.date || commit.commit?.committer?.date;
+      return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer" title="${escapeRepositoryHtml(title)}">${escapeRepositoryHtml(title)}</a><span class="repository-meta"><span>${escapeRepositoryHtml(sha)}</span><span>${escapeRepositoryHtml(repositoryDate(date))}</span></span></li>`;
+    }, "Geen commits gevonden.");
+
+    renderRepositoryList("repository-branches", branches, branch => {
+      const name = branch.name || "branch zonder naam";
+      const sha = String(branch.commit?.sha || "").slice(0, 7);
+      const url = simulated ? `${repositoryUrl}/branches` : `${repositoryUrl}/tree/${encodeURIComponent(name)}`;
+      return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer">${escapeRepositoryHtml(name)}</a><span class="repository-meta"><span>${escapeRepositoryHtml(sha)}</span><span>${branch.protected ? "beschermd" : "actief"}</span></span></li>`;
+    }, "Geen branches gevonden.");
+
+    renderRepositoryList("repository-issues", issues, issue => {
+      const url = safeRepositoryUrl(issue.html_url, `${repositoryUrl}/issues`);
+      return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer" title="${escapeRepositoryHtml(issue.title)}">#${escapeRepositoryHtml(issue.number)} ${escapeRepositoryHtml(issue.title || "Issue zonder titel")}</a><span class="repository-meta"><span class="repository-state ${issue.state === "open" ? "open" : "closed"}">${issue.state === "open" ? "open" : "gesloten"}</span><span>${escapeRepositoryHtml(repositoryDate(issue.updated_at))}</span></span></li>`;
+    }, "Geen issues gevonden.");
+
+    renderRepositoryList("repository-prs", prs, pr => {
+      const state = pr.merged_at ? "merged" : pr.state === "open" ? "open" : "closed";
+      const stateLabel = state === "merged" ? "gemerged" : state === "open" ? "open" : "gesloten";
+      const route = `${pr.head?.ref || "?"} → ${pr.base?.ref || repository.default_branch || "main"}`;
+      const url = safeRepositoryUrl(pr.html_url, `${repositoryUrl}/pulls`);
+      return `<li><a href="${escapeRepositoryHtml(url)}" target="_blank" rel="noreferrer" title="${escapeRepositoryHtml(pr.title)}">#${escapeRepositoryHtml(pr.number)} ${escapeRepositoryHtml(pr.title || "PR zonder titel")}</a><span class="repository-meta"><span class="repository-state ${state}">${stateLabel}</span><span title="${escapeRepositoryHtml(route)}">${escapeRepositoryHtml(route)}</span></span></li>`;
+    }, "Geen pull requests gevonden.");
+  }
+  function renderRepositoryUnavailable(preserveData = false) {
+    const repositoryUrl = `https://github.com/${REPOSITORY_FULL_NAME}`;
+    const links = {
+      "repository-commits": `${repositoryUrl}/commits/main`,
+      "repository-branches": `${repositoryUrl}/branches`,
+      "repository-issues": `${repositoryUrl}/issues`,
+      "repository-prs": `${repositoryUrl}/pulls?q=is%3Apr`,
+    };
+    const link = `<a href="${repositoryUrl}" target="_blank" rel="noreferrer">Bekijk de repository op GitHub ↗</a>`;
+    const status = el("repository-status");
+    status.className = "repository-status";
+    status.innerHTML = `De actuele GitHub-gegevens zijn nu niet beschikbaar. ${link}`;
+    el("repository-updated").textContent = "Tijdelijk niet bijgewerkt";
+    if (!preserveData) Object.entries(links).forEach(([id, url]) => {
+      el(id).innerHTML = `<li class="repository-empty"><a href="${url}" target="_blank" rel="noreferrer">Bekijk deze lijst op GitHub ↗</a></li>`;
+    });
+  }
+  async function loadRepositoryDashboard(force = false) {
+    const refresh = el("repository-refresh");
+    const status = el("repository-status");
+    const backendName = selectedRepositoryBackend();
+    const backend = REPOSITORY_BACKENDS[backendName];
+    refresh.disabled = true;
+    status.className = "repository-status";
+    status.textContent = force ? "GitHub-gegevens worden opnieuw opgehaald…" : "GitHub-gegevens worden opgehaald…";
+    const cached = repositoryCacheRead(backendName);
+    if (repositoryUsesSimulatedData()) {
+      renderRepositoryDashboard(simulatedRepositorySnapshot(), "simulated", backendName);
+      refresh.disabled = false;
+      return;
+    }
+    if (!force) {
+      if (cached) {
+        renderRepositoryDashboard(cached, "cache", backendName);
+        refresh.disabled = false;
+        return;
+      }
+    }
+    try {
+      let snapshot;
+      if (backend.aggregateDashboard) {
+        const aggregate = await fetchRepositoryJson(`${backend.apiRoot}/dashboard`, backendName);
+        if (!aggregate || typeof aggregate !== "object" || !aggregate.repository) throw new Error("Repositorydashboard ontbreekt");
+        snapshot = {
+          savedAt: Number.isFinite(aggregate.savedAt) ? aggregate.savedAt : Date.now(),
+          repository: aggregate.repository,
+          commits: Array.isArray(aggregate.commits) ? aggregate.commits : [],
+          branches: Array.isArray(aggregate.branches) ? aggregate.branches : [],
+          issues: Array.isArray(aggregate.issues) ? aggregate.issues : [],
+          prs: Array.isArray(aggregate.prs) ? aggregate.prs : [],
+        };
+      } else {
+        const repository = await fetchRepositoryJson(backend.apiRoot, backendName);
+        const defaultBranch = repository.default_branch || "main";
+        const [commits, branches, rawIssues, prs] = await Promise.all([
+          fetchRepositoryJson(`${backend.apiRoot}/commits?sha=${encodeURIComponent(defaultBranch)}&per_page=100`, backendName),
+          fetchRepositoryJson(`${backend.apiRoot}/branches?per_page=100`, backendName),
+          fetchRepositoryJson(`${backend.apiRoot}/issues?state=all&sort=updated&per_page=100`, backendName),
+          fetchRepositoryJson(`${backend.apiRoot}/pulls?state=all&sort=updated&direction=desc&per_page=100`, backendName),
+        ]);
+        snapshot = {
+          savedAt: Date.now(),
+          repository,
+          commits: Array.isArray(commits) ? commits : [],
+          branches: Array.isArray(branches) ? branches : [],
+          issues: Array.isArray(rawIssues) ? rawIssues.filter(issue => !issue.pull_request) : [],
+          prs: Array.isArray(prs) ? prs : [],
+        };
+      }
+      repositoryCacheWrite(snapshot, backendName);
+      renderRepositoryDashboard(snapshot, "api", backendName);
+    } catch (error) {
+      if (cached) renderRepositoryDashboard(cached, "cache", backendName);
+      renderRepositoryUnavailable(Boolean(cached));
+    } finally {
+      refresh.disabled = false;
+    }
+  }
+
+  /* ==== SECTIE: RELEASE-BADGE ==== */
+  const VERSION_FILE_URL = "version.json";
+  function getReleaseEnvironment() {
+    return typeof location !== "undefined"
+      ? (location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname) || repositoryUsesSimulatedData()
+        ? "dev"
+        : location.pathname.includes("/test/") || location.pathname.includes("/pr-preview/") ? "test" : "live")
+      : "dev";
+  }
+  const RELEASE_ENVIRONMENT = getReleaseEnvironment();
+
+  function setupReleaseBadge() {
+    const badge = el("release-history");
+    badge.classList.add(`release-badge`, RELEASE_ENVIRONMENT);
+    badge.title = {
+      dev: "Gesimuleerde buildversie op ontwikkeling",
+      test: "Eigen buildversie op test/preview",
+      live: "Eigen buildversie op live",
+    }[RELEASE_ENVIRONMENT];
+    badge.addEventListener("toggle", () => {
+      if (badge.open && badge.dataset.historyLoaded !== "true") loadReleaseHistory();
+    });
+  }
+  function formatBuild(build) {
+    const parts = [build.version || "versie onbekend"];
+    if (Number.isInteger(build.commitsAhead) && build.commitsAhead > 0) parts.push(`+${build.commitsAhead}`);
+    if (build.sha) parts.push(`· ${String(build.sha).slice(0, 7)}`);
+    return parts.join(" ");
+  }
+  function setReleaseBuild(build, source, noteText, releaseUrl) {
+    const label = el("release-badge-label");
+    const link = el("release-current-link");
+    const buildLabel = formatBuild(build);
+    label.textContent = `release: ${buildLabel}`;
+    link.textContent = `Bekijk ${build.version || "release"} op GitHub ↗`;
+    link.href = releaseUrl || `https://github.com/${REPOSITORY_FULL_NAME}/releases/tag/${encodeURIComponent(build.version || "")}`;
+    const note = el("release-build-note");
+    if (note) note.textContent = noteText;
+    el("release-history").dataset.source = source;
+    el("release-source-label").textContent = source === "simulated" ? "· oefengegevens" : "· echte deploymentgegevens";
+  }
+  function renderReleaseHistory(releases) {
+    const list = el("release-history-list");
+    list.innerHTML = "";
+    if (!releases.length) {
+      const empty = document.createElement("li");
+      empty.innerHTML = '<p class="release-history-empty">Geen eerdere releases gevonden.</p>';
+      list.appendChild(empty);
+      return;
+    }
+    releases.forEach(release => {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      const date = document.createElement("time");
+      link.textContent = release.tag_name || release.name || "release zonder tag";
+      link.href = release.html_url || `https://github.com/${REPOSITORY_FULL_NAME}/releases`;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      date.dateTime = release.published_at || release.created_at || "";
+      date.textContent = new Date(release.published_at || release.created_at).toLocaleDateString("nl-NL");
+      item.append(link, date);
+      list.appendChild(item);
+    });
+  }
+  async function loadReleaseHistory() {
+    const badge = el("release-history");
+    if (repositoryUsesSimulatedData()) {
+      renderReleaseHistory(SIMULATED_RELEASES);
+      badge.dataset.historyLoaded = "true";
+      return;
+    }
+    if (typeof fetch !== "function") {
+      renderReleaseHistory([]);
+      badge.dataset.historyLoaded = "true";
+      return;
+    }
+    try {
+      const response = await fetch(repositoryReleaseHistoryUrl(), { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) throw new Error(`GitHub Releases API: ${response.status}`);
+      const releases = await response.json();
+      if (!Array.isArray(releases)) throw new Error("GitHub-releasegeschiedenis is geen lijst");
+      renderReleaseHistory(releases.slice(0, 5));
+    } catch (error) {
+      renderReleaseHistory([]);
+    } finally {
+      badge.dataset.historyLoaded = "true";
+    }
+  }
+  async function loadVersionFile() {
+    if (typeof fetch !== "function") return { status: "unavailable" };
+    try {
+      const response = await fetch(VERSION_FILE_URL, { cache: "no-store" });
+      if (response.status === 404) return { status: "missing" };
+      if (!response.ok) return { status: "unavailable" };
+      const data = await response.json();
+      if (!data || typeof data.version !== "string" || !data.version.trim()) return { status: "invalid" };
+      return {
+        status: "ready",
+        build: {
+          version: data.version.trim(),
+          commitsAhead: Number.isInteger(data.commitsAhead) ? data.commitsAhead : null,
+          sha: typeof data.sha === "string" && data.sha.trim() ? data.sha.trim() : null,
+        },
+      };
+    } catch (error) {
+      return { status: "unavailable" };
+    }
+  }
+  async function loadTestLiveStatus() {
+    const status = el("test-live-status");
+    const text = el("test-live-status-text");
+    const conditions = el("test-live-conditions");
+    const link = el("test-live-promote-link");
+    const checkButton = el("test-live-check");
+    link.href = "https://github.com/lxdg-technologies/git-routekaart-demo/actions/workflows/promote-production.yml";
+    const isTestPage = typeof location !== "undefined" && location.pathname.includes("/test/");
+    status.hidden = !isTestPage;
+    status.classList.remove("is-safe", "is-blocked");
+    conditions.hidden = true;
+    text.textContent = "Nog niet gecontroleerd";
+    link.hidden = true;
+    if (!isTestPage || typeof fetch !== "function") return;
+    try {
+      const [testVersion, testEnvironmentResponse, liveResponse] = await Promise.all([
+        loadVersionFile(),
+        fetch("environment.json", { cache: "no-store" }),
+        fetch("../environment.json", { cache: "no-store" }),
+      ]);
+      if (testVersion.status !== "ready" || !testEnvironmentResponse.ok || !liveResponse.ok) throw new Error("deploymentgegevens ontbreken");
+      const testEnvironment = await testEnvironmentResponse.json();
+      const liveData = await liveResponse.json();
+      if (!testEnvironment || typeof testEnvironment.version !== "string" || !testEnvironment.version.trim() || typeof testEnvironment.sha !== "string" || !testEnvironment.sha.trim()) throw new Error("testpublicatie is ongeldig");
+      if (!liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("liveversie is ongeldig");
+      const test = testVersion.build.version;
+      const live = liveData.version.trim();
+      setDeploymentVersions(test, live);
+      if (test === live) {
+        text.textContent = "! Nog niet veilig";
+        el("test-live-condition-checks").textContent = "! Er is geen nieuw verschil tussen Test en Live.";
+        el("test-live-condition-published").textContent = "○ Er is niets nieuws te controleren.";
+        el("test-live-condition-human").textContent = "○ Een mens kan pas akkoord geven als Test voorloopt.";
+        conditions.hidden = false;
+        status.classList.add("is-blocked");
+      }
+      checkButton.disabled = test === live;
+      checkButton.onclick = () => checkTestLiveStatus({ status, text, conditions, link, checkButton, testVersion, testEnvironment, liveData });
+    } catch (error) {
+      text.textContent = "! Nog niet veilig";
+      el("test-live-condition-checks").textContent = "! De test- of liveversie kon niet betrouwbaar worden gelezen.";
+      el("test-live-condition-published").textContent = "○ Controleer eerst of de gepubliceerde versie klopt.";
+      el("test-live-condition-human").textContent = "○ Een mens kan pas akkoord geven na een geslaagde controle.";
+      conditions.hidden = false;
+      status.classList.add("is-blocked");
+      checkButton.disabled = true;
+    }
+  }
+  async function checkTestLiveStatus({ status, text, conditions, link, checkButton, testVersion, testEnvironment, liveData }) {
+    link.hidden = true;
+    checkButton.disabled = true;
+    conditions.hidden = false;
+    status.classList.remove("is-safe", "is-blocked");
+    const testSha = testVersion.build.sha;
+    const publishedSha = testEnvironment.sha.trim();
+    if (!testSha || testSha !== publishedSha || testEnvironment.version.trim() !== testVersion.build.version) {
+      text.textContent = "! Nog niet veilig";
+      el("test-live-condition-checks").textContent = "! De verplichte controles horen niet aantoonbaar bij deze versie.";
+      el("test-live-condition-published").textContent = "! De testpublicatie klopt niet met de gecontroleerde versie.";
+      el("test-live-condition-human").textContent = "○ Eerst moet de juiste versie op Test staan.";
+      status.classList.add("is-blocked");
+      return;
+    }
+    try {
+      const response = await fetch(repositoryCheckRunsUrl(testSha), { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) throw new Error(`GitHub-controles: ${response.status}`);
+      const data = await response.json();
+      const checks = Array.isArray(data.check_runs) ? data.check_runs : [];
+      const required = ["quality"];
+      const allGreen = required.every(name => checks.some(check => check.name === name && check.head_sha === testSha && check.status === "completed" && check.conclusion === "success"));
+      if (!allGreen) {
+        text.textContent = "! Nog niet veilig";
+        el("test-live-condition-checks").textContent = "! Een verplichte controle ontbreekt, draait nog of is mislukt.";
+        el("test-live-condition-published").textContent = "✓ De testpublicatie klopt met deze versie.";
+        el("test-live-condition-human").textContent = "○ Eerst moeten alle verplichte controles slagen.";
+        status.classList.add("is-blocked");
+        return;
+      }
+      text.textContent = "✓ Veilig om live te zetten";
+      el("test-live-condition-checks").textContent = "✓ Alle verplichte controles zijn geslaagd.";
+      el("test-live-condition-published").textContent = "✓ De testpublicatie klopt met deze versie.";
+      el("test-live-condition-human").textContent = "○ Akkoord van een mens is nog nodig.";
+      status.classList.add("is-safe");
+      link.hidden = testVersion.build.version === liveData.version.trim();
+    } catch (error) {
+      text.textContent = "! Nog niet veilig";
+      el("test-live-condition-checks").textContent = "! De verplichte controles konden niet worden gelezen.";
+      el("test-live-condition-published").textContent = "✓ De testpublicatie klopt met deze versie.";
+      el("test-live-condition-human").textContent = "○ Eerst moeten de controles betrouwbaar worden gelezen.";
+      status.classList.add("is-blocked");
+    } finally {
+      checkButton.disabled = false;
+    }
+  }
+  function deploymentUrl(path) {
+    const pathname = typeof location !== "undefined" && typeof location.pathname === "string" ? location.pathname : "/";
+    const marker = "/git-routekaart-demo/";
+    const markerIndex = pathname.indexOf(marker);
+    const base = markerIndex >= 0 ? pathname.slice(0, markerIndex + marker.length) : "/";
+    return `${base}${path}`;
+  }
+  function setDeploymentVersions(test, live) {
+    el("real-test-version").textContent = test;
+    el("real-live-version").textContent = live;
+  }
+  async function loadDeploymentVersions() {
+    if (typeof fetch !== "function" || repositoryUsesSimulatedData()) return;
+    try {
+      const [testResponse, liveResponse] = await Promise.all([
+        fetch(deploymentUrl("test/environment.json"), { cache: "no-store" }),
+        fetch(deploymentUrl("environment.json"), { cache: "no-store" }),
+      ]);
+      if (!testResponse.ok || !liveResponse.ok) throw new Error("deploymentgegevens ontbreken");
+      const [testData, liveData] = await Promise.all([testResponse.json(), liveResponse.json()]);
+      if (!testData || typeof testData.version !== "string" || !testData.version.trim() || !liveData || typeof liveData.version !== "string" || !liveData.version.trim()) throw new Error("deploymentversies zijn ongeldig");
+      setDeploymentVersions(testData.version.trim(), liveData.version.trim());
+    } catch (error) {
+      setDeploymentVersions("niet beschikbaar", "niet beschikbaar");
+    }
+  }
+  async function loadLatestRelease() {
+    if (repositoryUsesSimulatedData()) {
+      setReleaseBuild(
+        { version: "voorbeeld", commitsAhead: 1, sha: "de10001" },
+        "simulated",
+        "Oefengegevens: gesimuleerde build voor deze ontwikkelomgeving; geen echte GitHub-release.",
+        `https://github.com/${REPOSITORY_FULL_NAME}/pulls`,
+      );
+      el("release-current-link").textContent = "Bekijk pull requests op GitHub ↗";
+      return;
+    }
+    const stamped = await loadVersionFile();
+    if (stamped.status === "ready") {
+      setReleaseBuild(stamped.build, "version-file", "Echte deploymentgegevens: deze badge is gestempeld bij de deploy en beschrijft exact de build op deze pagina.", stamped.build.version && `https://github.com/${REPOSITORY_FULL_NAME}/releases/tag/${encodeURIComponent(stamped.build.version)}`);
+      return;
+    }
+    if (stamped.status === "invalid") {
+      setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "Echte deploymentgegevens zijn nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+      return;
+    }
+    if (stamped.status === "missing") {
+      setReleaseBuild({ version: "versie onbekend" }, "unknown", "Echte deploymentgegevens ontbreken voor deze uitrol. Bekijk het releaseoverzicht op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+      return;
+    }
+    setReleaseBuild({ version: "tijdelijk niet beschikbaar" }, "unknown", "Echte deploymentgegevens zijn nu niet beschikbaar. Bekijk de releases op GitHub.", `https://github.com/${REPOSITORY_FULL_NAME}/releases`);
+  }
+
+  /* ==== SECTIE: STATE ==== */
+  let S;
+  function freshState() {
+    return {
+      commits: [], branches: {}, issues: [], prs: [],
+      active: "main", seq: 0, issueNo: 17, prNo: 0, laneFree: [1, 2, 3, 4],
+      missions: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      colleagueSeq: 0,
+      hotfixAvailable: true,
+      mergeKinds: new Set(), releases: [], rollbackPreviewCommit: null,
+      relNum: 0, env: { test: "v0.1.0", live: "v0.1.0", testCommit: null, liveCommit: null, livePromotedAt: null },
+      selectedStart: null,
+      selectedStartAuto: false,
+      envFilter: "all",
+    };
+  }
+  const hash = () => Math.random().toString(16).slice(2, 8);
+  const el = id => document.getElementById(id);
+
+  function formatElapsedSince(promotedAt, now) {
+    if (promotedAt === null || promotedAt === undefined) return "";
+    const promotedMs = new Date(promotedAt).getTime();
+    const nowMs = new Date(now).getTime();
+    if (!Number.isFinite(promotedMs) || !Number.isFinite(nowMs) || nowMs < promotedMs) return "";
+    const elapsedMs = nowMs - promotedMs;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (elapsedMs < minute) return "live sinds minder dan een minuut";
+    if (elapsedMs < hour) {
+      const minutes = Math.floor(elapsedMs / minute);
+      return `live sinds ${minutes} ${minutes === 1 ? "minuut" : "minuten"}`;
+    }
+    if (elapsedMs < day) {
+      const hours = Math.floor(elapsedMs / hour);
+      return `live sinds ${hours} ${hours === 1 ? "uur" : "uur"}`;
+    }
+    const days = Math.floor(elapsedMs / day);
+    return `live sinds ${days} ${days === 1 ? "dag" : "dagen"}`;
+  }
+
+  function addCommit(branch, msg, parents, kind) {
+    const c = { id: hash(), branch, msg, parents, kind: kind || "normal", x: S.seq++ };
+    S.commits.push(c);
+    S.branches[branch].head = c.id;
+    return c;
+  }
+  function renderGlossary() {
+    el("begrippen-lijst").innerHTML = TERMS.map(({ term, explanation, example }) => {
+      const id = `term-${term.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+      return `
+      <details class="term-item" id="${id}" data-term="${term}">
+        <summary>${term}</summary>
+        <p class="term-explanation">${explanation}</p>
+        <p class="term-example"><b>Voorbeeld:</b> ${example}</p>
+      </details>`;
+    }).join("");
+  }
+  function renderCommandReference() {
+    const escapeHtml = value => String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+    el("commandoreferentie-lijst").innerHTML = COMMAND_GROUPS.map(group => `
+      <details class="command-group">
+        <summary>${group.title} (${group.commands.length} commando's)</summary>
+        <div class="command-list">${group.commands.map(([command, does, when, example, warning]) => `
+          <article class="command-item">
+            <code class="command-code">${escapeHtml(command)}</code>
+            <p><b>Wat:</b> ${escapeHtml(does)}</p>
+            <p><b>Wanneer:</b> ${escapeHtml(when)}</p>
+            <p><b>Voorbeeld:</b> <code>${escapeHtml(example)}</code></p>
+            ${warning ? `<p class="command-warning"><b>${escapeHtml(warning)}</b></p>` : ""}
+          </article>`).join("")}</div>
+      </details>`).join("");
+  }
+  function focusTerm(term) {
+    const id = `term-${term.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+    const item = document.getElementById(id);
+    if (!item) return;
+    item.open = true;
+    item.classList.remove("term-focus");
+    void item.offsetWidth;
+    item.classList.add("term-focus");
+    item.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  function init() {
+    S = freshState();
+    el("env-source-label").textContent = repositoryUsesSimulatedData()
+      ? "Oefengegevens: ook repository- en releasegegevens zijn voorbeelden voor deze ontwikkelomgeving."
+      : "De kaartversies Test en Live zijn oefenversies; status en releasebadge tonen echte deploymentgegevens.";
+    S.branches.main = { name: "main", lane: 0, color: getComputedStyle(document.documentElement).getPropertyValue("--main-line").trim() || "#1e5aa8", head: null, merged: false };
+    addCommit("main", "initiële versie", [], "normal");
+    const rel0 = addCommit("main", "release v0.1.0", [S.branches.main.head], "normal");
+    S.env.testCommit = rel0.id;
+    S.env.liveCommit = rel0.id;
+    S.releases.push({ version: "v0.1.0", commitId: rel0.id });
+    S.active = "main";
+    renderGlossary();
+    renderCommandReference();
+    setupReleaseBadge();
+    loadLatestRelease();
+    if (typeof location !== "undefined") loadDeploymentVersions();
+    loadTestLiveStatus();
+    render();
+  }
+
+  const byId = id => S.commits.find(c => c.id === id);
+  function ancestry(headId) {
+    const seen = new Set(), stack = [headId];
+    while (stack.length) {
+      const id = stack.pop();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const c = byId(id);
+      if (c) stack.push(...c.parents);
+    }
+    return seen;
+  }
+  function aheadOfMain(branch) {
+    const mainSet = ancestry(S.branches.main.head);
+    return [...ancestry(S.branches[branch].head)].filter(id => !mainSet.has(id)).map(byId);
+  }
+
+  /* ==== SECTIE: ACTIES ==== */
+  const PROMOTION_FIXTURES = {
+    green: {
+      checks: [
+        "Test zonder mergeconflicts: geen mergeconflicts gevonden",
+        "Beschikbare verplichte checks: quality geslaagd",
+        "Live zonder problemen kan worden bijgewerkt: ja, de geteste versie staat klaar",
+      ],
+      error: "",
+    },
+    red: {
+      checks: [
+        "Test zonder mergeconflicts: controleer de branch voordat je verdergaat",
+        "Beschikbare verplichte checks: quality is mislukt",
+        "Live zonder problemen kan worden bijgewerkt: nee, eerst herstellen",
+      ],
+      error: "Herstel eerst de fout en laat de verplichte checks opnieuw slagen. De menselijke live-goedkeuring blijft daarna nodig.",
+    },
+  };
+  function renderPromotionResult(result) {
+    const panel = el("live-promotion-panel");
+    el("promotion-checks").innerHTML = result.checks.map(check => `<li>${check}</li>`).join("");
+    el("promotion-error").textContent = result.error || "";
+    el("promotion-error").hidden = !result.error;
+    el("btn-promotion-recover").hidden = !result.error;
+    el("btn-promotion-live").hidden = !result.safe;
+    panel.classList.toggle("is-blocked", !result.safe);
+    el("promotion-demo-note").textContent = result.note || "De menselijke live-goedkeuring blijft verplicht; deze actie zet niets automatisch live.";
+  }
+  function renderPromotionFixture(mode) {
+    const fixture = PROMOTION_FIXTURES[mode];
+    renderPromotionResult({ ...fixture, safe: mode === "green", note: "Ontwikkelomgeving: dit zijn fixtures; er is niets live gezet." });
+    el("btn-promotion-green").classList.toggle("active", mode === "green");
+    el("btn-promotion-red").classList.toggle("active", mode === "red");
+  }
+  async function loadRealPromotionStatus() {
+    const fail = message => renderPromotionResult({
+      checks: [
+        "Test zonder mergeconflicts: niet betrouwbaar vast te stellen",
+        "Beschikbare verplichte checks: niet betrouwbaar vast te stellen",
+        "Live zonder problemen kan worden bijgewerkt: nee, statusgegevens ontbreken",
+      ],
+      error: `${message} Controleer de Test-publicatie opnieuw voordat je de menselijke goedkeuring start.`,
+      safe: false,
+      note: "Echte Test-gegevens: promotie blijft geblokkeerd totdat alle controles betrouwbaar zijn.",
+    });
+    renderPromotionResult({
+      checks: ["Teststatus wordt opgehaald…", "Verplichte checks worden opgehaald…", "Live-veiligheid wordt gecontroleerd…"],
+      error: "",
+      safe: false,
+      note: "Echte Test-gegevens worden gecontroleerd; de simulatie blijft onaangeraakt.",
+    });
+    try {
+      const [versionResult, testResponse, liveResponse] = await Promise.all([
+        loadVersionFile(),
+        fetch("environment.json", { cache: "no-store" }),
+        fetch("../environment.json", { cache: "no-store" }),
+      ]);
+      if (versionResult.status !== "ready" || !testResponse.ok || !liveResponse.ok) throw new Error("De Test- of Live-status is niet bereikbaar.");
+      const testData = await testResponse.json();
+      const liveData = await liveResponse.json();
+      const testSha = versionResult.build.sha;
+      const testVersion = versionResult.build.version;
+      if (!testSha || testData?.environment !== "test" || testData.version !== testVersion || testData.sha !== testSha || !liveData?.version) throw new Error("De Test-publicatie en de versiegegevens komen niet aantoonbaar overeen.");
+      const checksResponse = await fetch(repositoryCheckRunsUrl(testSha), { headers: { Accept: "application/vnd.github+json" } });
+      if (!checksResponse.ok) throw new Error("De verplichte checks konden niet worden gelezen.");
+      const checksData = await checksResponse.json();
+      const checks = Array.isArray(checksData.check_runs) ? checksData.check_runs : [];
+      const quality = checks.find(check => check.name === "quality" && check.head_sha === testSha);
+      const qualityGreen = Boolean(quality && quality.status === "completed" && quality.conclusion === "success");
+      const testIsMain = testData.branch === "main";
+      const liveIsDifferent = liveData.version !== testVersion;
+      const result = {
+        checks: [
+          `Test zonder mergeconflicts: ${testIsMain ? "de geteste versie komt uit main; geen conflict in de opgeslagen Test-versie" : "de bronbranch is niet main"}`,
+          `Beschikbare verplichte checks: ${qualityGreen ? "quality geslaagd" : quality ? `quality ${quality.status === "completed" ? "mislukt" : "draait nog"}` : "quality ontbreekt"}`,
+          `Live zonder problemen kan worden bijgewerkt: ${liveIsDifferent && testIsMain && qualityGreen ? "ja, de geteste versie staat klaar" : "nee, eerst herstellen"}`,
+        ],
+        error: testIsMain && qualityGreen && liveIsDifferent ? "" : !testIsMain ? "De Test-versie komt niet aantoonbaar uit main." : !qualityGreen ? "De verplichte quality-check is niet geslaagd of ontbreekt." : "Test en Live bevatten dezelfde versie; er is niets nieuws te promoveren.",
+        safe: testIsMain && qualityGreen && liveIsDifferent,
+        note: "Echte Test-gegevens: de knop opent alleen de bestaande menselijke live-goedkeuringsstap; er wordt niets automatisch live gezet.",
+      };
+      renderPromotionResult(result);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : "De statusgegevens konden niet worden gelezen.");
+    }
+  }
+  function promotionUsesFixtures() {
+    return repositoryUsesSimulatedData() || typeof location === "undefined";
+  }
+  function openPromotionOverlay() {
+    const overlay = el("live-promotion-overlay");
+    overlay.hidden = false;
+    overlay.setAttribute("aria-hidden", "false");
+    const simulated = promotionUsesFixtures();
+    el("promotion-modes").hidden = !simulated;
+    el("promotion-description").textContent = simulated
+      ? "Zelfstandige voorbeeldcontrole. De simulatie eronder blijft onaangeraakt."
+      : "Zelfstandige controle met echte Test-gegevens. De simulatie eronder blijft onaangeraakt.";
+    if (simulated) renderPromotionFixture("green");
+    else loadRealPromotionStatus();
+  }
+  function closePromotionOverlay() {
+    const overlay = el("live-promotion-overlay");
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  function initialisePromotionOverlay() {
+    el("btn-live-overlay").onclick = openPromotionOverlay;
+    el("btn-close-live-overlay").onclick = closePromotionOverlay;
+    el("btn-promotion-green").onclick = () => renderPromotionFixture("green");
+    el("btn-promotion-red").onclick = () => renderPromotionFixture("red");
+    el("btn-promotion-recover").onclick = () => promotionUsesFixtures() ? renderPromotionFixture("green") : loadRealPromotionStatus();
+    el("btn-promotion-live").onclick = event => {
+      if (!promotionUsesFixtures()) return;
+      event?.preventDefault?.();
+      el("promotion-demo-note").textContent = "Ontwikkelomgeving: menselijke goedkeuring zou nu starten; er is niets live gezet.";
+    };
+    renderPromotionFixture("green");
+  }
+  const REVIEW_GUIDES = {
+    approve: {
+      title: "Goedkeuren: samenvoegen naar Test",
+      intro: "De wijziging wordt samengevoegd en verschijnt daarna vanzelf op Test. Hij gaat niet meteen naar live.",
+      steps: ["Open de pull request en kijk of de controles groen zijn.", "Klik op de knop Merge pull request.", "Klik daarna op Confirm merge om het samenvoegen te bevestigen."],
+      targets: ["Pull request", "Merge pull request", "Confirm merge"],
+    },
+    reject: {
+      title: "Afkeuren: formeel wijzigingen vragen",
+      intro: "Een gewone opmerking typen zet niets in beweging. Kies in het review-menu formeel Request changes; dan weet de maker dat er eerst iets moet worden aangepast.",
+      steps: ["Open Files changed om de wijziging na te kijken.", "Klik op Review changes.", "Kies Request changes en bevestig je beoordeling."],
+      targets: ["Files changed", "Review changes", "Request changes"],
+    },
+  };
+  let reviewGuideKind = "approve";
+  let reviewGuideStep = 0;
+  function renderReviewGuide() {
+    const guide = REVIEW_GUIDES[reviewGuideKind];
+    el("review-guide-title").textContent = guide.title;
+    el("review-guide-intro").textContent = guide.intro;
+    el("review-guide-pr-title").textContent = `Wijziging voor de Git Routekaart #${simulatedPullRequestNumber()}`;
+    el("review-guide-steps").innerHTML = guide.steps.map((step, index) => `<li class="${index === reviewGuideStep ? "current" : ""}">${step}</li>`).join("");
+    el("review-guide-target").textContent = guide.targets[reviewGuideStep];
+    const mockupItems = document.querySelectorAll ? document.querySelectorAll("[data-review-target]") : [];
+    mockupItems.forEach(item => item.classList.toggle("current", item.dataset.reviewTarget === guide.targets[reviewGuideStep]));
+    el("review-guide-state").textContent = `${reviewGuideStep + 1} / ${guide.steps.length}`;
+    el("btn-review-guide-back").disabled = reviewGuideStep === 0;
+    const last = reviewGuideStep === guide.steps.length - 1;
+    el("btn-review-guide-next").hidden = last;
+    el("review-guide-skip").hidden = false;
+    el("review-guide-skip").href = el("review-guide-github").href;
+    el("review-guide-github").hidden = !last;
+  }
+  function openReviewGuide(kind) {
+    const prNumber = simulatedPullRequestNumber();
+    if (!prNumber) return;
+    reviewGuideKind = kind;
+    reviewGuideStep = 0;
+    const guide = el("review-guide");
+    el("review-guide-github").href = `https://github.com/${REPOSITORY_FULL_NAME}/pull/${prNumber}`;
+    guide.hidden = false;
+    guide.setAttribute("aria-hidden", "false");
+    renderReviewGuide();
+  }
+  function closeReviewGuide() {
+    const guide = el("review-guide");
+    guide.hidden = true;
+    guide.setAttribute("aria-hidden", "true");
+  }
+  function initialiseReviewActions() {
+    const prNumber = simulatedPullRequestNumber();
+    if (getReleaseEnvironment() !== "dev" || !prNumber) {
+      closeReviewGuide();
+      return false;
+    }
+    el("btn-review-approve")?.addEventListener("click", () => openReviewGuide("approve"));
+    el("btn-review-reject")?.addEventListener("click", () => openReviewGuide("reject"));
+    el("btn-close-review-guide")?.addEventListener("click", closeReviewGuide);
+    el("btn-review-guide-back")?.addEventListener("click", () => { reviewGuideStep--; renderReviewGuide(); });
+    el("btn-review-guide-next")?.addEventListener("click", () => { reviewGuideStep++; renderReviewGuide(); });
+    return true;
+  }
+  function applyPromotionVisibility() {
+    const environment = getReleaseEnvironment();
+    if (environment === "dev") {
+      el("btn-live-overlay")?.remove();
+      el("live-promotion-overlay")?.remove();
+      initialiseReviewActions();
+      return true;
+    }
+    if (environment === "live") {
+      closeReviewGuide();
+      el("btn-live-overlay")?.remove();
+      el("live-promotion-overlay")?.remove();
+      return false;
+    }
+    initialisePromotionOverlay();
+    return true;
+  }
+  function newIssue() {
+    const [title, slug] = ISSUE_POOL[S.issues.length % ISSUE_POOL.length];
+    S.issues.push({ num: ++S.issueNo, title, slug, branch: null, closed: false });
+    log(`Issue #${S.issueNo} aangemaakt`, "Een issue beschrijft <i>wat</i> er moet gebeuren en waarom — nog geen code. Maak er nu een branch bij.");
+    tick(0); render();
+  }
+  function newBranch(issue) {
+    const name = `${issue.slug}-${issue.num}`;
+    const lane = S.laneFree.length ? S.laneFree.shift() : 1;
+    const startId = S.selectedStart || S.branches.main.head;
+    const startCommit = byId(startId);
+    const fromBranch = startCommit ? startCommit.branch : "main";
+    const isMainHead = startId === S.branches.main.head;
+    S.branches[name] = { name, lane, color: LANE_COLORS[(lane - 1) % LANE_COLORS.length], head: startId, merged: false, issue: issue.num };
+    issue.branch = name;
+    S.active = name;
+    S.selectedStart = null;
+    S.selectedStartAuto = false;
+    let why;
+    if (isMainHead) {
+      why = "Een branch is een eigen zijspoor: je vertrekt vanaf het laatste station van main en kunt vrij experimenteren zonder dat main (en dus de live-omgeving) er iets van merkt. Dit is je <b>ontwikkelomgeving</b>.";
+    } else if (fromBranch === "main") {
+      why = `Je vertrekt hier niet vanaf de huidige kop van main, maar vanaf een <b>ouder punt</b> in de geschiedenis — dit heet weleens "tijdreis". Alle commits die ná dat punt op main kwamen, horen niet bij deze nieuwe branch.`;
+      tick(10);
+    } else {
+      why = `Je vertrekt vanaf een commit op <code>${fromBranch}</code> — een branch die zelf nog niet gemergd is. Dit heet een <b>branch-van-branch</b> (stacked branch): handig als jouw werk afhankelijk is van werk dat nog in review staat. Branches zijn niet hiërarchisch — alles kan overal vandaan vertakken.`;
+      tick(11);
+    }
+    log(`Branch <code>${name}</code> gemaakt vanaf ${isMainHead ? "main" : `commit <code>${startId.slice(0, 5)}</code>`}`, why);
+    tick(1); render();
+  }
+  function commit() {
+    const b = S.branches[S.active];
+    const msg = COMMIT_MSGS[Math.floor(Math.random() * COMMIT_MSGS.length)];
+    addCommit(b.name, msg, [b.head]);
+    log(`Commit <code>${S.commits[S.commits.length - 1].id}</code> op <code>${b.name}</code>`, "Een commit is een station: een vastgelegd tussenpunt waar je altijd naar terug kunt.");
+    if (aheadOfMain(b.name).length >= 2) tick(2);
+    render();
+  }
+  function colleagueMerge() {
+    const active = S.branches[S.active];
+    if (!active || active.name === "main" || active.merged) return;
+    const messages = ["collega: typefout hersteld", "collega: logo bijgewerkt", "collega: test toegevoegd"];
+    const mainHead = S.branches.main.head;
+    const c = addCommit("main", messages[S.colleagueSeq % messages.length], [mainHead]);
+    c.byCollega = true;
+    S.colleagueSeq++;
+    release();
+    log("Een collega heeft iets naar main gemerged", "Jij hebt niets gedaan, en toch is <code>main</code> opgeschoven. Kijk op de kaart: jouw zijspoor hangt nog aan het <b>oudere</b> station waar je vertrok. Dat is geen probleem zolang jullie niet dezelfde regels aanpassen — git voegt werk van verschillende plekken vanzelf samen. Wél verstandig: haal vlak vóór het insturen van je pull request de laatste <code>main</code> op, dan werk je op de nieuwste stand.");
+    tick(13);
+    render();
+  }
+  function openPR(branch) {
+    const b = S.branches[branch];
+    S.prs.push({ num: ++S.prNo, branch, state: "open", issue: b.issue });
+    log(`PR #${S.prNo} geopend: <code>${branch}</code> → <code>main</code>`, "Een pull request is het voorstel om jouw zijspoor aan te laten sluiten op main — hét moment voor review en CI-checks, vóórdat er iets samengevoegd wordt. Kijk op de kaart: er loopt nu een stippellijn van jouw zijspoor richting main die er nét niet bij komt — dat is het voorstel. Bij de merge wordt het een echte lijn.");
+    tick(3); render();
+  }
+  function release(mergeType = "merge") {
+    const v = "v0.1." + (++S.relNum);
+    S.env.test = v;
+    S.env.testCommit = S.branches.main.head;
+    S.releases.push({ version: v, commitId: S.env.testCommit });
+    if (mergeType !== "hotfix") S.hotfixAvailable = true;
+    const route = mergeType === "rebase" ? "Deze rebase-merge levert" : mergeType === "hotfix" ? "Deze hotfix levert" : "Deze merge-commit levert";
+    log(`CI bouwt ${v} en zet hem op <b>test</b>`, `${route} versie <code>${v}</code> op: het pakket is gebouwd en staat nu op <b>test</b>. Stations zonder versielabel zijn wel geschiedenis, maar nooit als versie uitgerold — dáárom kun je daar niet naartoe terugrollen. <b>Live</b> draait nog gewoon ${S.env.live}; promoveer bewust als gebruikers deze versie moeten krijgen. Kijk op de kaart: het 🧪-vlaggetje staat nu bij deze commit.`);
+    tick(7);
+  }
+  function doMerge(pr, squash, rebase = false) {
+    const b = S.branches[pr.branch];
+    const ahead = aheadOfMain(pr.branch);
+    if (rebase) {
+      let parent = S.branches.main.head;
+      ahead.forEach(original => {
+        const rebased = addCommit("main", `${original.msg} (rebase PR #${pr.num})`, [parent], "rebase");
+        rebased.rebasedFrom = original.id;
+        parent = rebased.id;
+      });
+      log(`PR #${pr.num} — rebase &amp; merge`, `De branch is eerst boven op de actuele kop van <code>main</code> gezet. Daarna zijn ${ahead.length} nieuwe rebased commitobjecten zonder merge-commit op main gezet: de oude branchstations blijven als oorspronkelijke geschiedenis bestaan en zijn niet stilzwijgend herschreven. Kijk op de kaart: deze aansluiting is een rechte main-lijn, zonder overstapstation met twee ouders.`);
+    } else if (squash) {
+      addCommit("main", `${pr.branch} (squash van ${ahead.length} commits, PR #${pr.num})`, [S.branches.main.head], "squash");
+      ahead.forEach(c => c.squashed = true);
+      log(`PR #${pr.num} — squash &amp; merge`, `De ${ahead.length} commits van <code>${pr.branch}</code> zijn samengeperst tot één nieuwe commit op main. Kijk op de kaart: het zijspoor is vervaagd — die stations zitten <b>niet</b> in de historie van main. Main blijft een rechte, leesbare lijn.`);
+      S.mergeKinds.add("squash");
+    } else {
+      const mainHead = S.branches.main.head;
+      addCommit("main", `merge PR #${pr.num} (${pr.branch})`, [mainHead, b.head], "merge");
+      log(`PR #${pr.num} — merge commit`, `Main heeft nu een overstapstation met twee ouders: de oude main én de kop van <code>${pr.branch}</code>. Alle ${ahead.length} commits van het zijspoor horen nu óók bij de historie van main.`);
+      S.mergeKinds.add("merge");
+    }
+    pr.state = "merged"; b.merged = true;
+    const issue = S.issues.find(i => i.num === pr.issue);
+    if (issue) issue.closed = true;
+    if (S.active === b.name) S.active = "main";
+    if (S.mergeKinds.has("merge")) tick(4);
+    if (S.mergeKinds.has("merge") && S.mergeKinds.has("squash")) tick(5);
+    release(rebase ? "rebase" : "merge");
+    render();
+  }
+  function deleteBranch(name) {
+    const b = S.branches[name];
+    S.laneFree.unshift(b.lane); S.laneFree.sort();
+    b.deleted = true;
+    if (S.active === name) S.active = "main";
+    log(`Branch <code>${name}</code> opgeruimd`, "Na de merge heeft het zijspoor geen functie meer. De commits blijven bestaan (via de merge of de PR), alleen het naambordje is weg. Opruimen houdt de kaart leesbaar.");
+    tick(6); render();
+  }
+  function promote(now = Date.now()) {
+    if (now && typeof now === "object") now = Date.now();
+    if (S.env.test === S.env.live) return;
+    S.env.live = S.env.test;
+    S.env.liveCommit = S.env.testCommit;
+    S.env.livePromotedAt = now;
+    log(`${S.env.live} gepromoveerd naar <b>live</b>`, "Je zet exact dezelfde build door die op test al bewezen heeft te werken — er wordt niets opnieuw gebouwd. Dit is altijd een bewuste, handmatige stap: de enige knop die het echte systeem raakt. Op de kaart schuiven 🧪 en 🚀 nu samen naar dezelfde commit.");
+    tick(8); render();
+  }
+  function hotfix() {
+    if (!S.env.liveCommit || !S.hotfixAvailable) return;
+    const liveCommit = byId(S.env.liveCommit), mainHead = S.branches.main.head;
+    if (!liveCommit || !mainHead) return;
+    const lane = S.laneFree.length ? S.laneFree.shift() : 1;
+    const name = `hotfix/${S.relNum + 1}`;
+    S.branches[name] = { name, lane, color: "#c43b3b", head: liveCommit.id, merged: false, hotfix: true };
+    const fix = addCommit(name, "hotfix: storing gestopt", [liveCommit.id], "hotfix");
+    const merge = addCommit("main", `hotfix vanaf ${S.env.live}`, [mainHead, fix.id], "merge");
+    merge.hotfix = true;
+    S.branches[name].merged = true;
+    S.active = "main";
+    S.hotfixAvailable = false;
+    log(`Hotfix vanaf live ${S.env.live} uitgevoerd`, "Deze noodgreep vertrok vanaf wat nu live stond en sloeg issue, branch, PR en de gewone controles vooraf over. Daardoor ging hij met minder tussenstappen sneller naar live, maar met minder controle vooraf is de kans op een nieuwe fout groter. Breng deze wijziging daarna alsnog via de gewone route terug, zodat de normale controle en historie weer kloppen.");
+    release("hotfix");
+    promote();
+    render();
+  }
+  function rollback() {
+    const targetIndex = Number(el("rollback-version").value);
+    const target = S.releases[targetIndex];
+    if (!target || target.version === S.env.live) return;
+    S.env.live = target.version;
+    S.env.liveCommit = target.commitId;
+    S.rollbackPreviewCommit = target.commitId;
+    log(`${target.version} teruggezet naar <b>live</b>`, "Je hebt geen nieuwe code geschreven: je zet een versie terug die eerder al bewezen heeft te werken. Daarom is dit direct klaar, terwijl een revert eerst gebouwd en getest moet worden. Bij een kapotte live-omgeving doe je dit eerst, en repareer je daarna pas rustig. <b>Test blijft op de nieuwere versie staan</b>, zodat het werk aan de fix gewoon door kan gaan.");
+    tick(12); render();
+  }
+  function revertLast() {
+    const head = byId(S.branches.main.head);
+    if (!head || (head.kind !== "merge" && head.kind !== "squash")) return;
+    addCommit("main", `revert: ${head.msg}`, [S.branches.main.head], "revert");
+    log("Revert-commit op <code>main</code>", "Terugdraaien is in git <i>vooruit</i> werken: je gooit geen historie weg, maar zet er een nieuwe commit bovenop die de wijziging exact omkeert. De CI bouwt daarna gewoon weer een nieuwe versie — eerst naar test, en pas na jouw promotie naar live. Zo is óók elke terugdraai-actie traceerbaar en omkeerbaar.");
+    tick(9);
+    release();
+    render();
+  }
+  function selectStart(id) {
+    S.selectedStart = id;
+    S.selectedStartAuto = false;
+    const c = byId(id);
+    log(`Startpunt gekozen: commit <code>${id.slice(0, 5)}</code> op <code>${c ? c.branch : "?"}</code>`, "De volgende nieuwe branch vertrekt vanaf hier in plaats van vanaf de huidige kop van main. Maak nu een issue (of gebruik een bestaand open issue) en klik 'Maak branch'.");
+    render();
+  }
+  function clearStart() {
+    S.selectedStart = null;
+    S.selectedStartAuto = false;
+    log("Startpunt teruggezet naar main", "De volgende nieuwe branch vertrekt weer gewoon vanaf de huidige kop van main.");
+    render();
+  }
+
+  /* ==== SECTIE: MISSIES ==== */
+  const MISSIONS = [
+    "Maak een issue aan",
+    "Maak een branch voor het issue",
+    "Zet minstens 2 commits op de branch",
+    "Open een pull request",
+    "Merge de PR met een <b>merge commit</b>",
+    "Herhaal missie 1–4 en kies nu <b>squash &amp; merge</b> — vergelijk de kaart",
+    "Ruim een gemergde branch op",
+    "Merge een PR en zie: de nieuwe versie komt alléén op <b>test</b>",
+    "Promoveer de geteste versie naar <b>live</b>",
+    "Draai een merge terug met een <b>revert</b> — ook dát is gewoon een nieuwe versie",
+    "Klik een oudere commit op <code>main</code> aan en maak daar een branch vanaf — een \"tijdreis\"",
+    "Klik een commit op een niet-gemergde branch aan en maak daar een branch vanaf — een \"branch-van-branch\"",
+    "Zet live terug naar een eerdere versie — en zie dat test gewoon vooruit blijft lopen.",
+    "Laat een collega mergen terwijl jij op je eigen branch zit — zie main opschuiven",
+    "Bekijk de kaart in de stand Live en zie wat je gebruikers écht hebben",
+  ];
+  function tick(i) { S.missions[i] = true; }
+
+  /* ==== SECTIE: LOGBOEK ==== */
+  function decorateLogTerms(html, seen = new Set()) {
+    const patterns = TERMS.flatMap(({ term, keywords }) => (keywords || [term]).map(keyword => ({ term, keyword })))
+      .sort((a, b) => b.keyword.length - a.keyword.length);
+    const placeholders = [];
+    const escaped = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const decorated = html.split(/(<[^>]*>)/g).map(part => {
+      if (part.startsWith("<")) return part;
+      let text = part;
+      patterns.forEach(({ term, keyword }) => {
+        if (seen.has(term)) return;
+        const pattern = new RegExp(`(^|[^\\p{L}\\p{N}])(${escaped(keyword)})(?=$|[^\\p{L}\\p{N}])`, "iu");
+        const match = text.match(pattern);
+        if (!match) return;
+        const token = `__LOG_TERM_${placeholders.length}__`;
+        text = text.replace(pattern, `$1${token}`);
+        placeholders.push(`<button type="button" class="log-term" onclick="focusTerm('${term.replace(/'/g, "\\\\'")}')">${match[2]}</button>`);
+        seen.add(term);
+      });
+      return text;
+    }).join("");
+    return decorated.replace(/__LOG_TERM_(\d+)__/g, (_, index) => placeholders[Number(index)]);
+  }
+
+  function log(title, why) {
+    const d = document.createElement("div");
+    d.className = "log-entry";
+    const seen = new Set();
+    d.innerHTML = `<b>${decorateLogTerms(title, seen)}</b><span class="why">${decorateLogTerms(why, seen)}</span>`;
+    el("log").prepend(d);
+  }
+
+  /* ==== SECTIE: KAART ==== */
+  function setEnvFilter(filter) {
+    const next = S.envFilter === filter ? "all" : filter;
+    S.envFilter = next;
+    if (next === "all") {
+      render();
+      return;
+    }
+    const labels = { dev: "Ontwikkel", test: "Test", live: "Live" };
+    const explanations = {
+      all: "Alles staat vol: zo ziet de hele geschiedenis eruit.",
+      dev: "Je ziet waar op dit moment aan gewerkt wordt en vanaf welk punt dat vertrok. De rest van de geschiedenis is grijs.",
+      test: "Je ziet main tot en met wat op test staat; alles daarna en alle zijsporen zijn grijs.",
+      live: "Dit is wat je gebruikers nu hebben. Alles wat grijs is, is al gebouwd en getest — maar staat nog niet bij hen. Het komt er pas als iemand bewust op promoveren drukt.",
+    };
+    log(`Weergave: ${labels[next]}`, explanations[next]);
+    if (next === "live" && S.env.test !== S.env.live) tick(14);
+    render();
+  }
+  function isEnvFaded(c) {
+    if (S.envFilter === "all") return false;
+    if (S.envFilter === "dev") {
+      const branch = S.branches[c.branch];
+      if (c.branch !== "main" && branch && !branch.merged && !branch.deleted) return false;
+      if (c.id === S.branches.main.head) return false;
+      const openBranches = Object.values(S.branches).filter(b => b.name !== "main" && !b.merged && !b.deleted);
+      const departurePoints = openBranches.map(b => {
+        const first = S.commits.find(commit => commit.branch === b.name);
+        return first && first.parents[0];
+      }).filter(Boolean);
+      return !departurePoints.includes(c.id);
+    }
+    if (c.branch !== "main") return true;
+    const target = byId(S.envFilter === "live" ? S.env.liveCommit : S.env.testCommit);
+    return !target || !ancestry(target.id).has(c.id);
+  }
+
+  function render() {
+    renderMap(); renderChips(); renderTickets(); renderMissions(); renderEnv(); renderStartPicker();
+    const b = S.branches[S.active];
+    const commitBtn = el("btn-commit");
+    commitBtn.disabled = S.active === "main" || b.merged;
+    el("commit-sub").textContent = S.active === "main"
+      ? "Op main committen we nooit direct — maak eerst een branch"
+      : `voegt een station toe aan ${S.active}`;
+  }
+
+  function renderStartPicker() {
+    if (S.selectedStart) {
+      const c = byId(S.selectedStart);
+      el("start-label").textContent = c ? `${S.selectedStartAuto ? "automatisch: " : ""}commit ${c.id.slice(0, 5)} op ${c.branch}` : "onbekend";
+      el("start-hint").textContent = "";
+      el("btn-clear-start").style.display = "inline";
+    } else {
+      el("start-label").textContent = "main (huidige kop)";
+      el("start-hint").textContent = " — klik een commit op de kaart om een ander startpunt te kiezen";
+      el("btn-clear-start").style.display = "none";
+    }
+  }
+
+  function renderEnv() {
+    el("env-dev").textContent = S.active === "main" ? "—" : S.active;
+    el("env-test").textContent = S.env.test;
+    el("env-live").textContent = S.env.live;
+    const filterLabels = { all: "Simulatie/oefening: acties op deze kaart wijzigen GitHub niet.", dev: "Simulatie/oefening — Ontwikkel: je ziet waar nu gewerkt wordt en vanaf welk punt dat vertrok; de rest van de geschiedenis is grijs.", test: "Simulatie/oefening — Test: main tot en met test is vol; alles daarna en alle zijsporen zijn grijs.", live: "Simulatie/oefening — Live: grijs is gebouwd en getest, maar nog niet bij gebruikers." };
+    el("env-filter-note").textContent = filterLabels[S.envFilter];
+    ["dev", "test", "live"].forEach(filter => {
+      const box = el(`env-${filter}-box`);
+      box.classList.toggle("active", S.envFilter === filter);
+      box.setAttribute("aria-pressed", String(S.envFilter === filter));
+    });
+    const behind = S.env.test !== S.env.live;
+    el("env-live-box").classList.toggle("behind", behind);
+    const liveAge = el("env-live-age");
+    liveAge.textContent = S.env.livePromotedAt === null
+      ? "alleen na jouw akkoord"
+      : formatElapsedSince(S.env.livePromotedAt, Date.now());
+    const promoteButton = el("btn-promote");
+    promoteButton.disabled = !behind;
+    el("promote-sub").textContent = behind
+      ? "zet de geteste versie op het echte systeem"
+      : "Test loopt niet voor op live — er is niets te promoveren";
+    const head = byId(S.branches.main.head);
+    const canRevert = Boolean(head && (head.kind === "merge" || head.kind === "squash"));
+    el("btn-revert").disabled = !canRevert;
+    el("revert-sub").textContent = canRevert
+      ? "draait de wijziging terug met een nieuwe commit"
+      : "Op main staat nog geen merge om terug te draaien";
+    const liveIndex = S.releases.findIndex(r => r.version === S.env.live);
+    const rollbackCandidates = liveIndex > 0 ? S.releases.slice(0, liveIndex) : [];
+    const rollbackSelect = el("rollback-version");
+    const previewIndex = rollbackCandidates.findIndex(r => r.commitId === S.rollbackPreviewCommit);
+    const selectedCandidateIndex = previewIndex >= 0 ? previewIndex : rollbackCandidates.length - 1;
+    rollbackSelect.innerHTML = rollbackCandidates.length
+      ? rollbackCandidates.map((r, i) => `<option value="${S.releases.indexOf(r)}"${i === selectedCandidateIndex ? " selected" : ""}>${r.version}</option>`).join("")
+      : "<option value=\"\">Geen eerdere versie beschikbaar</option>";
+    rollbackSelect.onchange = () => {
+      const target = S.releases[Number(rollbackSelect.value)];
+      S.rollbackPreviewCommit = target ? target.commitId : null;
+      render();
+    };
+    const canRollback = rollbackCandidates.length > 0;
+    el("btn-rollback").disabled = !canRollback;
+    el("rollback-sub").textContent = canRollback
+      ? "zet een eerder bewezen versie direct terug"
+      : "Er is nog geen eerdere live-versie om naar terug te rollen";
+    const canHotfix = Boolean(S.env.liveCommit && S.hotfixAvailable);
+    el("btn-hotfix").disabled = !canHotfix;
+    el("hotfix-sub").textContent = canHotfix
+      ? "stop een storing snel, met minder controle vooraf"
+      : S.env.liveCommit
+        ? "Er is al een hotfix uitgevoerd — wacht op een nieuwe aanleiding"
+        : "Er is nog geen live-versie om vanaf te starten";
+    const active = S.branches[S.active];
+    const canColleagueMerge = Boolean(active && active.name !== "main" && !active.merged);
+    el("btn-collega").disabled = !canColleagueMerge;
+    el("collega-sub").textContent = canColleagueMerge
+      ? "iemand anders werkt ook — kijk wat er met main gebeurt"
+      : "Je staat op main — maak eerst een eigen branch";
+  }
+
+  function renderChips() {
+    const box = el("branch-chips"); box.innerHTML = "";
+    Object.values(S.branches).filter(b => !b.deleted).forEach(b => {
+      const c = document.createElement("button");
+      c.className = "chip" + (S.active === b.name ? " active" : "");
+      c.style.color = b.color;
+      c.textContent = b.name + (b.merged ? " ✓" : "");
+      c.onclick = () => {
+        S.active = b.name;
+        if (b.name === "main") {
+          S.selectedStart = null;
+          S.selectedStartAuto = false;
+        } else {
+          S.selectedStart = b.head;
+          S.selectedStartAuto = true;
+          log(`Actieve branch gekozen: <code>${b.name}</code>`, "Het startpunt voor een nieuwe branch staat nu automatisch op de laatste commit van deze branch. Klik gerust een ouder station op de kaart aan als je bewust vanaf daar wilt vertakken.");
+        }
+        render();
+      };
+      box.appendChild(c);
+    });
+  }
+
+  function renderTickets() {
+    const box = el("tickets"); box.innerHTML = "";
+    S.issues.forEach(i => {
+      const t = document.createElement("div");
+      t.className = "ticket" + (i.closed ? " done" : "");
+      t.innerHTML = `<div class="t-head"><span><span class="num">#${i.num}</span> ${i.title}</span><span class="badge ${i.closed ? "" : "open"}">${i.closed ? "gesloten" : "open"}</span></div>`;
+      if (!i.branch && !i.closed) {
+        const m = document.createElement("div"); m.className = "mini-btns";
+        const btn = document.createElement("button");
+        btn.textContent = "🌿 Maak branch";
+        btn.onclick = () => newBranch(i);
+        m.appendChild(btn); t.appendChild(m);
+      }
+      box.appendChild(t);
+    });
+    S.prs.forEach(pr => {
+      const ahead = aheadOfMain(pr.branch).length;
+      const t = document.createElement("div");
+      t.className = "ticket pr" + (pr.state === "merged" ? " done" : "");
+      t.innerHTML = `<div class="t-head"><span><span class="num">PR #${pr.num}</span> <code>${pr.branch}</code> → <code>main</code></span><span class="badge ${pr.state === "merged" ? "merged" : "open"}">${pr.state === "merged" ? "merged" : ahead + " commit" + (ahead === 1 ? "" : "s")}</span></div>`;
+      if (pr.state === "open") {
+        const m = document.createElement("div"); m.className = "mini-btns";
+        const b1 = document.createElement("button"); b1.textContent = "Merge commit"; b1.onclick = () => doMerge(pr, false);
+        const b2 = document.createElement("button"); b2.textContent = "Squash & merge"; b2.onclick = () => doMerge(pr, true);
+        const b3 = document.createElement("button"); b3.textContent = "Rebase & merge"; b3.onclick = () => doMerge(pr, false, true);
+        b1.disabled = b2.disabled = b3.disabled = ahead === 0;
+        m.append(b1, b2, b3); t.appendChild(m);
+      } else if (!S.branches[pr.branch].deleted) {
+        const m = document.createElement("div"); m.className = "mini-btns";
+        const b3 = document.createElement("button"); b3.textContent = "🗑️ Verwijder branch"; b3.onclick = () => deleteBranch(pr.branch);
+        m.appendChild(b3); t.appendChild(m);
+      }
+      box.appendChild(t);
+    });
+    // PR openen knop per branch met commits ahead en zonder open PR
+    Object.values(S.branches).forEach(b => {
+      if (b.name === "main" || b.merged || b.deleted) return;
+      if (S.prs.some(p => p.branch === b.name && p.state === "open")) return;
+      if (aheadOfMain(b.name).length === 0) return;
+      const m = document.createElement("div"); m.className = "mini-btns";
+      const btn = document.createElement("button");
+      btn.textContent = `⇪ Open PR voor ${b.name}`;
+      btn.onclick = () => openPR(b.name);
+      m.appendChild(btn); box.appendChild(m);
+    });
+  }
+
+  function renderMissions() {
+    const list = el("missie-list"); list.innerHTML = "";
+    let firstOpen = S.missions.findIndex(m => !m);
+    MISSIONS.forEach((m, i) => {
+      const li = document.createElement("li");
+      li.className = (S.missions[i] ? "done" : "") + (i === firstOpen ? " next" : "");
+      li.innerHTML = `<span class="box">${S.missions[i] ? "✓" : ""}</span><span>${m}</span>`;
+      list.appendChild(li);
+    });
+    const done = S.missions.filter(Boolean).length;
+    el("progress").firstElementChild.style.width = (done / MISSIONS.length * 100) + "%";
+    el("trophy").className = done === MISSIONS.length ? "show" : "";
+  }
+
+  function renderMap() {
+    const SP = typeof window !== "undefined" && window.innerWidth <= 700 ? 90 : 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
+    const lanes = Math.max(2, ...Object.values(S.branches).filter(b => !b.deleted || S.commits.some(c => c.branch === b.name)).map(b => b.lane + 1));
+    const W = X0 + S.commits.length * SP + 60, H = Y0 + lanes * LH;
+    const laneY = l => Y0 + l * LH - LH / 2 + 10;
+    const cx = c => X0 + c.x * SP;
+    const branchOf = c => S.branches[c.branch];
+    let edges = "", stations = "", labels = "", flags = "";
+    const lineSamples = [];
+    const placedLabels = [];
+    const branchLabelRects = [];
+    let frameBounds = null;
+    const sampleLine = (x1, y1, x2, y2, steps = 20) => Array.from({ length: steps + 1 }, (_, i) => {
+      const t = i / steps;
+      return { x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t };
+    });
+    const includeFrame = (left, top, right, bottom) => {
+      frameBounds = frameBounds ? {
+        left: Math.min(frameBounds.left, left), top: Math.min(frameBounds.top, top),
+        right: Math.max(frameBounds.right, right), bottom: Math.max(frameBounds.bottom, bottom),
+      } : { left, top, right, bottom };
+    };
+    const releaseByCommit = new Map(S.releases.map(release => [release.commitId, release]));
+
+    S.commits.forEach(c => {
+      const b = branchOf(c), y = laneY(b.lane), x = cx(c);
+      c.parents.forEach((pid, pi) => {
+        const p = byId(pid); if (!p) return;
+        const pb = branchOf(p), px = cx(p), py = laneY(pb.lane);
+        const color = pi === 1 ? branchOf(p).color : (pb.lane === b.lane ? b.color : b.color);
+        const dash = c.squashed || p.squashed ? 'stroke-dasharray="3 6" opacity=".45"' : "";
+        const envFade = isEnvFaded(c) || isEnvFaded(p) ? ' data-env-faded="true"' : "";
+        const envOpacity = envFade ? ' opacity=".4"' : "";
+        const lineTerm = b.name === "main" ? "Repository (repo)" : "Branch";
+        const lineAttrs = `class="branch-line" role="button" tabindex="0"${envFade} onclick="focusTerm('${lineTerm}')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('${lineTerm}')" aria-label="toon uitleg van ${lineTerm}"`;
+        const hitAttrs = `class="branch-line-hit" aria-hidden="true" onclick="focusTerm('${lineTerm}')"`;
+        if (py === y) {
+          lineSamples.push(...sampleLine(px, py, x, y));
+          edges += `<path ${hitAttrs} d="M${px} ${py} H${x}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="M${px} ${py} H${x}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+        } else {
+          const mid = px + Math.min(40, (x - px) / 2);
+          const curveEnd = Math.min(px + 80, x);
+          const curvePoints = Array.from({ length: 31 }, (_, i) => {
+            const t = i / 30, mt = 1 - t;
+            return {
+              x: mt ** 3 * px + 3 * mt ** 2 * t * mid + 3 * mt * t ** 2 * mid + t ** 3 * curveEnd,
+              y: mt ** 3 * py + 3 * mt ** 2 * t * py + 3 * mt * t ** 2 * y + t ** 3 * y,
+            };
+          });
+          lineSamples.push(...curvePoints, ...sampleLine(curveEnd, y, x, y));
+          const path = `M${px} ${py} C ${mid} ${py}, ${mid} ${y}, ${curveEnd} ${y} H ${x}`;
+          edges += `<path ${hitAttrs} d="${path}" stroke="transparent" stroke-width="28" fill="none" stroke-linecap="round"/><path ${lineAttrs} d="${path}" stroke="${pi === 1 ? pb.color : b.color}" stroke-width="6" fill="none" stroke-linecap="round" ${dash}${envOpacity}><title>klik voor uitleg over ${lineTerm}</title></path>`;
+        }
+      });
+    });
+    S.commits.forEach(c => {
+      const b = branchOf(c), y = laneY(b.lane), x = cx(c);
+      const envFaded = isEnvFaded(c);
+      const fade = c.squashed || envFaded ? 'opacity=".4"' : "";
+      const envFadeAttr = envFaded ? 'data-env-faded="true"' : "";
+      const isHub = c.kind === "merge";
+      const selected = c.id === S.selectedStart;
+      const release = c.branch === "main" ? releaseByCommit.get(c.id) : null;
+      const rollbackPreview = c.id === S.rollbackPreviewCommit;
+      if (!envFaded) {
+        const stationRadius = isHub ? R + 3 : R;
+        includeFrame(x - stationRadius, y - stationRadius, x + stationRadius, y + (c.byCollega ? 59 : release ? 45 : 32));
+      }
+      stations += `<g ${envFadeAttr} ${fade} onclick="selectStart('${c.id}')" style="cursor:pointer"><title>klik om hier een nieuwe branch te starten</title>`;
+      stations += `<circle class="station-hit" cx="${x}" cy="${y}" r="22" fill="transparent" stroke="none"/>`;
+      if (rollbackPreview) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 11 : R + 9}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 3"><title>terugrol naar ${release ? release.version : "dit station"}</title></circle>`;
+      if (selected) stations += `<circle cx="${x}" cy="${y}" r="${R + 6}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 3"/>`;
+      stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R + 3 : R}" fill="var(--station)" stroke="${b.color}" stroke-width="3"><title>${c.id} — ${c.msg}</title></circle>`;
+      if (release) stations += `<circle cx="${x}" cy="${y}" r="${isHub ? R - 1 : R - 3}" fill="none" stroke="var(--ok)" stroke-width="2"><title>release station ${release.version}</title></circle>`;
+      if (isHub) stations += `<circle cx="${x}" cy="${y}" r="3.5" fill="${b.color}"/>`;
+      if (c.kind === "squash") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">S</text>`;
+      if (c.kind === "rebase") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="${b.color}" font-weight="700">↻</text>`;
+      if (c.kind === "revert") stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">R</text>`;
+      if (c.kind === "hotfix" || c.hotfix) stations += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" fill="var(--danger)" font-weight="700">⚡</text>`;
+      stations += `</g>`;
+      const commitLabel = c.id.slice(0, 5), commitLabelY = y + 26;
+      labels += `<text x="${x}" y="${commitLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${commitLabel}</text>`;
+      placedLabels.push({ left: x - commitLabel.length * 6.1 / 2, right: x + commitLabel.length * 6.1 / 2, top: commitLabelY - 11, bottom: commitLabelY + 2 });
+      if (release) {
+        const releaseLabelY = y + 39;
+        labels += `<text x="${x}" y="${releaseLabelY}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-weight="700" style="font-family:var(--mono)" ${fade} ${envFadeAttr}>${release.version}</text>`;
+        placedLabels.push({ left: x - release.version.length * 6.1 / 2, right: x + release.version.length * 6.1 / 2, top: releaseLabelY - 11, bottom: releaseLabelY + 2 });
+      }
+      if (c.byCollega) labels += `<text x="${x}" y="${y + 52}" text-anchor="middle" font-size="12" aria-label="commit van collega" ${envFaded ? 'data-env-faded="true" opacity=".4"' : ""}>👤</text>`;
+    });
+    // branch-naambordjes + HEAD: plaats ze na een eenvoudige overlapcheck.
+    const branchLabels = Object.values(S.branches).filter(b => !b.deleted).map(b => {
+      const head = byId(b.head);
+      const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
+      const width = Math.max(24, text.length * 6.1);
+      const headX = head ? cx(head) : X0;
+      return { b, head, text, x: Math.max(4, Math.min(headX + 18, W - width - 4)), y: laneY(b.lane), width };
+    });
+    const laneRows = [...new Set(Object.values(S.branches).filter(b => !b.deleted).map(b => laneY(b.lane)))];
+    const overlaps = (a, b) => a.left < b.right + 4 && a.right + 4 > b.left && a.top < b.bottom + 3 && a.bottom + 3 > b.top;
+    const lineCollisions = rect => lineSamples.reduce((hits, point) => hits + (point.x >= rect.left - 5 && point.x <= rect.right + 5 && point.y >= rect.top - 5 && point.y <= rect.bottom + 5 ? 1 : 0), 0);
+    const placementScore = rect => lineCollisions(rect) + placedLabels.reduce((hits, placed) => hits + (overlaps(rect, placed) ? 100 : 0), 0);
+    // Open PR's tekenen de toekomstige merge voor: een voorstel, nog geen feit.
+    S.prs.filter(pr => pr.state === "open").forEach(pr => {
+      const b = S.branches[pr.branch], head = b && byId(b.head);
+      if (!b || b.deleted || !head) return;
+      const y = laneY(b.lane), mainY = laneY(0), headX = cx(head);
+      const startX = headX + R + 4, bendX = startX + 40, endX = bendX + 40, endY = mainY + 24;
+      const mid = bendX + Math.min(40, (endX - bendX) / 2);
+      const path = `M${startX} ${y} H${bendX} C ${mid} ${y}, ${mid} ${endY}, ${endX} ${endY}`;
+      const points = [...sampleLine(startX, y, bendX, y), ...Array.from({ length: 31 }, (_, i) => {
+        const t = i / 30, mt = 1 - t;
+        return { x: mt ** 3 * bendX + 3 * mt ** 2 * t * mid + 3 * mt * t ** 2 * mid + t ** 3 * endX, y: mt ** 3 * y + 3 * mt ** 2 * t * y + 3 * mt * t ** 2 * endY + t ** 3 * endY };
+      })];
+      lineSamples.push(...points);
+      const faded = isEnvFaded(head);
+      const fade = faded ? ' data-env-faded="true" opacity=".4"' : "";
+      const label = `PR #${pr.num}`, labelX = endX + 9, labelY = endY + 4;
+      const labelRect = { left: labelX, right: labelX + label.length * 6.1, top: labelY - 11, bottom: labelY + 2 };
+      placedLabels.push(labelRect);
+      if (!faded) includeFrame(Math.min(startX, bendX), Math.min(y, endY), Math.max(endX, labelRect.right), Math.max(y, endY));
+      const attrs = `data-pr="${pr.num}" class="pr-preview" role="button" tabindex="0" onclick="focusTerm('Pull Request (PR)')" onkeydown="if(event.key === 'Enter' || event.key === ' ') focusTerm('Pull Request (PR)')" aria-label="open pull request naar main"`;
+      edges += `<g ${attrs}${fade}><path d="${path}" stroke="${b.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/><path d="M${endX - 7} ${endY - 5} L${endX} ${endY} L${endX - 7} ${endY + 5}" stroke="${b.color}" stroke-width="2" fill="none"/><title>open pull request naar main</title></g>`;
+      labels += `<text data-pr="${pr.num}" x="${labelX}" y="${labelY}" font-size="11" fill="${b.color}" style="font-family:var(--mono)"${fade}>${label}</text>`;
+    });
+    branchLabels.forEach(({ b, head, x, y, width }) => {
+      const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
+      const yCandidates = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8].map(step => y - 14 + step * 14).filter(candidate => candidate >= 12 && candidate <= H - 4);
+      const xCandidates = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6].map(step => Math.max(4, Math.min(W - width - 4, x + step * 24)));
+      const candidates = xCandidates.flatMap(candidateX => yCandidates.map(candidateY => ({ x: candidateX, y: candidateY })));
+      const rectFor = candidate => ({ left: candidate.x, right: candidate.x + width, top: candidate.y - 11, bottom: candidate.y + 2 });
+      const free = candidates.find(candidate => {
+        const rect = rectFor(candidate);
+        return !laneRows.some(lineY => rect.top <= lineY + 3 && rect.bottom >= lineY - 3) && placementScore(rect) === 0;
+      });
+      const label = free ?? candidates.slice().sort((a, b) => placementScore(rectFor(a)) - placementScore(rectFor(b)))[0] ?? { x, y: Math.max(12, Math.min(H - 4, y - 14)) };
+      const labelX = label.x, labelY = label.y;
+      const rect = rectFor(label);
+      const faded = head && isEnvFaded(head);
+      placedLabels.push(rect);
+      branchLabelRects.push(rect);
+      if (!faded) includeFrame(rect.left, rect.top, rect.right, rect.bottom);
+      labels += `<text x="${labelX}" y="${labelY}" font-size="11" font-weight="700" fill="${b.color}" style="font-family:var(--mono)"${faded ? ' data-env-faded="true" opacity=".4"' : ""}>${text}</text>`;
+    });
+    // Omgevingsiconen: elk bolletje staat met tussenruimte boven zijn eigen commit.
+    const testC = byId(S.env.testCommit), liveC = byId(S.env.liveCommit);
+    const devC = S.active && S.branches[S.active] ? byId(S.branches[S.active].head) : byId(S.branches.main.head);
+    const environmentMarker = (environment, commit, label) => {
+      if (!commit) return "";
+      const faded = isEnvFaded(commit) ? ' data-env-faded="true" opacity=".4"' : "";
+      const colors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
+      const stationRadius = commit.kind === "merge" ? R + 3 : R;
+      const markerRadius = 5, markerGap = 8;
+      const y = laneY(branchOf(commit).lane) - stationRadius - markerGap - markerRadius;
+      return `<circle data-environment="${environment}" class="environment-marker" cx="${cx(commit)}" cy="${y}" r="${markerRadius}" fill="${colors[environment]}" aria-hidden="true"${faded}><title>${label}</title></circle>`;
+    };
+    flags += environmentMarker("dev", devC, "huidige ontwikkel-omgeving");
+    flags += environmentMarker("test", testC, "huidige test-omgeving");
+    flags += environmentMarker("live", liveC, "huidige live-omgeving");
+    const frameColors = { dev: "var(--warn)", test: "var(--accent)", live: "var(--ok)" };
+    const frame = S.envFilter !== "all" && frameBounds ? (() => {
+      const left = Math.max(0, frameBounds.left - 14), top = Math.max(0, frameBounds.top - 14);
+      const right = Math.min(W, frameBounds.right + 14), bottom = Math.min(H, frameBounds.bottom + 14);
+      return `<rect data-env-frame="${S.envFilter}" x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" rx="8" fill="none" stroke="${frameColors[S.envFilter]}" stroke-width="2" stroke-dasharray="6 5"/>`;
+    })() : "";
+    S.mapLayout = { lineSamples, branchLabels: branchLabelRects.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
+    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${frame}${edges}${stations}${labels}${flags}</svg>`;
+    el("map-scroll").scrollLeft = 1e6;
+
+    const lg = el("legend");
+    lg.innerHTML = `<span><i style="background:${S.branches.main.color}"></i> main (bron van elke versie)</span>` +
+      Object.values(S.branches).filter(b => b.name !== "main" && !b.deleted).map(b =>
+        `<span><i style="background:${b.color}"></i> ${b.name}</span>`).join("") +
+      `<span>◎ = merge-commit (2 ouders)</span><span>◉ = release station met versielabel</span><span>S = squash-commit</span><span>↻ = rebase-resultaat (rechte lijn, nieuwe commitobjecten)</span><span>R = revert-commit</span><span>⚡ = hotfix (noodroute vanaf live)</span><span>⇢ = open pull request (voorgestelde aansluiting, nog niet gemerged)</span><span>vervaagd = niet in main-historie</span><span><i class="env-marker dev" aria-hidden="true"></i> = huidige ontwikkel-commit</span><span><i class="env-marker test" aria-hidden="true"></i> = huidige test-commit</span><span><i class="env-marker live" aria-hidden="true"></i> = huidige live-commit</span>`;
+    }
+
+  el("btn-issue").onclick = newIssue;
+  el("btn-commit").onclick = commit;
+  el("btn-collega").onclick = colleagueMerge;
+  el("btn-hotfix").onclick = hotfix;
+  el("env-dev-box").onclick = () => setEnvFilter("dev");
+  el("env-test-box").onclick = () => setEnvFilter("test");
+  el("env-live-box").onclick = () => setEnvFilter("live");
+  el("btn-promote").onclick = promote;
+  el("btn-revert").onclick = revertLast;
+  el("btn-rollback").onclick = rollback;
+  el("btn-clear-start").onclick = clearStart;
+  applyPromotionVisibility();
+  el("repository-backend").onchange = () => {
+    el("release-history").dataset.historyLoaded = "false";
+    loadRepositoryDashboard();
+    if (el("release-history").open) loadReleaseHistory();
+  };
+  el("repository-refresh").onclick = () => loadRepositoryDashboard(true);
+  el("reset").onclick = () => { el("log").innerHTML = ""; init(); log("Opnieuw begonnen", "Schone kaart: alleen main met twee commits, test en live allebei op v0.1.0."); };
+  window.selectStart = selectStart; // aangeroepen vanuit de inline SVG (onclick-attribuut)
+  window.focusTerm = focusTerm;
+  window.__formatElapsedSince = formatElapsedSince; // alleen voor test/smoketest.js
+  window.__promoteAt = promote; // alleen voor test/smoketest.js
+  window.__loadTestLiveStatus = loadTestLiveStatus; // alleen voor test/smoketest.js
+  window.__loadDeploymentVersions = loadDeploymentVersions; // alleen voor test/smoketest.js
+  window.__render = render; // alleen voor test/smoketest.js
+  window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__applyPromotionVisibility = applyPromotionVisibility; // alleen voor test/smoketest.js
+  init();
+  loadRepositoryDashboard();
+})();
+</script>
+</body>
+</html>
