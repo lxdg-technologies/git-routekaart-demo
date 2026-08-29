@@ -268,18 +268,7 @@ jobs:
             exit 0
           fi
           git commit -m "Deploy $VERSION to test (${GITHUB_SHA::7})"
-          for poging in 1 2 3 4 5; do
-            if git push origin gh-pages; then
-              echo "Test en $VERSION gepubliceerd"
-              exit 0
-            fi
-            echo "Push naar gh-pages afgewezen (poging $poging) — deploymentbranch is intussen bijgewerkt"
-            git fetch origin gh-pages
-            git rebase origin/gh-pages
-            sleep 3
-          done
-          echo "::error::Publiceren van test bleef mislukken na 5 pogingen"
-          exit 1
+          bash ../source/.github/scripts/publiceer-omgeving.sh
 
       - name: Chrome instellen voor controle van de gepubliceerde pagina's
         id: chrome
