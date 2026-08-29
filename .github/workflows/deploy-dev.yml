@@ -158,6 +158,16 @@ jobs:
       group: gh-pages-development-pr-${{ github.event.number }}
       cancel-in-progress: false
     steps:
+      # Deze taak heeft de broncode nodig, want het publiceren gaat via een
+      # script dat daar staat. Zonder deze stap valt het opruimen om met
+      # "No such file or directory" — en dan blijft de proefomgeving van een
+      # gesloten voorstel voorgoed staan. Zie #209.
+      - name: Checkout de broncode van main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: source
+
       - name: Checkout deployment branch
         uses: actions/checkout@v6
         with:
