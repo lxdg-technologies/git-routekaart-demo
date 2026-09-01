@@ -79,7 +79,7 @@ class FakeGitHub:
 
     def mutate_status(self, project, item, field, option):
         self.mutations.append(("status", option))
-        self.current = {"progress": "In progress", "review": "Wacht op jou", "done": "Done"}[option]
+        self.current = {"backlog": "Backlog", "progress": "In progress", "review": "Wacht op jou", "done": "Done"}[option]
 
     def mutate_environment(self, project, item, field, option):
         self.mutations.append(("environment", option))
@@ -263,6 +263,31 @@ class ProjectBoardTests(unittest.TestCase):
         actions = projectbord.sync(client, project=client.project_data())
         self.assertEqual(client.mutations, [])
         self.assertTrue(any("issue #74: status overgeslagen" in action for action in actions))
+
+    def test_open_issue_op_done_wordt_teruggezet_naar_backlog(self):
+        client = FakeGitHub(None, current="Done")
+        actions = projectbord.sync(client, project=client.project_data())
+        self.assertIn(("status", "backlog"), client.mutations)
+        self.assertTrue(any("issue #74: status gecorrigeerd" in action for action in actions))
+
+    def test_open_issue_op_done_met_branch_wordt_in_progress(self):
+        class BranchClient(FakeGitHub):
+            def linked_branches(self, number):
+                return {"werk"}
+
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 74, "state": "open"}]
+                if "/pulls?" in path:
+                    return []
+                if "/branches?" in path:
+                    return [{"name": "main"}, {"name": "werk"}]
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+        client = BranchClient(None, current="Done")
+        actions = projectbord.sync(client, project=client.project_data())
+        self.assertIn(("status", "progress"), client.mutations)
+        self.assertTrue(any("issue #74: status gecorrigeerd" in action for action in actions))
 
     def test_status_gaat_nooit_achteruit(self):
         class WorkClient(FakeGitHub):
