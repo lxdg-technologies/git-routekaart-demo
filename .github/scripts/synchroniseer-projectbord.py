@@ -94,6 +94,18 @@ def target_pr_status(pr: PullRequestState) -> str:
     return "In progress"
 
 
+def _inconsistent_issue_status(issue: IssueState, current: str | None) -> tuple[str | None, str | None]:
+    """Correct only a status that contradicts an open, unfinished issue.
+
+    An explicit manual placement remains authoritative unless GitHub proves it
+    impossible: an issue that is still open and has no merged PR cannot be Done.
+    """
+    if issue.state == "open" and current == "Done" and not issue.merged_pr:
+        desired = target_status(issue) or "Backlog"
+        return desired, f"issue #{issue.number}: status gecorrigeerd — open zonder afgeronde PR kan niet op Done staan"
+    return None, None
+
+
 def _status_change(current: str | None, desired: str | None, subject: str) -> tuple[str | None, str | None]:
     """Return a safe status mutation and the corresponding log entry.
 
@@ -516,12 +528,20 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
             continue
         current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
                         if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
-        status_option, status_action = _status_change(current, desired, f"issue #{number}")
-        if status_option is not None:
-            option_id = options.get(status_option)
+        correction, correction_action = _inconsistent_issue_status(state, current)
+        if correction is not None:
+            option_id = options.get(correction)
             if option_id is None:
-                raise RuntimeError(f"ProjectV2 mist statusoptie: {status_option}")
+                raise RuntimeError(f"ProjectV2 mist statusoptie: {correction}")
             client.mutate_status(project["id"], item["id"], status_field["id"], option_id)
+            status_action = correction_action
+        else:
+            status_option, status_action = _status_change(current, desired, f"issue #{number}")
+            if status_option is not None:
+                option_id = options.get(status_option)
+                if option_id is None:
+                    raise RuntimeError(f"ProjectV2 mist statusoptie: {status_option}")
+                client.mutate_status(project["id"], item["id"], status_field["id"], option_id)
 
         environment = target_environment(
             state,
