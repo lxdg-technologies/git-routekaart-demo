@@ -368,7 +368,7 @@
   letter-spacing:.01em;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
     <div style="flex:1 1 22rem;min-width:0;">
-      Ontwikkelversie — pull request #213 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">3692cdc</code>
+      Ontwikkelversie — pull request #213 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">429af06</code>
       <span style="display:block;font-weight:400;">
         Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
         publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -2160,6 +2160,8 @@
       top: Math.min(...routePoints.map(point => point.y)) - R,
       bottom: Math.max(...routePoints.map(point => point.y)) + R,
     } : { left: 0, right: W, top: 0, bottom: H };
+    routeBounds.width = routeBounds.right - routeBounds.left;
+    routeBounds.height = routeBounds.bottom - routeBounds.top;
     const zoomBounds = mapZoomBounds(W, H, { width: routeBounds.right - routeBounds.left, height: routeBounds.bottom - routeBounds.top });
     const z = S.mapZoom;
     z.width = W; z.height = H; z.minScale = zoomBounds.minScale; z.maxScale = zoomBounds.maxScale; z.routeBounds = { ...routeBounds }; z.detailWidth = Math.max(SP * 1.8, routeBounds.width * .08);
