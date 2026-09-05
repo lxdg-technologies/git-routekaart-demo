@@ -368,7 +368,7 @@
   letter-spacing:.01em;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
     <div style="flex:1 1 22rem;min-width:0;">
-      Ontwikkelversie — pull request #213 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">9f7213f</code>
+      Ontwikkelversie — pull request #213 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">e7aa09c</code>
       <span style="display:block;font-weight:400;">
         Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
         publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -2151,7 +2151,11 @@
   function renderMap() {
     const SP = typeof window !== "undefined" && window.innerWidth <= 700 ? 90 : 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
     const lanes = Math.max(2, ...Object.values(S.branches).filter(b => !b.deleted || S.commits.some(c => c.branch === b.name)).map(b => b.lane + 1));
-    const W = X0 + S.commits.length * SP + 60, H = Y0 + lanes * LH;
+    const labelWidth = text => text.length * 7.2;
+    const branchLabelPadding = Math.max(24, ...Object.values(S.branches).filter(b => !b.deleted).map(b => labelWidth(`${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`) + 26));
+    const prLabelPadding = Math.max(0, ...S.prs.filter(pr => pr.state === "open").map(pr => 100 + labelWidth(`PR #${pr.num}`)));
+    const labelRightPadding = Math.max(branchLabelPadding, prLabelPadding);
+    const W = X0 + S.commits.length * SP + 60 + labelRightPadding, H = Y0 + lanes * LH;
     const laneY = l => Y0 + l * LH - LH / 2 + 10;
     const cx = c => X0 + c.x * SP;
     const branchOf = c => S.branches[c.branch];
@@ -2265,7 +2269,7 @@
     const branchLabels = Object.values(S.branches).filter(b => !b.deleted).map(b => {
       const head = byId(b.head);
       const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
-      const width = Math.max(24, text.length * 6.1);
+      const width = Math.max(24, labelWidth(text));
       const headX = head ? cx(head) : X0;
       return { b, head, text, x: Math.max(4, Math.min(headX + 18, W - width - 4)), y: laneY(b.lane), width };
     });
@@ -2337,7 +2341,7 @@
       return `<rect data-env-frame="${S.envFilter}" x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" rx="8" fill="none" stroke="${frameColors[S.envFilter]}" stroke-width="2" stroke-dasharray="6 5"/>`;
     })() : "";
     S.mapLayout = { lineSamples, branchLabels: branchLabelRects.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null, routeBounds: { ...routeBounds }, zoom: { ...z }, visibleRoutePercent: Math.round((1 - mapZoomProgress()) * 100) };
-    const clip = `<clipPath id="map-route-clip"><rect id="map-route-clip-rect" x="${clipLeft}" y="${Math.max(0, routeBounds.top - 12)}" width="${visibleWidth + 24}" height="${routeBounds.bottom - routeBounds.top + 24}"/></clipPath>`;
+    const clip = `<clipPath id="map-route-clip"><rect id="map-route-clip-rect" x="${clipLeft}" y="${Math.max(0, routeBounds.top - 12)}" width="${visibleWidth + labelRightPadding + 24}" height="${routeBounds.bottom - routeBounds.top + 24}"/></clipPath>`;
     el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek"><defs>${clip}</defs><g id="map-route-content" style="will-change:transform" clip-path="url(#map-route-clip)" transform="translate(${z.translateX} ${z.translateY}) scale(${z.scale})">${frame}${edges}${stations}${labels}${flags}</g></svg>`;
     applyMapTransform();
     el("map-scroll").scrollLeft = 1e6;
