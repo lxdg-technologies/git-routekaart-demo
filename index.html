@@ -2014,7 +2014,9 @@
 
   function mapZoomProgress() {
     const z = S.mapZoom;
-    return z.maxScale === z.minScale ? 0 : Math.max(0, Math.min(1, (z.scale - z.minScale) / (z.maxScale - z.minScale)));
+    // 100% is the existing kaartgrootte and always shows the full route.
+    // Only zooming in beyond that level progressively narrows the route view.
+    return z.maxScale <= 1 ? 0 : Math.max(0, Math.min(1, (z.scale - 1) / (z.maxScale - 1)));
   }
 
   function applyMapTransform() {
@@ -2023,7 +2025,7 @@
     const z = S.mapZoom;
     content.setAttribute("transform", `translate(${z.translateX} ${z.translateY}) scale(${z.scale})`);
     const level = el("map-zoom-level");
-    if (level) level.textContent = `${Math.round(z.scale / z.minScale * 100)}% · ${Math.round((1 - mapZoomProgress()) * 100)}% van route`;
+    if (level) level.textContent = `${Math.round(z.scale * 100)}% · ${Math.round((1 - mapZoomProgress()) * 100)}% van route`;
     const clipRect = document.getElementById("map-route-clip-rect");
     if (clipRect && z.routeBounds) {
       const width = z.routeBounds.width - (z.routeBounds.width - z.detailWidth) * mapZoomProgress();

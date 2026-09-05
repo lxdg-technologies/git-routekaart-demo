@@ -23,7 +23,7 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   const initialClip = initialMap.match(/id="map-route-clip-rect"[^>]*width="([0-9.]+)"[^>]*height="([0-9.]+)"/);
   assert(initialMap.includes('<path') && initialMap.includes('class="station-hit"') && initialClip && Number(initialClip[1]) > 0 && Number(initialClip[2]) > 0 && !initialMap.includes('NaN'), "kaart toont de route zelf met een geldige zichtbare clip in plaats van een lege kaart");
   const initialZoom = window.__mapZoom();
-  assert(initialZoom.scale === 1 && initialZoom.scale >= initialZoom.minScale && initialZoom.maxScale >= 4, "kaart start op 100% van de bestaande kaartgrootte en houdt ruimte voor inzoomen");
+  assert(initialZoom.scale === 1 && initialZoom.scale >= initialZoom.minScale && initialZoom.maxScale >= 4 && window.__state().mapLayout.visibleRoutePercent === 100, "kaart start op 100% van de bestaande kaartgrootte met de hele route zichtbaar");
   window.__setMapZoom(initialZoom.maxScale, 120, 80);
   window.__render();
   const zoomed = window.__mapZoom();
@@ -31,6 +31,7 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   assert(mapResult().includes("map-route-clip") && /transform="translate\([^\"]+\) scale\([^\"]+\)"/.test(mapResult()), "zoom gebruikt een begrensde SVG-transformatie met routeclip");
   window.__setMapZoom(initialZoom.minScale, 120, 80);
   window.__render();
+  assert(window.__mapZoom().scale === initialZoom.minScale && window.__state().mapLayout.visibleRoutePercent === 100, "uitzoomen vanaf 100% houdt de volledige route zichtbaar");
 
   stappen.nieuwIssue();
   stappen.maakBranch();
