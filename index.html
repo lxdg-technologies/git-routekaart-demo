@@ -1999,7 +1999,7 @@
     const viewportWidth = el("map-scroll")?.clientWidth || Math.min(width, 900);
     const viewportHeight = el("map-scroll")?.clientHeight || height;
     const fitScale = Math.min(1, viewportWidth / Math.max(1, routeBounds.width), viewportHeight / Math.max(1, routeBounds.height));
-    return { minScale: Math.max(.2, fitScale), maxScale: Math.max(1, fitScale * 4) };
+    return { minScale: Math.max(.2, fitScale), maxScale: Math.max(4, fitScale * 4) };
   }
 
   function clampMapTranslation(x, y, scale, width, height) {
@@ -2117,7 +2117,7 @@
     map.addEventListener("dblclick", event => { const p = mapPoint(event); setMapZoom(S.mapZoom.scale * 1.8, p.x, p.y); event.preventDefault(); });
     el("map-zoom-in")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(S.mapZoom.scale * 1.5, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
     el("map-zoom-out")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(S.mapZoom.scale / 1.5, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
-    el("map-zoom-reset")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(S.mapZoom.minScale, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
+    el("map-zoom-reset")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(1, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
   }
 
   function renderMap() {
@@ -2140,7 +2140,7 @@
     const z = S.mapZoom;
     z.width = W; z.height = H; z.minScale = zoomBounds.minScale; z.maxScale = zoomBounds.maxScale; z.routeBounds = { ...routeBounds }; z.detailWidth = Math.max(SP * 1.8, routeBounds.width * .08);
     if (!z.ready) {
-      z.scale = z.targetScale = z.minScale;
+      z.scale = z.targetScale = 1;
       const centered = clampMapTranslation((W - W * z.scale) / 2, (H - H * z.scale) / 2, z.scale, W, H);
       z.translateX = z.targetTranslateX = centered.x; z.translateY = z.targetTranslateY = centered.y; z.ready = true;
     } else {

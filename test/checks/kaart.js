@@ -23,6 +23,7 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   const initialClip = initialMap.match(/id="map-route-clip-rect"[^>]*width="([0-9.]+)"[^>]*height="([0-9.]+)"/);
   assert(initialMap.includes('<path') && initialMap.includes('class="station-hit"') && initialClip && Number(initialClip[1]) > 0 && Number(initialClip[2]) > 0 && !initialMap.includes('NaN'), "kaart toont de route zelf met een geldige zichtbare clip in plaats van een lege kaart");
   const initialZoom = window.__mapZoom();
+  assert(initialZoom.scale === 1 && initialZoom.scale >= initialZoom.minScale && initialZoom.maxScale >= 4, "kaart start op 100% van de bestaande kaartgrootte en houdt ruimte voor inzoomen");
   window.__setMapZoom(initialZoom.maxScale, 120, 80);
   window.__render();
   const zoomed = window.__mapZoom();
