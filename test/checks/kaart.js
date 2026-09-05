@@ -33,6 +33,16 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   window.__render();
   assert(window.__mapZoom().scale === initialZoom.minScale && window.__state().mapLayout.visibleRoutePercent === 100, "uitzoomen vanaf 100% houdt de volledige route zichtbaar");
 
+  stappen.opnieuw();
+  stappen.mergeRonde("merge");
+  stappen.hotfix();
+  const hotfixMap = mapResult();
+  const hotfixClip = hotfixMap.match(/id="map-route-clip-rect"[^>]*x="([0-9.]+)"[^>]*width="([0-9.]+)"/);
+  const hotfixClipRight = hotfixClip ? Number(hotfixClip[1]) + Number(hotfixClip[2]) : 0;
+  const hotfixLabelRight = Math.max(...state().mapLayout.branchLabels.map(label => label.right));
+  assert(hotfixClip && hotfixClipRight >= hotfixLabelRight, "kaartclip groeit mee met een langere route zodat branchlabels volledig zichtbaar blijven");
+
+  stappen.opnieuw();
   stappen.nieuwIssue();
   stappen.maakBranch();
   stappen.commit();
