@@ -167,8 +167,13 @@
 
   /* ==== SECTIE: KAART ==== */
   #map-card { padding: .6rem .6rem .2rem; }
-  #map-scroll { overflow-x: auto; padding-bottom: .4rem; }
-  #map-scroll svg { display: block; }
+  #map-scroll { position: relative; overflow: hidden; padding-bottom: .4rem; touch-action: none; user-select: none; }
+  #map-scroll svg { display: block; max-width: none; }
+  #map-scroll.is-panning { cursor: grabbing; }
+  .map-zoom-controls { display: flex; gap: .35rem; margin: 0 .25rem .45rem; }
+  .map-zoom-controls button { min-width: 2.1rem; border: 1.5px solid var(--line); border-radius: 7px; padding: .25rem .55rem; background: var(--chip-bg); color: var(--ink); font: 700 1rem inherit; cursor: pointer; }
+  .map-zoom-controls button:hover, .map-zoom-controls button:focus-visible { border-color: var(--accent); }
+  .map-zoom-level { align-self: center; color: var(--ink-soft); font-size: .78rem; }
   .env-filter-note { min-height: 1.35em; margin: 0 .25rem .35rem; color: var(--ink-soft); font-size: .82rem; }
   .source-label { margin: .35rem 0 .7rem; color: var(--ink-soft); font-size: .82rem; }
   .branch-line { cursor: pointer; transition: stroke-width .15s, filter .15s; }
@@ -412,6 +417,12 @@
     <!-- ==== SECTIE: KAART ==== -->
     <div class="card" id="map-card">
       <p id="env-filter-note" class="env-filter-note" aria-live="polite">Simulatie/oefening: acties op deze kaart wijzigen GitHub niet.</p>
+      <div class="map-zoom-controls" role="group" aria-label="Kaart zoomen">
+        <button id="map-zoom-out" type="button" aria-label="Uitzoomen">−</button>
+        <button id="map-zoom-in" type="button" aria-label="Inzoomen">+</button>
+        <button id="map-zoom-reset" type="button">100%</button>
+        <span id="map-zoom-level" class="map-zoom-level" aria-live="polite">routeweergave</span>
+      </div>
       <div id="map-scroll"></div>
       <div class="legend" id="legend"></div>
     </div>
@@ -1248,6 +1259,7 @@
       selectedStart: null,
       selectedStartAuto: false,
       envFilter: "all",
+      mapZoom: { scale: 1, targetScale: 1, translateX: 0, translateY: 0, targetTranslateX: 0, targetTranslateY: 0, minScale: 1, maxScale: 4, animation: null },
     };
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
@@ -1983,13 +1995,167 @@
     el("trophy").className = done === MISSIONS.length ? "show" : "";
   }
 
+  function mapZoomBounds(width, height, routeBounds) {
+    const viewportWidth = el("map-scroll")?.clientWidth || Math.min(width, 900);
+    const viewportHeight = el("map-scroll")?.clientHeight || height;
+    const fitScale = Math.min(1, viewportWidth / Math.max(1, routeBounds.width), viewportHeight / Math.max(1, routeBounds.height));
+    return { minScale: Math.max(.2, fitScale), maxScale: Math.max(4, fitScale * 4) };
+  }
+
+  function clampMapTranslation(x, y, scale, width, height) {
+    const viewportWidth = el("map-scroll")?.clientWidth || width;
+    const viewportHeight = el("map-scroll")?.clientHeight || height;
+    const scaledWidth = width * scale, scaledHeight = height * scale;
+    const clampAxis = (value, scaled, viewport) => scaled <= viewport
+      ? (viewport - scaled) / 2
+      : Math.min(0, Math.max(viewport - scaled, value));
+    return { x: clampAxis(x, scaledWidth, viewportWidth), y: clampAxis(y, scaledHeight, viewportHeight) };
+  }
+
+  function mapZoomProgress() {
+    const z = S.mapZoom;
+    // 100% is the existing kaartgrootte and always shows the full route.
+    // Only zooming in beyond that level progressively narrows the route view.
+    return z.maxScale <= 1 ? 0 : Math.max(0, Math.min(1, (z.scale - 1) / (z.maxScale - 1)));
+  }
+
+  function applyMapTransform() {
+    const content = document.getElementById("map-route-content");
+    if (!content || !S.mapZoom) return;
+    const z = S.mapZoom;
+    content.setAttribute("transform", `translate(${z.translateX} ${z.translateY}) scale(${z.scale})`);
+    const level = el("map-zoom-level");
+    if (level) level.textContent = `${Math.round(z.scale * 100)}% · ${Math.round((1 - mapZoomProgress()) * 100)}% van route`;
+    const clipRect = document.getElementById("map-route-clip-rect");
+    if (clipRect && z.routeBounds) {
+      const width = z.routeBounds.width - (z.routeBounds.width - z.detailWidth) * mapZoomProgress();
+      clipRect.setAttribute("x", String(Math.max(0, z.routeBounds.right - width - 12)));
+      clipRect.setAttribute("width", String(width + 24));
+    }
+  }
+
+  function stopMapZoomAnimation() {
+    if (S.mapZoom.animation !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(S.mapZoom.animation);
+    S.mapZoom.animation = null;
+  }
+
+  function animateMapZoom() {
+    const z = S.mapZoom;
+    stopMapZoomAnimation();
+    const start = { scale: z.scale, x: z.translateX, y: z.translateY };
+    const end = { scale: z.targetScale, x: z.targetTranslateX, y: z.targetTranslateY };
+    const started = performance.now();
+    const frame = now => {
+      const t = Math.min(1, (now - started) / 300);
+      const eased = 1 - (1 - t) ** 4;
+      z.scale = start.scale + (end.scale - start.scale) * eased;
+      z.translateX = start.x + (end.x - start.x) * eased;
+      z.translateY = start.y + (end.y - start.y) * eased;
+      applyMapTransform();
+      if (t < 1) z.animation = requestAnimationFrame(frame); else z.animation = null;
+    };
+    z.animation = requestAnimationFrame(frame);
+  }
+
+  function setMapZoom(scale, anchorX, anchorY, animate = true) {
+    const z = S.mapZoom;
+    stopMapZoomAnimation();
+    const next = Math.max(z.minScale, Math.min(z.maxScale, scale));
+    const ratio = next / z.scale;
+    const x = anchorX - (anchorX - z.translateX) * ratio;
+    const y = anchorY - (anchorY - z.translateY) * ratio;
+    const clamped = clampMapTranslation(x, y, next, S.mapZoom.width, S.mapZoom.height);
+    z.targetScale = next; z.targetTranslateX = clamped.x; z.targetTranslateY = clamped.y;
+    if (animate) animateMapZoom();
+    else { z.scale = next; z.translateX = clamped.x; z.translateY = clamped.y; applyMapTransform(); }
+  }
+
+  function mapPoint(event) {
+    const rect = el("map-scroll").getBoundingClientRect ? el("map-scroll").getBoundingClientRect() : { left: 0, top: 0 };
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function setupMapGestures() {
+    const map = el("map-scroll");
+    if (!map || map.dataset.zoomReady) return;
+    map.dataset.zoomReady = "true";
+    const pointers = new Map();
+    let panStart = null, pinchStart = null;
+    map.addEventListener("pointerdown", event => {
+      pointers.set(event.pointerId, mapPoint(event));
+      map.setPointerCapture?.(event.pointerId);
+      stopMapZoomAnimation();
+      if (pointers.size === 1) panStart = { point: mapPoint(event), x: S.mapZoom.translateX, y: S.mapZoom.translateY };
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        pinchStart = { distance: Math.hypot(a.x - b.x, a.y - b.y), scale: S.mapZoom.scale, x: S.mapZoom.translateX, y: S.mapZoom.translateY, center };
+      }
+    });
+    map.addEventListener("pointermove", event => {
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, mapPoint(event));
+      if (pointers.size >= 2 && pinchStart) {
+        const [a, b] = [...pointers.values()];
+        const distance = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+        const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const scale = Math.max(S.mapZoom.minScale, Math.min(S.mapZoom.maxScale, pinchStart.scale * distance / pinchStart.distance));
+        const ratio = scale / pinchStart.scale;
+        const x = center.x - (pinchStart.center.x - pinchStart.x) * ratio;
+        const y = center.y - (pinchStart.center.y - pinchStart.y) * ratio;
+        const clamped = clampMapTranslation(x, y, scale, S.mapZoom.width, S.mapZoom.height);
+        Object.assign(S.mapZoom, { scale, targetScale: scale, translateX: clamped.x, translateY: clamped.y, targetTranslateX: clamped.x, targetTranslateY: clamped.y });
+        applyMapTransform();
+      } else if (pointers.size === 1 && panStart) {
+        const point = pointers.values().next().value;
+        const clamped = clampMapTranslation(panStart.x + point.x - panStart.point.x, panStart.y + point.y - panStart.point.y, S.mapZoom.scale, S.mapZoom.width, S.mapZoom.height);
+        Object.assign(S.mapZoom, { translateX: clamped.x, translateY: clamped.y, targetTranslateX: clamped.x, targetTranslateY: clamped.y });
+        applyMapTransform(); map.classList.add("is-panning");
+      }
+      event.preventDefault();
+    });
+    const end = event => { pointers.delete(event.pointerId); if (pointers.size < 2) pinchStart = null; if (!pointers.size) { panStart = null; map.classList.remove("is-panning"); } };
+    map.addEventListener("pointerup", end); map.addEventListener("pointercancel", end);
+    map.addEventListener("dblclick", event => { const p = mapPoint(event); setMapZoom(S.mapZoom.scale * 1.8, p.x, p.y); event.preventDefault(); });
+    el("map-zoom-in")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(S.mapZoom.scale * 1.5, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
+    el("map-zoom-out")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(S.mapZoom.scale / 1.5, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
+    el("map-zoom-reset")?.addEventListener("click", () => { const m = el("map-scroll"); setMapZoom(1, (m.clientWidth || S.mapZoom.width) / 2, (m.clientHeight || S.mapZoom.height) / 2); });
+  }
+
   function renderMap() {
     const SP = typeof window !== "undefined" && window.innerWidth <= 700 ? 90 : 78, X0 = 60, Y0 = 64, LH = 60, R = 9;
     const lanes = Math.max(2, ...Object.values(S.branches).filter(b => !b.deleted || S.commits.some(c => c.branch === b.name)).map(b => b.lane + 1));
-    const W = X0 + S.commits.length * SP + 60, H = Y0 + lanes * LH;
+    const labelWidth = text => text.length * 7.2;
+    const branchLabelPadding = Math.max(24, ...Object.values(S.branches).filter(b => !b.deleted).map(b => labelWidth(`${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`) + 26));
+    const prLabelPadding = Math.max(0, ...S.prs.filter(pr => pr.state === "open").map(pr => 100 + labelWidth(`PR #${pr.num}`)));
+    const labelRightPadding = Math.max(branchLabelPadding, prLabelPadding);
+    const W = X0 + S.commits.length * SP + 60 + labelRightPadding, H = Y0 + lanes * LH;
     const laneY = l => Y0 + l * LH - LH / 2 + 10;
     const cx = c => X0 + c.x * SP;
     const branchOf = c => S.branches[c.branch];
+    const routePoints = S.commits.filter(c => !isEnvFaded(c)).map(c => ({ x: cx(c), y: laneY(branchOf(c).lane) }));
+    const routeBounds = routePoints.length ? {
+      left: Math.min(...routePoints.map(point => point.x)) - R,
+      right: Math.max(...routePoints.map(point => point.x)) + R,
+      top: Math.min(...routePoints.map(point => point.y)) - R,
+      bottom: Math.max(...routePoints.map(point => point.y)) + R,
+    } : { left: 0, right: W, top: 0, bottom: H };
+    routeBounds.width = routeBounds.right - routeBounds.left;
+    routeBounds.height = routeBounds.bottom - routeBounds.top;
+    const zoomBounds = mapZoomBounds(W, H, { width: routeBounds.right - routeBounds.left, height: routeBounds.bottom - routeBounds.top });
+    const z = S.mapZoom;
+    z.width = W; z.height = H; z.minScale = zoomBounds.minScale; z.maxScale = zoomBounds.maxScale; z.routeBounds = { ...routeBounds }; z.detailWidth = Math.max(SP * 1.8, routeBounds.width * .08);
+    if (!z.ready) {
+      z.scale = z.targetScale = 1;
+      const centered = clampMapTranslation((W - W * z.scale) / 2, (H - H * z.scale) / 2, z.scale, W, H);
+      z.translateX = z.targetTranslateX = centered.x; z.translateY = z.targetTranslateY = centered.y; z.ready = true;
+    } else {
+      z.scale = Math.max(z.minScale, Math.min(z.maxScale, z.scale));
+      const clamped = clampMapTranslation(z.translateX, z.translateY, z.scale, W, H);
+      z.translateX = z.targetTranslateX = clamped.x; z.translateY = z.targetTranslateY = clamped.y;
+    }
+    const visibleWidth = routeBounds.width - (routeBounds.width - Math.max(SP * 1.8, routeBounds.width * .08)) * mapZoomProgress();
+    const clipLeft = Math.max(0, routeBounds.right - visibleWidth - 12);
     let edges = "", stations = "", labels = "", flags = "";
     const lineSamples = [];
     const placedLabels = [];
@@ -2077,7 +2243,7 @@
     const branchLabels = Object.values(S.branches).filter(b => !b.deleted).map(b => {
       const head = byId(b.head);
       const text = `${b.name}${b.merged ? " ✓" : ""}${S.active === b.name ? " ◀ HEAD" : ""}`;
-      const width = Math.max(24, text.length * 6.1);
+      const width = Math.max(24, labelWidth(text));
       const headX = head ? cx(head) : X0;
       return { b, head, text, x: Math.max(4, Math.min(headX + 18, W - width - 4)), y: laneY(b.lane), width };
     });
@@ -2148,8 +2314,10 @@
       const right = Math.min(W, frameBounds.right + 14), bottom = Math.min(H, frameBounds.bottom + 14);
       return `<rect data-env-frame="${S.envFilter}" x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" rx="8" fill="none" stroke="${frameColors[S.envFilter]}" stroke-width="2" stroke-dasharray="6 5"/>`;
     })() : "";
-    S.mapLayout = { lineSamples, branchLabels: branchLabelRects.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null };
-    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek">${frame}${edges}${stations}${labels}${flags}</svg>`;
+    S.mapLayout = { lineSamples, branchLabels: branchLabelRects.map(rect => ({ ...rect })), frame: frameBounds && S.envFilter !== "all" ? { ...frameBounds } : null, routeBounds: { ...routeBounds }, zoom: { ...z }, visibleRoutePercent: Math.round((1 - mapZoomProgress()) * 100) };
+    const clip = `<clipPath id="map-route-clip"><rect id="map-route-clip-rect" x="${clipLeft}" y="${Math.max(0, routeBounds.top - 12)}" width="${visibleWidth + labelRightPadding + 24}" height="${routeBounds.bottom - routeBounds.top + 24}"/></clipPath>`;
+    el("map-scroll").innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="commit-grafiek"><defs>${clip}</defs><g id="map-route-content" style="will-change:transform" clip-path="url(#map-route-clip)" transform="translate(${z.translateX} ${z.translateY}) scale(${z.scale})">${frame}${edges}${stations}${labels}${flags}</g></svg>`;
+    applyMapTransform();
     el("map-scroll").scrollLeft = 1e6;
 
     const lg = el("legend");
@@ -2170,6 +2338,7 @@
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
+  setupMapGestures();
   applyPromotionVisibility();
   el("repository-backend").onchange = () => {
     el("release-history").dataset.historyLoaded = "false";
@@ -2187,6 +2356,8 @@
   window.__render = render; // alleen voor test/smoketest.js
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
+  window.__mapZoom = () => S.mapZoom; // alleen voor test/smoketest.js
+  window.__setMapZoom = (scale, x, y, animate = false) => setMapZoom(scale, x, y, animate); // alleen voor test/smoketest.js
   window.__applyPromotionVisibility = applyPromotionVisibility; // alleen voor test/smoketest.js
   init();
   loadRepositoryDashboard();
