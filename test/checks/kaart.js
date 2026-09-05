@@ -18,6 +18,15 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   assert(mapResult().includes('role="button"') && mapResult().includes("branch-line"), "kaart rendert klikbare branch-lijn en stations");
   assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
   assert(byIdMap["legend"].innerHTML.includes("release station") && ["dev", "test", "live"].every(environment => byIdMap["legend"].innerHTML.includes(`class="env-marker ${environment}" aria-hidden="true"`)) && !byIdMap["legend"].innerHTML.includes("🧪") && !byIdMap["legend"].innerHTML.includes("🚀"), "legenda toont drie ronde omgevingsbolletjes zonder oude omgevingsemoji");
+  assert(byIdMap["map-zoom-in"] && byIdMap["map-zoom-out"] && byIdMap["map-zoom-reset"] && mapResult().includes('id="map-route-content"') && mapResult().includes('will-change:transform'), "kaart toont zoomknoppen en transformeert uitsluitend de route-inhoud");
+  const initialZoom = window.__mapZoom();
+  window.__setMapZoom(initialZoom.maxScale, 120, 80);
+  window.__render();
+  const zoomed = window.__mapZoom();
+  assert(zoomed.scale === zoomed.maxScale && zoomed.scale >= zoomed.minScale && zoomed.scale <= zoomed.maxScale && window.__state().mapLayout.visibleRoutePercent < 100, "maximaal inzoomen blijft binnen de dynamische grenzen en toont geleidelijk minder route");
+  assert(mapResult().includes("map-route-clip") && /transform="translate\([^\"]+\) scale\([^\"]+\)"/.test(mapResult()), "zoom gebruikt een begrensde SVG-transformatie met routeclip");
+  window.__setMapZoom(initialZoom.minScale, 120, 80);
+  window.__render();
 
   stappen.nieuwIssue();
   stappen.maakBranch();
