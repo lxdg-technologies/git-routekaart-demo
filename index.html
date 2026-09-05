@@ -2134,6 +2134,8 @@
       top: Math.min(...routePoints.map(point => point.y)) - R,
       bottom: Math.max(...routePoints.map(point => point.y)) + R,
     } : { left: 0, right: W, top: 0, bottom: H };
+    routeBounds.width = routeBounds.right - routeBounds.left;
+    routeBounds.height = routeBounds.bottom - routeBounds.top;
     const zoomBounds = mapZoomBounds(W, H, { width: routeBounds.right - routeBounds.left, height: routeBounds.bottom - routeBounds.top });
     const z = S.mapZoom;
     z.width = W; z.height = H; z.minScale = zoomBounds.minScale; z.maxScale = zoomBounds.maxScale; z.routeBounds = { ...routeBounds }; z.detailWidth = Math.max(SP * 1.8, routeBounds.width * .08);

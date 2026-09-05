@@ -19,6 +19,9 @@ module.exports = async function kaart({ assert, byIdMap, findBtn, mapResult, sta
   assert(mapResult().includes("branch-line-hit") && mapResult().includes("station-hit"), "kaart rendert ruime klikdoelen");
   assert(byIdMap["legend"].innerHTML.includes("release station") && ["dev", "test", "live"].every(environment => byIdMap["legend"].innerHTML.includes(`class="env-marker ${environment}" aria-hidden="true"`)) && !byIdMap["legend"].innerHTML.includes("🧪") && !byIdMap["legend"].innerHTML.includes("🚀"), "legenda toont drie ronde omgevingsbolletjes zonder oude omgevingsemoji");
   assert(byIdMap["map-zoom-in"] && byIdMap["map-zoom-out"] && byIdMap["map-zoom-reset"] && mapResult().includes('id="map-route-content"') && mapResult().includes('will-change:transform'), "kaart toont zoomknoppen en transformeert uitsluitend de route-inhoud");
+  const initialMap = mapResult();
+  const initialClip = initialMap.match(/id="map-route-clip-rect"[^>]*width="([0-9.]+)"[^>]*height="([0-9.]+)"/);
+  assert(initialMap.includes('<path') && initialMap.includes('class="station-hit"') && initialClip && Number(initialClip[1]) > 0 && Number(initialClip[2]) > 0 && !initialMap.includes('NaN'), "kaart toont de route zelf met een geldige zichtbare clip in plaats van een lege kaart");
   const initialZoom = window.__mapZoom();
   window.__setMapZoom(initialZoom.maxScale, 120, 80);
   window.__render();
