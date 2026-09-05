@@ -368,7 +368,7 @@
   letter-spacing:.01em;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
     <div style="flex:1 1 22rem;min-width:0;">
-      Ontwikkelversie — pull request #213 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">ac3918f</code>
+      Ontwikkelversie — pull request #213 · versie <code style="font:inherit;font-weight:700;background:var(--warn);color:#10161d;padding:.05em .3em;border-radius:.25em;">9f7213f</code>
       <span style="display:block;font-weight:400;">
         Dit is niet de echte site. Klopt dit versienummer niet met wat je verwacht, dan is het
         publiceren nog bezig — wacht een minuut en ververs de pagina.
@@ -2040,7 +2040,9 @@
 
   function mapZoomProgress() {
     const z = S.mapZoom;
-    return z.maxScale === z.minScale ? 0 : Math.max(0, Math.min(1, (z.scale - z.minScale) / (z.maxScale - z.minScale)));
+    // 100% is the existing kaartgrootte and always shows the full route.
+    // Only zooming in beyond that level progressively narrows the route view.
+    return z.maxScale <= 1 ? 0 : Math.max(0, Math.min(1, (z.scale - 1) / (z.maxScale - 1)));
   }
 
   function applyMapTransform() {
@@ -2049,7 +2051,7 @@
     const z = S.mapZoom;
     content.setAttribute("transform", `translate(${z.translateX} ${z.translateY}) scale(${z.scale})`);
     const level = el("map-zoom-level");
-    if (level) level.textContent = `${Math.round(z.scale / z.minScale * 100)}% · ${Math.round((1 - mapZoomProgress()) * 100)}% van route`;
+    if (level) level.textContent = `${Math.round(z.scale * 100)}% · ${Math.round((1 - mapZoomProgress()) * 100)}% van route`;
     const clipRect = document.getElementById("map-route-clip-rect");
     if (clipRect && z.routeBounds) {
       const width = z.routeBounds.width - (z.routeBounds.width - z.detailWidth) * mapZoomProgress();
