@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import base64
+import datetime as dt
 import os
 import re
 import sys
@@ -42,6 +43,7 @@ class IssueState:
     closed_unmerged_pr: bool
     labels: frozenset[str] = frozenset()
     merge_commit_sha: str | None = None
+    assigned: bool = False
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,31 @@ def _inconsistent_issue_status(issue: IssueState, current: str | None) -> tuple[
         desired = target_status(issue) or "Backlog"
         return desired, f"issue #{issue.number}: status gecorrigeerd — open zonder afgeronde PR kan niet op Done staan"
     return None, None
+
+
+STANDAARD_STILSTAAN_MINUTEN = 4 * 60
+
+
+def _stalled_issue_minutes(
+    issue: IssueState,
+    current: str | None,
+    card_updated_at: str | None,
+    *,
+    moment: dt.datetime | None = None,
+) -> int | None:
+    """Return the age of an untouched In-progress issue, or None if safe to skip."""
+    if (current != "In progress" or issue.branch or issue.open_pr or issue.assigned
+            or issue.merged_pr or not card_updated_at):
+        return None
+    try:
+        updated = dt.datetime.fromisoformat(card_updated_at.replace("Z", "+00:00"))
+        moment = moment or dt.datetime.now(dt.timezone.utc)
+        if updated.tzinfo is None:
+            return None
+        minutes = int((moment - updated).total_seconds() // 60)
+    except (TypeError, ValueError):
+        return None
+    return minutes if minutes >= STANDAARD_STILSTAAN_MINUTEN else None
 
 
 def _status_change(current: str | None, desired: str | None, subject: str) -> tuple[str | None, str | None]:
@@ -241,9 +268,12 @@ class GitHub:
                     totalCount
                     pageInfo { hasNextPage endCursor }
                     nodes {
-                      id isArchived
+                      id isArchived updatedAt
                       content {
-                        ... on Issue { __typename number repository { nameWithOwner } }
+                        ... on Issue {
+                          __typename number repository { nameWithOwner }
+                          assignees(first:100) { nodes { login } }
+                        }
                         ... on PullRequest { __typename number repository { nameWithOwner } }
                       }
                       fieldValues(first:100) { nodes {
@@ -417,7 +447,8 @@ def _issue_states(client: GitHub) -> dict[int, IssueState]:
                 break
         labels = frozenset(label.get("name") for label in issue.get("labels", []) if label.get("name"))
         states[number] = IssueState(number, issue["state"], branch, bool(open_prs), review, merged, closed_unmerged,
-                                     labels, merged_pr.get("merge_commit_sha") if merged_pr else None)
+                                     labels, merged_pr.get("merge_commit_sha") if merged_pr else None,
+                                     bool(issue.get("assignees")))
     return states
 
 
@@ -455,6 +486,7 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
         status_field = fields[0] if len(fields) == 1 else None
     if not isinstance(status_field, dict):
         raise RuntimeError("ProjectV2 heeft niet precies één veld Status")
+    assert status_field is not None
     options = {o["name"]: o["id"] for o in status_field.get("options", [])}
     missing = STATUSES - options.keys()
     if missing:
@@ -528,6 +560,20 @@ def sync(client: Any, *, project: dict[str, Any] | None = None) -> list[str]:
             continue
         current = next((v.get("name") for v in item.get("fieldValues", {}).get("nodes", [])
                         if v and v.get("field", {}).get("name") == STATUS_FIELD_NAME), None)
+        stalled_minutes = _stalled_issue_minutes(state, current, item.get("updatedAt"))
+        if stalled_minutes is not None and "staat stil" not in state.labels:
+            try:
+                stalled_option = options.get("Wacht op jou")
+                if stalled_option is None:
+                    raise RuntimeError("ProjectV2 mist statusoptie: Wacht op jou")
+                client.add_label(number, "staat stil")
+                client.mutate_status(project["id"], item["id"], status_field["id"], stalled_option)
+                actions.append(
+                    f"issue #{number}: staat stil ({stalled_minutes} minuten) — label toegevoegd en naar Wacht op jou"
+                )
+            except Exception as error:
+                actions.append(f"issue #{number}: controle op stilstand overgeslagen — {error}")
+            continue
         correction, correction_action = _inconsistent_issue_status(state, current)
         if correction is not None:
             option_id = options.get(correction)
