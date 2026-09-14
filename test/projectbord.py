@@ -2,6 +2,7 @@
 """Gedragstests voor de ProjectV2-synchronisatie (geen GitHub-mutaties)."""
 import importlib.util
 import io
+import datetime as dt
 import re
 import sys
 import unittest
@@ -121,6 +122,81 @@ class FakePullRequestGitHub(FakeGitHub):
 
 
 class ProjectBoardTests(unittest.TestCase):
+    def test_stilstaande_in_progress_kaart_wordt_na_vier_uur_herkend(self):
+        issue = projectbord.IssueState(211, "open", False, False, False, False, False)
+        moment = dt.datetime(2026, 9, 14, 12, 0, tzinfo=dt.timezone.utc)
+        self.assertEqual(projectbord._stalled_issue_minutes(
+            issue, "In progress", "2026-09-14T08:00:00Z", moment=moment
+        ), 240)
+
+    def test_actieve_kaart_wordt_niet_als_stilstaand_herkend(self):
+        moment = dt.datetime(2026, 9, 14, 12, 0, tzinfo=dt.timezone.utc)
+        for issue in (
+            projectbord.IssueState(1, "open", True, False, False, False, False),
+            projectbord.IssueState(2, "open", False, True, False, False, False),
+            projectbord.IssueState(3, "open", False, False, False, False, False, assigned=True),
+        ):
+            with self.subTest(issue=issue.number):
+                self.assertIsNone(projectbord._stalled_issue_minutes(
+                    issue, "In progress", "2026-09-14T08:00:00Z", moment=moment
+                ))
+
+    def test_kaart_die_een_uur_stilstaat_wordt_niet_herkend(self):
+        issue = projectbord.IssueState(211, "open", False, False, False, False, False)
+        moment = dt.datetime(2026, 9, 14, 12, 0, tzinfo=dt.timezone.utc)
+        self.assertIsNone(projectbord._stalled_issue_minutes(
+            issue, "In progress", "2026-09-14T11:00:00Z", moment=moment
+        ))
+
+    def test_onzekere_kaarttijd_wordt_niet_herkend(self):
+        issue = projectbord.IssueState(211, "open", False, False, False, False, False)
+        self.assertIsNone(projectbord._stalled_issue_minutes(issue, "In progress", "geen tijd"))
+
+    def test_bestaand_staat_stil_label_wordt_niet_opnieuw_geraakt(self):
+        issue = projectbord.IssueState(211, "open", False, False, False, False, False,
+                                       frozenset({"staat stil"}))
+        moment = dt.datetime(2026, 9, 14, 12, 0, tzinfo=dt.timezone.utc)
+        self.assertEqual(projectbord._stalled_issue_minutes(
+            issue, "In progress", "2026-09-14T08:00:00Z", moment=moment
+        ), 240)
+
+    def test_een_mislukte_kaart_houdt_andere_kaarten_niet_tegen(self):
+        class TwoCardClient(FakeGitHub):
+            def project_data(self):
+                project = super().project_data()
+                values = project["items"]["nodes"][0]["fieldValues"]
+                project["items"]["nodes"] = [
+                    {"id": "item-74", "isArchived": False, "updatedAt": "2026-09-14T08:00:00Z",
+                     "content": {"number": 74, "repository": {"nameWithOwner": projectbord.REPOSITORY}},
+                     "fieldValues": values},
+                    {"id": "item-75", "isArchived": False, "updatedAt": "2026-09-14T08:00:00Z",
+                     "content": {"number": 75, "repository": {"nameWithOwner": projectbord.REPOSITORY}},
+                     "fieldValues": {"nodes": [
+                         {"field": {"name": "Status"}, "name": "In progress"},
+                         {"field": {"name": "Omgeving"}, "name": "Geen omgeving"},
+                     ]}},
+                ]
+                return project
+
+            def rest(self, path, **kwargs):
+                if "/issues?" in path:
+                    return [{"number": 74, "state": "open"}, {"number": 75, "state": "open"}]
+                if "/pulls?" in path:
+                    return []
+                if "/branches?" in path:
+                    return []
+                raise AssertionError(f"onverwachte API-call: {path}")
+
+            def add_label(self, number, label):
+                if number == 74:
+                    raise RuntimeError("kaart 74 onbereikbaar")
+                super().add_label(number, label)
+
+        client = TwoCardClient(None, current="In progress")
+        actions = projectbord.sync(client, project=client.project_data())
+        self.assertTrue(any("issue #74: controle op stilstand overgeslagen" in action for action in actions))
+        self.assertIn(("add-label", 75, "staat stil"), client.mutations)
+
     def test_project_items_worden_doorgebladerd_tot_alle_kaarten_binnen_zijn(self):
         first_page = {
             "organization": {"projectV2": {
