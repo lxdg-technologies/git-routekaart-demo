@@ -56,6 +56,15 @@ jobs:
       - name: ProjectV2-synchronisatie testen
         run: python3 test/projectbord.py
 
+      - name: Productiepromotie en rollbackkeuze testen
+        run: bash test/promote-production.sh
+
+      - name: Gepubliceerde omgevingsknoppen testen
+        run: node test/published-buttons.js
+
+      - name: Stilstaand werk herkennen testen
+        run: python3 test/vastgelopen-werk.py
+
       - name: Routecontrole testen
         run: python3 test/route-controle.py
 

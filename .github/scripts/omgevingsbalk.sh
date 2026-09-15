@@ -80,10 +80,22 @@ if grep -q 'role="note"' "$bestand"; then
 fi
 
 tijdelijk="$(mktemp)"
-awk -v balk="$balk" -v omgeving="$omgeving" '
+balkbestand="$(mktemp)"
+trap 'rm -f -- "$tijdelijk" "$balkbestand"' EXIT HUP INT TERM
+printf '%s\n' "$balk" > "$balkbestand"
+awk -v balkbestand="$balkbestand" -v omgeving="$omgeving" '
+  BEGIN {
+    while ((getline regel < balkbestand) > 0) {
+      balkregels[++aantal_balkregels] = regel
+    }
+    close(balkbestand)
+  }
   omgeving == "test" && /id="btn-live-overlay"/ { next }
   { print }
-  !gedaan && /<body>/ { print balk; gedaan = 1 }
+  !gedaan && /<body>/ {
+    for (i = 1; i <= aantal_balkregels; i++) print balkregels[i]
+    gedaan = 1
+  }
 ' "$bestand" > "$tijdelijk"
 
 if ! grep -q 'role="note"' "$tijdelijk"; then
