@@ -60,6 +60,8 @@
   header.top h1 { font-size: 1.45rem; font-weight: 700; margin: 0; letter-spacing: -.01em; }
   header.top h1 .metro { color: var(--main-line); }
   header.top p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+  .theme-toggle { margin-left: auto; border: 1px solid var(--line); border-radius: 999px; padding: .25rem .65rem; background: var(--panel); color: var(--ink); font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
+  .theme-toggle:hover, .theme-toggle:focus-visible { border-color: var(--accent); color: var(--accent); }
   .promotion-banner-button { margin-left: auto; border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .65rem; background: var(--accent); color: #fff; font: 700 .76rem inherit; cursor: pointer; white-space: nowrap; }
   .promotion-banner-button:hover, .promotion-banner-button:focus-visible { filter: brightness(1.08); }
   .review-guide { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .62); }
@@ -141,6 +143,8 @@
   .repository-empty { color: var(--ink-soft); font-size: .76rem; }
   @media (max-width: 1100px) { .repository-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 700px) {
+    header.top { align-items: center; }
+    .theme-toggle, .promotion-banner-button { margin-left: 0; }
     .repository-summary, .repository-columns { grid-template-columns: 1fr; }
     .repository-actions { justify-content: flex-start; }
   }
@@ -352,6 +356,7 @@
 <header class="top">
   <h1><span class="metro">◉</span> Git Routekaart</h1>
   <p>Bekijk de echte repository en speel daaronder de moderne git-werkstroom na: issue → branch → PR → merge → test → live.</p>
+  <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">Donkere weergave</button>
   <button type="button" class="promotion-banner-button" id="btn-live-overlay">Naar live zetten</button>
 </header>
 
@@ -1248,10 +1253,30 @@
       selectedStart: null,
       selectedStartAuto: false,
       envFilter: "all",
+      theme: null,
     };
   }
   const hash = () => Math.random().toString(16).slice(2, 8);
   const el = id => document.getElementById(id);
+
+  function preferredTheme() {
+    const explicit = document.documentElement.dataset.theme;
+    if (explicit === "dark" || explicit === "light") return explicit;
+    return typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  function renderThemeToggle() {
+    const button = el("theme-toggle");
+    const dark = S.theme === "dark";
+    document.documentElement.dataset.theme = S.theme;
+    button.textContent = dark ? "Lichte weergave" : "Donkere weergave";
+    button.setAttribute("aria-pressed", String(dark));
+    button.setAttribute("aria-label", dark ? "Schakel naar lichte weergave" : "Schakel naar donkere weergave");
+  }
+  function toggleTheme() {
+    S.theme = S.theme === "dark" ? "light" : "dark";
+    renderThemeToggle();
+    render();
+  }
 
   function formatElapsedSince(promotedAt, now) {
     if (promotedAt === null || promotedAt === undefined) return "";
@@ -1324,6 +1349,8 @@
   }
   function init() {
     S = freshState();
+    S.theme = preferredTheme();
+    renderThemeToggle();
     el("env-source-label").textContent = repositoryUsesSimulatedData()
       ? "Oefengegevens: ook repository- en releasegegevens zijn voorbeelden voor deze ontwikkelomgeving."
       : "De kaartversies Test en Live zijn oefenversies; status en releasebadge tonen echte deploymentgegevens.";
@@ -1816,6 +1843,7 @@
   }
 
   function render() {
+    renderThemeToggle();
     renderMap(); renderChips(); renderTickets(); renderMissions(); renderEnv(); renderStartPicker();
     const b = S.branches[S.active];
     const commitBtn = el("btn-commit");
@@ -2170,6 +2198,7 @@
   el("btn-revert").onclick = revertLast;
   el("btn-rollback").onclick = rollback;
   el("btn-clear-start").onclick = clearStart;
+  el("theme-toggle").onclick = toggleTheme;
   applyPromotionVisibility();
   el("repository-backend").onchange = () => {
     el("release-history").dataset.historyLoaded = "false";
