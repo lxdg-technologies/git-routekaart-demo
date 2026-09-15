@@ -40,7 +40,7 @@ const ids = ["map-scroll", "legend", "begrippen-lijst", "commandoreferentie-lijs
   "log", "btn-issue", "btn-commit", "btn-collega", "btn-hotfix", "commit-sub", "promote-sub", "revert-sub", "rollback-sub", "collega-sub", "hotfix-sub", "reset", "btn-promote", "btn-revert", "btn-rollback", "rollback-version", "env-filter-note", "env-dev-box", "env-test-box",
   "env-dev", "env-test", "env-live", "env-live-age", "env-live-box", "env-source-label", "start-label", "start-hint", "btn-clear-start", "repository-link", "repository-updated", "repository-refresh", "repository-status", "repository-source-label", "repository-summary",
   "repository-title", "repository-commits", "repository-branches", "repository-issues", "repository-prs", "test-live-status", "test-live-status-text", "test-live-conditions", "test-live-condition-checks", "test-live-condition-published", "test-live-condition-human", "test-live-check", "test-live-promote-link", "real-test-version", "real-live-version",
-  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note", "review-guide", "review-guide-title", "review-guide-intro", "review-guide-steps", "review-guide-state", "review-guide-target", "review-guide-skip", "review-guide-github", "review-guide-pr-title"];
+  "live-promotion-overlay", "live-promotion-panel", "promotion-description", "promotion-modes", "promotion-checks", "promotion-error", "promotion-demo-note", "review-guide", "review-guide-title", "review-guide-intro", "review-guide-steps", "review-guide-state", "review-guide-target", "review-guide-skip", "review-guide-github", "review-guide-pr-title", "theme-toggle"];
 for (const id of ids) byIdMap[id] = makeEl("div");
 for (const id of ["btn-live-overlay", "btn-close-live-overlay", "btn-promotion-green", "btn-promotion-red", "btn-promotion-recover", "btn-promotion-live", "btn-review-approve", "btn-review-reject", "btn-close-review-guide", "btn-review-guide-back", "btn-review-guide-next"]) byIdMap[id] = makeEl("button");
 for (const id of ["env-dev-box", "env-test-box", "env-live-box"]) byIdMap[id] = makeEl("button");
@@ -196,6 +196,16 @@ const delen = [
   // Vóór de eerste await uitlezen: het deel release-badge controleert de beginwaarde van de badge.
   const initialBadge = byIdMap["release-badge-label"].textContent;
   const gereedschap = { assert, flush, byIdMap, created, makeEl, fetchCalls, findBtn, mapResult, glossaryResult, hiddenActDisplay, state, setFetchMode, stappen, initialBadge, environmentMarkup: html, decorateLogTerms: window.__decorateLogTerms };
+
+  // Dark-mode-toggle: zichtbare toestand, muisbediening en behoud bij opnieuw renderen.
+  const themeToggle = byIdMap["theme-toggle"];
+  assert(themeToggle.textContent === "Donkere weergave" && themeToggle.attributes["aria-pressed"] === "false" && document.documentElement.dataset.theme === "light", "dark-mode-toggle start zichtbaar in de lichte weergave");
+  themeToggle.onclick();
+  assert(document.documentElement.dataset.theme === "dark" && themeToggle.textContent === "Lichte weergave" && themeToggle.attributes["aria-pressed"] === "true", "dark-mode-toggle wisselt naar donker en toont de nieuwe toestand");
+  window.__render();
+  assert(document.documentElement.dataset.theme === "dark" && themeToggle.textContent === "Lichte weergave" && themeToggle.attributes["aria-pressed"] === "true", "dark-mode-toggle behoudt toestand na opnieuw tekenen");
+  themeToggle.onclick();
+  assert(document.documentElement.dataset.theme === "light" && themeToggle.textContent === "Donkere weergave" && themeToggle.attributes["aria-pressed"] === "false", "dark-mode-toggle wisselt terug naar licht");
 
   for (const [, deel] of delen) await deel(gereedschap);
 
