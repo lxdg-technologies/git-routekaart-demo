@@ -53,6 +53,9 @@ jobs:
       - name: Deploymentrij en voorrang testen
         run: bash test/deployment-queue.sh
 
+      - name: Bericht over ontwikkeladres testen
+        run: bash test/ontwikkeladres.sh
+
       - name: ProjectV2-synchronisatie testen
         run: python3 test/projectbord.py
 
