@@ -72,9 +72,19 @@ test "$(grep -c '<!-- ontwikkeladres -->' "$FAKE_GH_STATE")" -eq 1
 printf 'ok  : bestaand bericht bijgewerkt zonder tweede bericht\n'
 
 # Een fout bij GitHub maakt de al geslaagde publicatie niet alsnog rood.
-FAKE_GH_FAIL=1 bash "$helper" > "$tmp/fail.log" 2>&1
+COMMIT_SHA=abcdef1234567890 DEV_URL="${DEV_URL}abcdef1234567890" \
+  FAKE_GH_FAIL=1 bash "$helper" > "$tmp/fail.log" 2>&1
 status=$?
 test "$status" -eq 0
-grep -Fq 'Ontwikkeladres niet gemeld' "$tmp/fail.log"
+grep -Fq 'bestaande berichten konden niet worden opgehaald' "$tmp/fail.log"
+test "$(grep -c '^api' "$FAKE_GH_LOG")" -eq 3
 printf 'ok  : fout bij plaatsen geeft waarschuwing en status 0\n'
+
+# Ontbrekende invoer wordt afzonderlijk gecontroleerd.
+unset COMMIT_SHA
+bash "$helper" > "$tmp/missing.log" 2>&1
+status=$?
+test "$status" -eq 0
+grep -Fq 'PR_NUMBER, GITHUB_REPOSITORY of COMMIT_SHA ontbreekt' "$tmp/missing.log"
+printf 'ok  : ontbrekende invoer geeft waarschuwing en status 0\n'
 printf '\nALLE ONTWIKKELADRES-CHECKS GESLAAGD\n'
