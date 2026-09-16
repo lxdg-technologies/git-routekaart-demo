@@ -95,6 +95,7 @@ global.fetch = async url => {
     { number: 1, title: "Omgevingen ingericht", state: "closed", merged_at: "2026-08-07T09:00:00Z", html_url: "https://github.com/lxdg-technologies/git-routekaart-demo/pull/1", head: { ref: "agent/setup" }, base: { ref: "main" } },
   ]);
   if (String(url) === "environment.json") {
+    if (fetchMode === "development-banner") return response({ pull_request: 223, sha: "0123456789abcdef0123456789abcdef01234567" });
     if (["test-live-behind", "test-live-equal", "checks-green", "checks-failed", "checks-missing"].includes(fetchMode)) return response({ environment: "test", branch: "main", version: "v9.9.9", sha: "abc1234" });
     if (fetchMode === "test-live-invalid-published") return response({ environment: "test", version: "v9.9.9", sha: "wrongsha" });
     return response({}, 404);
@@ -126,6 +127,7 @@ const reviewMockupItems = ["Pull request", "Conversation", "Commits", "Checks", 
   return item;
 });
 global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), querySelectorAll: selector => selector === "[data-review-target]" ? reviewMockupItems : [], documentElement: { dataset: {} } };
+byIdMap["development-banner"] = makeEl("div");
 global.getComputedStyle = () => ({ getPropertyValue: () => "#1e5aa8" });
 const sessionValues = new Map();
 global.sessionStorage = { getItem: key => sessionValues.get(key) ?? null, setItem: (key, value) => sessionValues.set(key, value) };
@@ -298,6 +300,17 @@ const delen = [
   assert(byIdMap["btn-hotfix"].disabled === true, "hotfix-knop schakelt uit als test en live weer gelijk zijn");
 
   await require("./checks/live-promotion")(gereedschap);
+
+  // Ontwikkelbalk: links komen alleen uit geldige deploymentmetadata en blijven weg zonder die metadata.
+  global.location = { pathname: "/dev/pr-223/" };
+  byIdMap["development-banner"].innerHTML = "Ontwikkelversie — pull request #223 · versie <code>0123456</code>";
+  setFetchMode("development-banner");
+  await window.__decorateDevelopmentBanner();
+  assert(byIdMap["development-banner"].innerHTML.includes('href="https://github.com/lxdg-technologies/git-routekaart-demo/pull/223"') && byIdMap["development-banner"].innerHTML.includes('href="https://github.com/lxdg-technologies/git-routekaart-demo/commit/0123456789abcdef0123456789abcdef01234567"') && byIdMap["development-banner"].innerHTML.includes('target="_blank"'), "ontwikkelbalk linkt voorstelnummer en zichtbare korte versie naar GitHub in nieuwe tabbladen");
+  byIdMap["development-banner"].innerHTML = "Ontwikkelversie — pull request #223 · versie <code>0123456</code>";
+  setFetchMode("version");
+  await window.__decorateDevelopmentBanner();
+  assert(!byIdMap["development-banner"].innerHTML.includes("<a "), "ontwikkelbalk blijft platte tekst als environment.json ontbreekt");
 
   if (failed) { console.error(`\n${failed} van ${total} CHECK(S) GEFAALD`); process.exit(1); }
   console.log(`\nALLE ${total} CHECKS GESLAAGD`);
