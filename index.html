@@ -1186,6 +1186,30 @@
       checkButton.disabled = false;
     }
   }
+  async function decorateDevelopmentBanner() {
+    if (!repositoryUsesSimulatedData() || typeof fetch !== "function" || typeof document.querySelector !== "function") return;
+    const banner = document.querySelector('[role="note"]');
+    if (!banner || typeof banner.innerHTML !== "string" || banner.innerHTML.includes('href="https://github.com/lxdg-technologies/git-routekaart-demo/pull/')) return;
+    try {
+      const response = await fetch("environment.json", { cache: "no-store" });
+      if (!response.ok) return;
+      const environment = await response.json();
+      const pullRequest = Number(environment?.pull_request);
+      const sha = typeof environment?.sha === "string" ? environment.sha.trim() : "";
+      if (!Number.isInteger(pullRequest) || pullRequest < 1 || !/^[0-9a-f]{7,64}$/i.test(sha)) return;
+      const shortSha = sha.slice(0, 7);
+      const pullRequestUrl = `https://github.com/${REPOSITORY_FULL_NAME}/pull/${pullRequest}`;
+      const commitUrl = `https://github.com/${REPOSITORY_FULL_NAME}/commit/${sha}`;
+      const pullRequestText = `pull request #${pullRequest}`;
+      const pullRequestLink = `<a href="${pullRequestUrl}" target="_blank" rel="noreferrer">${pullRequestText}</a>`;
+      const versionPattern = new RegExp(`(<code\\b[^>]*>)${shortSha.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}(</code>)`);
+      const withPullRequest = banner.innerHTML.replace(pullRequestText, pullRequestLink);
+      const withVersion = withPullRequest.replace(versionPattern, `$1<a href="${commitUrl}" target="_blank" rel="noreferrer">${shortSha}</a>$2`);
+      if (withVersion !== banner.innerHTML && withVersion.includes(`href="${commitUrl}"`)) banner.innerHTML = withVersion;
+    } catch (error) {
+      // De bestaande platte tekst blijft staan als de deploymentmetadata niet beschikbaar is.
+    }
+  }
   function deploymentUrl(path) {
     const pathname = typeof location !== "undefined" && typeof location.pathname === "string" ? location.pathname : "/";
     const marker = "/git-routekaart-demo/";
@@ -2217,8 +2241,10 @@
   window.__state = () => S; // alleen voor test/smoketest.js — geen productiegebruik
   window.__decorateLogTerms = decorateLogTerms; // alleen voor test/smoketest.js — geen productiegebruik
   window.__applyPromotionVisibility = applyPromotionVisibility; // alleen voor test/smoketest.js
+  window.__decorateDevelopmentBanner = decorateDevelopmentBanner; // alleen voor test/smoketest.js
   init();
   loadRepositoryDashboard();
+  decorateDevelopmentBanner();
 })();
 </script>
 </body>
