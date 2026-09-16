@@ -1188,7 +1188,7 @@
   }
   async function decorateDevelopmentBanner() {
     if (!repositoryUsesSimulatedData() || typeof fetch !== "function" || typeof document.querySelector !== "function") return;
-    const banner = document.querySelector('[role="note"]');
+    const banner = document.querySelector('[role=' + '"note"' + ']');
     if (!banner || typeof banner.innerHTML !== "string" || banner.innerHTML.includes('href="https://github.com/lxdg-technologies/git-routekaart-demo/pull/')) return;
     try {
       const response = await fetch("environment.json", { cache: "no-store" });
