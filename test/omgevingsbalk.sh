@@ -26,8 +26,12 @@ from pathlib import Path
 
 pagina, breedte, omgeving = sys.argv[1:]
 bron = Path(pagina).read_text()
-match = re.search(r'<div role="note" style="([^"]+)">', bron)
+match = re.search(r'<div(?: id="development-banner")? role="note" style="([^"]+)">', bron)
 assert match, f"geen environment-banner voor schermbreedte {breedte}px"
+if omgeving == "development":
+    assert bron.count('id="development-banner"') == 1, "de ontwikkelbalk heeft precies één vaste id"
+else:
+    assert 'id="development-banner"' not in bron, "de testbalk gebruikt geen ontwikkel-id"
 style = html.unescape(match.group(1)).replace(" ", "")
 expected = {
     "development": ("#c47f17", "#10161d", "background:var(--warn)", "color:#10161d"),

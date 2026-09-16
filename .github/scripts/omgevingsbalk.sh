@@ -31,7 +31,9 @@ else
 fi
 
 review_controls=""
+banner_id=""
 if [ "$omgeving" = "development" ]; then
+  banner_id=' id="development-banner"'
   review_controls='<div style="display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;justify-content:flex-end;flex:0 1 auto;">
     <button type="button" id="btn-review-approve" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:#fff;color:#10161d;font:700 13px inherit;cursor:pointer;">Goedkeuren</button>
     <button type="button" id="btn-review-reject" style="border:1px solid #fff;border-radius:999px;padding:.3rem .7rem;background:transparent;color:#fff;font:700 13px inherit;cursor:pointer;">Afkeuren</button>
@@ -47,7 +49,7 @@ case "$omgeving" in
 esac
 
 balk=$(cat <<EOF
-<div role="note" style="
+<div${banner_id} role="note" style="
   background:${kleur};
   color:${tekstkleur};
   font:600 14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;

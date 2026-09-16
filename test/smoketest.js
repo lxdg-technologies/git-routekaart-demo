@@ -126,7 +126,7 @@ const reviewMockupItems = ["Pull request", "Conversation", "Commits", "Checks", 
   item.dataset.reviewTarget = target;
   return item;
 });
-global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), querySelector: selector => selector === '[role="note"]' ? byIdMap["development-banner"] : null, querySelectorAll: selector => selector === "[data-review-target]" ? reviewMockupItems : [], documentElement: { dataset: {} } };
+global.document = { getElementById: id => byIdMap[id], createElement: tag => makeEl(tag), querySelectorAll: selector => selector === "[data-review-target]" ? reviewMockupItems : [], documentElement: { dataset: {} } };
 byIdMap["development-banner"] = makeEl("div");
 global.getComputedStyle = () => ({ getPropertyValue: () => "#1e5aa8" });
 const sessionValues = new Map();
